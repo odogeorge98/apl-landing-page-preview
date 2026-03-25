@@ -40,12 +40,12 @@ export const AuthLoading: React.FC<AuthLoadingProps> = ({ className }) => {
   return (
     <div
       className={cn(
-        "login-page-landing min-h-screen flex items-center justify-center bg-[#0F0F0F] bg-gradient-to-br from-[#0a0612] via-[#12081f] to-[#2a1848]",
+        "login-page-landing min-h-screen flex items-center justify-center bg-[#0e0b16]",
         className
       )}
     >
       <div className="text-center">
-        <LoadingSpinner size="lg" text="PEPP Cruise Loading..." className="border-white/20 border-t-[#8A4AF3]" />
+        <LoadingSpinner size="lg" text="PEPP Cruise Loading..." className="border-white/15 border-t-white/70" />
       </div>
     </div>
   );

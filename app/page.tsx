@@ -4,41 +4,29 @@ import AuthPagesWrapper from "@/components/layout/AuthWrapper";
 import { Button } from "@/components/ui/Button";
 import InputField from "@/components/ui/InputField";
 import React, { useState, Suspense } from "react";
-import * as yup from "yup";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import { useLogin } from "@/lib/hooks/auth/use-login";
 import { LoginData } from "@/lib/interfaces/auth";
-import { showValidationError } from "@/lib/utils/error-handler";
+import useAuthStore from "@/lib/store/auth";
+import {
+  MOCK_ADMIN_USER,
+  MOCK_PREVIEW_TOKEN,
+} from "@/lib/dev/mock-admin-user";
+import { showSuccess } from "@/lib/utils/error-handler";
 
 const Login = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const storeLogin = useAuthStore((s) => s.login);
+
   const [loginData, setLoginData] = useState<LoginData>({
     email: "",
     password: "",
   });
   const [rememberMe, setRememberMe] = useState(false);
 
-  const {
-    mutate: login,
-    isPending: loginLoading,
-  } = useLogin({
-    onSuccess: (data) => {
-      console.log(data);
-      if (rememberMe && typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem("peppcruise_admin_remember", "7d");
-        } catch {
-          /* ignore */
-        }
-      }
-    },
-  });
   const { email, password } = loginData;
-  const [errors, setErrors] = useState<{
-    email?: string;
-    password?: string;
-  }>({});
-  const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
 
   const handlers = {
@@ -50,61 +38,33 @@ const Login = () => {
       }));
     },
 
-    async validation(payload: LoginData) {
-      const schema = yup.object({
-        email: yup
-          .string()
-          .email("Please enter a valid email address")
-          .required("Email is required"),
-        password: yup
-          .string()
-          .min(8, "Password must be at least 8 characters long")
-          .matches(
-            /[A-Z]/,
-            "Password must contain at least one uppercase letter"
-          )
-          .matches(
-            /[a-z]/,
-            "Password must contain at least one lowercase letter"
-          )
-          .matches(/\d/, "Password must contain at least one number")
-          .matches(
-            /[!@#$%^&*(),.?":{}|<>]/,
-            "Password must contain at least one special character"
-          ),
-      });
-
-      return await schema.validate(payload, { abortEarly: false });
-    },
-
     handleToggle() {
       setVisible((prev) => !prev);
     },
 
-    async handleSubmit(e: React.FormEvent) {
+    handleSubmit(e: React.FormEvent) {
       e.preventDefault();
-      setErrors({});
-      setLoading(true);
-      try {
-        await handlers.validation(loginData);
-        login(loginData);
-      } catch (error) {
-        if (error instanceof yup.ValidationError) {
-          const validationErrors: { email?: string; password?: string } = {};
-          error.inner.forEach((err) => {
-            if (err.path) {
-              validationErrors[err.path as keyof typeof validationErrors] =
-                err.message;
-            }
-          });
-          setErrors(validationErrors);
-          showValidationError(validationErrors);
+      const emailTrim = loginData.email.trim();
+      storeLogin(
+        {
+          ...MOCK_ADMIN_USER,
+          email: emailTrim || MOCK_ADMIN_USER.email,
+        },
+        MOCK_PREVIEW_TOKEN
+      );
+      showSuccess("Login successful!");
+      if (rememberMe && typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem("peppcruise_admin_remember", "7d");
+        } catch {
+          /* ignore */
         }
-      } finally {
-        setLoading(false);
       }
+      const redirectTo = searchParams.get("redirect") || "/dashboard/overview";
+      router.push(redirectTo);
     },
   };
+
   return (
     <AuthPagesWrapper>
       <>
@@ -126,7 +86,7 @@ const Login = () => {
             placeholder="Enter authorised email"
             handlers={handlers}
             wrapperCss="col-span-1"
-            error={errors.email}
+            error={undefined}
             value={email}
             authDark
             inputIcon="mail"
@@ -138,7 +98,7 @@ const Login = () => {
             placeholder="Input password"
             handlers={handlers}
             wrapperCss="col-span-1"
-            error={errors.password}
+            error={undefined}
             value={password}
             visible={visible}
             authDark
@@ -151,7 +111,7 @@ const Login = () => {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="size-[18px] shrink-0 rounded border border-white/25 bg-transparent accent-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/50 focus:ring-offset-0"
+                className="size-[18px] shrink-0 rounded border border-white/25 bg-transparent accent-zinc-300 focus:ring-2 focus:ring-white/20 focus:ring-offset-0"
               />
               Remember me for 7 days
             </label>
@@ -165,11 +125,10 @@ const Login = () => {
 
           <Button
             type="submit"
-            disabled={loading || loginLoading}
-            className="w-full h-auto py-3.5 mt-2 cursor-pointer rounded-xl border-0 bg-[#8247E5] font-semibold text-white shadow-lg shadow-[#8247E5]/30 hover:bg-[#7139d4]"
+            className="w-full h-auto py-3.5 mt-2 cursor-pointer rounded-xl font-semibold bg-[#8A4AF3] hover:bg-[#7a3fe0] shadow-lg shadow-[#8A4AF3]/20"
             size="lg"
           >
-            {loading || loginLoading ? "Loading..." : "Login"}
+            Login
           </Button>
         </form>
       </>

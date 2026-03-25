@@ -186,7 +186,7 @@ const AdminOnboard = () => {
           <Button
             type="submit"
             disabled={loading || onboardLoading || !token}
-            className="w-full h-auto py-3.5 mt-2 cursor-pointer rounded-xl font-semibold bg-[#8A4AF3] hover:bg-[#7a3fe0] shadow-lg shadow-[#8A4AF3]/20"
+            className="w-full h-auto py-3.5 mt-2 cursor-pointer rounded-xl border border-white/10 bg-[#e4e4e8] font-semibold text-[#141216] shadow-sm hover:bg-[#f0f0f3]"
             size="lg"
           >
             {loading || onboardLoading ? "Setting up account..." : "Complete Onboarding"}

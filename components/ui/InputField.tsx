@@ -54,7 +54,7 @@ const InputField = ({
         <label
           htmlFor={name}
           className={cn(
-            authDark && 'text-sm font-medium text-[#C9B8E0]',
+            authDark && 'text-sm font-medium text-white/75',
           )}
         >
           {label}
@@ -89,9 +89,9 @@ const InputField = ({
             authDark
               ? [
                   'bg-transparent',
-                  'border-[#3D2E5E]',
-                  'text-white placeholder:text-[#8B7BA8]',
-                  'focus:outline-none focus:ring-2 focus:ring-[#8247E5]/35 focus:border-[#5C4A80]',
+                  'border-white/[0.12]',
+                  'text-white placeholder:text-white/35',
+                  'focus:outline-none focus:ring-2 focus:ring-white/12 focus:border-white/22',
                 ]
               : [
                   'px-3',
@@ -125,7 +125,7 @@ const InputField = ({
                 <div className='text-right mt-4'>
                     <Link href={'/forgot-password'} className={cn(
                       'underline font-medium',
-                      authDark ? 'text-[#8A4AF3]' : 'text-[#5F3DF4]',
+                      authDark ? 'text-white/80 underline-offset-4 hover:text-white' : 'text-[#5F3DF4]',
                     )}>Forgot Password</Link>
                 </div>
             )

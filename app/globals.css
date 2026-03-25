@@ -127,8 +127,8 @@
 .auth-form-input-transparent:-webkit-autofill:hover,
 .auth-form-input-transparent:-webkit-autofill:focus,
 .auth-form-input-transparent:-webkit-autofill:active {
-  box-shadow: inset 0 0 0 1000px #0f0a1a;
-  -webkit-box-shadow: inset 0 0 0 1000px #0f0a1a;
+  box-shadow: inset 0 0 0 1000px #0e0b16;
+  -webkit-box-shadow: inset 0 0 0 1000px #0e0b16;
   -webkit-text-fill-color: rgba(255, 255, 255, 0.95);
   caret-color: #fff;
 }

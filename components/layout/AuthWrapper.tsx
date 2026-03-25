@@ -30,7 +30,7 @@ const AuthPagesWrapper = ({
         className={cn(
           'relative flex w-full flex-col lg:w-[44%] lg:max-w-[540px] lg:shrink-0',
           'min-h-0 lg:min-h-[100dvh]',
-          '[background:radial-gradient(ellipse_100%_70%_at_0%_-10%,rgba(130,71,229,0.35)_0%,transparent_55%),#0F0A1A]',
+          '[background:radial-gradient(ellipse_90%_60%_at_0%_0%,rgba(255,255,255,0.045)_0%,transparent_55%),#0e0b16]',
         )}
       >
         <div className="flex flex-1 flex-col justify-center px-6 py-10 sm:px-10 lg:px-12 lg:py-12 xl:pl-16 xl:pr-10">
