@@ -59,7 +59,7 @@ const attention = [
   { text: "6 Payout requests pending", link: "#" },
   { text: "3 New disputes", link: "#" },
   { text: "2 Vehicles pending inspection", link: "#" },
-  { text: "5 Support tickets opened today", link: "#" },
+  { text: "5 Support tickets opened today", link: "/dashboard/support" },
   { text: "Station sync review needed", link: "#" },
 ];
 
