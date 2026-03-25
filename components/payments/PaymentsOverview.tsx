@@ -155,15 +155,28 @@ function PaymentsTrendChart() {
   const tipX = xAt(june);
   const tipYRev = yAt(paymentsTrendRevenue[june]!);
 
+  const scrollBar =
+    "[scrollbar-width:thin] [scrollbar-color:rgba(168,85,247,0.5)_rgba(255,255,255,0.07)] [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/[0.06] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#8247E5]/45 hover:[&::-webkit-scrollbar-thumb]:bg-[#8247E5]/65";
+
   return (
-    <div className="relative h-full min-h-[200px] w-full min-w-0 flex-1 overflow-hidden">
-      <svg
-        viewBox={`0 0 ${viewW} ${viewH}`}
-        className="absolute inset-0 block h-full w-full"
-        preserveAspectRatio="xMinYMid slice"
-        role="img"
-        aria-label="Payments trend: revenue and payout over twelve months"
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col">
+      <div
+        className={cn(
+          "min-h-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1",
+          scrollBar,
+        )}
+        style={{ scrollbarGutter: "stable" }}
       >
+        <div className="h-full min-h-[200px]" style={{ width: "max(100%, 42rem)" }}>
+          <svg
+            viewBox={`0 0 ${viewW} ${viewH}`}
+            width="100%"
+            height="100%"
+            className="block min-h-[200px]"
+            preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-label="Payments trend: revenue and payout over twelve months"
+          >
         <defs>
           <linearGradient id="payFillRev" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#a855f7" stopOpacity="0.45" />
@@ -279,7 +292,9 @@ function PaymentsTrendChart() {
             June 21, 2023
           </text>
         </g>
-      </svg>
+          </svg>
+        </div>
+      </div>
     </div>
   );
 }
