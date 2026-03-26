@@ -2,12 +2,17 @@ export type TripStatus = "Active" | "Canceled" | "Completed";
 
 export type TripType = "Intra-State" | "Inter-State";
 
+/** Product line: rideshare inter-city, scheduled intra-state shuttle, or fleet ops. */
+export type TripServiceLine = "inter_state" | "intra_state" | "fleet";
+
 export type TripRow = {
   id: string;
   tripId: string;
   passenger: { name: string; email: string };
   driver: { name: string; email: string };
   tripType: TripType;
+  /** How the trip is classified in admin (aligns with mobile booking flows). */
+  serviceLine: TripServiceLine;
   status: TripStatus;
   fare: string;
   dateTime: string;
@@ -79,16 +84,40 @@ const types: TripType[] = [
   "Inter-State",
 ];
 
+const serviceLines: TripServiceLine[] = [
+  "intra_state",
+  "inter_state",
+  "intra_state",
+  "fleet",
+  "inter_state",
+  "intra_state",
+  "fleet",
+  "inter_state",
+  "intra_state",
+  "fleet",
+  "inter_state",
+];
+
 export const mockTrips: TripRow[] = Array.from({ length: 11 }, (_, i) => ({
   id: `t-${i + 1}`,
   tripId: String(14568340000 + i * 901337),
   passenger: people[i % people.length]!,
   driver: people[(i + 2) % people.length]!,
   tripType: types[i]!,
+  serviceLine: serviceLines[i]!,
   status: statuses[i]!,
   fare: `₦${(25000 + i * 3200).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
   dateTime: `${String(i + 1).padStart(2, "0")} Dec 2025 · ${String(8 + (i % 3)).padStart(2, "0")}:${String(10 + i * 3).padStart(2, "0")}`,
 }));
+
+export function serviceLineLabel(s: TripServiceLine): string {
+  const map: Record<TripServiceLine, string> = {
+    inter_state: "Inter state",
+    intra_state: "Intra state",
+    fleet: "Fleet",
+  };
+  return map[s];
+}
 
 /** Total records for pagination demo */
 export const mockTripsTotalCount = 248;

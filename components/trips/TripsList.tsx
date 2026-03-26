@@ -14,7 +14,14 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { mockTrips, mockTripsTotalCount, tripsKpis, type TripStatus } from "@/lib/data/trips-mock";
+import {
+  mockTrips,
+  mockTripsTotalCount,
+  serviceLineLabel,
+  tripsKpis,
+  type TripServiceLine,
+  type TripStatus,
+} from "@/lib/data/trips-mock";
 import { TablePaginationBar } from "@/components/users/TablePaginationBar";
 import { cn } from "@/lib/utils";
 import AdminSelect from "@/components/ui/AdminSelect";
@@ -88,6 +95,7 @@ function TripStatusPill({ status }: { status: TripStatus }) {
 export default function TripsList() {
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
   const [tripFilter, setTripFilter] = useState("all");
+  const [serviceLineFilter, setServiceLineFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
 
   const filteredTrips = useMemo(() => {
@@ -96,6 +104,9 @@ export default function TripsList() {
       if (tripFilter !== "all") {
         const want = tripFilter === "canceled" ? "Canceled" : tripFilter === "active" ? "Active" : "Completed";
         if (t.status !== want) return false;
+      }
+      if (serviceLineFilter !== "all" && t.serviceLine !== (serviceLineFilter as TripServiceLine)) {
+        return false;
       }
       if (!q) return true;
       return (
@@ -106,7 +117,7 @@ export default function TripsList() {
         t.driver.email.toLowerCase().includes(q)
       );
     });
-  }, [tripFilter, search]);
+  }, [tripFilter, serviceLineFilter, search]);
 
   const pageStart = filteredTrips.length ? 1 : 0;
   const pageEnd = filteredTrips.length;
@@ -132,24 +143,38 @@ export default function TripsList() {
       </div>
 
       <div className={tableCard}>
-        <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 border-b border-white/[0.06] p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-3 sm:gap-y-2">
           <h2 className="shrink-0 text-base font-semibold text-white">All Trips</h2>
-          <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3 lg:max-w-3xl lg:flex-1 lg:justify-end">
-            <div className="relative min-w-0 w-full flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
+          <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 sm:justify-end">
+            <div className="relative min-w-0 max-w-[260px] flex-1 sm:flex-initial sm:max-w-[280px]">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-white/35" />
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search ID, driver or rider name…"
-                className="w-full rounded-xl bg-white/[0.07] py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-white/35 outline-none ring-[#8247E5]/30 transition focus:ring-2"
+                placeholder="Search ID, names…"
+                className="w-full rounded-lg bg-white/[0.07] py-2 pl-8 pr-2.5 text-xs text-white placeholder:text-white/35 outline-none ring-[#8247E5]/30 transition focus:ring-2"
                 aria-label="Search trips"
               />
             </div>
-            <div className="w-full shrink-0 sm:w-[min(100%,200px)] sm:shrink-0">
+            <div className="w-[min(100%,160px)] shrink-0 sm:w-[150px]">
               <AdminSelect
                 icon={Filter}
-                size="lg"
+                size="md"
+                options={[
+                  { value: "all", label: "All lines" },
+                  { value: "inter_state", label: "Inter state" },
+                  { value: "intra_state", label: "Intra state" },
+                  { value: "fleet", label: "Fleet" },
+                ]}
+                value={serviceLineFilter}
+                onValueChange={setServiceLineFilter}
+                aria-label="Filter by service line"
+              />
+            </div>
+            <div className="w-[min(100%,150px)] shrink-0 sm:w-[140px]">
+              <AdminSelect
+                size="md"
                 options={[
                   { value: "all", label: "All statuses" },
                   { value: "active", label: "Active" },
@@ -158,19 +183,20 @@ export default function TripsList() {
                 ]}
                 value={tripFilter}
                 onValueChange={setTripFilter}
-                aria-label="Filter trips"
+                aria-label="Filter trips by status"
               />
             </div>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1040px] text-left text-sm">
+          <table className="w-full min-w-[1180px] text-left text-sm">
             <thead>
               <tr className="border-b border-white/[0.06] text-[11px] font-semibold uppercase tracking-wider text-white/40">
                 <th className="px-4 py-3 font-medium">Trip ID</th>
                 <th className="px-4 py-3 font-medium">Passenger</th>
                 <th className="px-4 py-3 font-medium">Driver</th>
+                <th className="px-4 py-3 font-medium">Service line</th>
                 <th className="px-4 py-3 font-medium">Trip Type</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Fare</th>
@@ -203,6 +229,7 @@ export default function TripsList() {
                       </div>
                     </div>
                   </td>
+                  <td className="px-4 py-3.5 text-white/80">{serviceLineLabel(trip.serviceLine)}</td>
                   <td className="px-4 py-3.5 text-white/75">{trip.tripType}</td>
                   <td className="px-4 py-3.5">
                     <TripStatusPill status={trip.status} />

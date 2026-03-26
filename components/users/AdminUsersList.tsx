@@ -134,48 +134,46 @@ export default function AdminUsersList() {
       </div>
 
       <div className={tableCard}>
-        <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-3 border-b border-white/[0.06] p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-3 sm:gap-y-2">
           <h2 className="shrink-0 text-base font-semibold text-white">Directory</h2>
-          <div className="flex w-full min-w-0 flex-col gap-3 lg:max-w-4xl lg:flex-1 lg:items-stretch">
-            <div className="relative w-full min-w-0 lg:max-w-xl">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
+          <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 sm:justify-end">
+            <div className="relative min-w-0 max-w-[200px] flex-1 sm:flex-initial sm:max-w-[220px]">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-white/35" />
               <input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search name, email, phone…"
-                className="w-full rounded-xl bg-white/[0.07] py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-white/35 outline-none ring-[#8247E5]/30 transition focus:ring-2"
+                placeholder="Search…"
+                className="w-full rounded-lg bg-white/[0.07] py-2 pl-8 pr-2.5 text-xs text-white placeholder:text-white/35 outline-none ring-[#8247E5]/30 transition focus:ring-2"
                 aria-label="Search admin users"
               />
             </div>
-            <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:gap-2 sm:justify-end">
-              <div className="w-full shrink-0 sm:w-[min(100%,220px)]">
-                <AdminSelect
-                  icon={Filter}
-                  size="lg"
-                  options={[
-                    { value: "all", label: "All roles" },
-                    ...ADMIN_ROLE_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
-                  ]}
-                  value={roleFilter}
-                  onValueChange={setRoleFilter}
-                  aria-label="Filter by role"
-                />
-              </div>
-              <div className="w-full shrink-0 sm:w-[min(100%,200px)]">
-                <AdminSelect
-                  size="lg"
-                  options={[
-                    { value: "all", label: "All statuses" },
-                    { value: "active", label: "Active" },
-                    { value: "pending", label: "Pending" },
-                    { value: "expired", label: "Expired" },
-                  ]}
-                  value={statusFilter}
-                  onValueChange={setStatusFilter}
-                  aria-label="Filter by status"
-                />
-              </div>
+            <div className="w-[min(100%,160px)] shrink-0 sm:w-[150px]">
+              <AdminSelect
+                icon={Filter}
+                size="md"
+                options={[
+                  { value: "all", label: "All roles" },
+                  ...ADMIN_ROLE_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
+                ]}
+                value={roleFilter}
+                onValueChange={setRoleFilter}
+                aria-label="Filter by role"
+              />
+            </div>
+            <div className="w-[min(100%,150px)] shrink-0 sm:w-[140px]">
+              <AdminSelect
+                size="md"
+                options={[
+                  { value: "all", label: "All statuses" },
+                  { value: "active", label: "Active" },
+                  { value: "pending", label: "Pending" },
+                  { value: "expired", label: "Expired" },
+                ]}
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                aria-label="Filter by status"
+              />
             </div>
           </div>
         </div>

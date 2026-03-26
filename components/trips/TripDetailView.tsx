@@ -13,7 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import type { TripDetail } from "@/lib/data/trips-mock";
-import { getTripDetail } from "@/lib/data/trips-mock";
+import { getTripDetail, serviceLineLabel } from "@/lib/data/trips-mock";
 import { cn } from "@/lib/utils";
 
 const cardBase =
@@ -85,6 +85,8 @@ export default function TripDetailView({ tripRowId }: { tripRowId: string }) {
             <StatusHeaderPill status={trip.status} />
           </div>
           <p className="text-sm text-white/45">
+            <span className="text-white/65">{serviceLineLabel(trip.serviceLine)}</span>
+            <span className="text-white/25"> · </span>
             {trip.tripType} · {trip.regionLabel} · {trip.dateTime}
           </p>
         </div>
@@ -187,7 +189,11 @@ export default function TripDetailView({ tripRowId }: { tripRowId: string }) {
                   {trip.durationMins} min
                 </dd>
               </div>
-              <div className="rounded-xl bg-white/[0.03] px-4 py-3 sm:col-span-2">
+              <div className="rounded-xl bg-white/[0.03] px-4 py-3">
+                <dt className="text-[11px] font-medium text-white/40">Service line</dt>
+                <dd className="mt-1 text-sm font-medium text-white">{serviceLineLabel(trip.serviceLine)}</dd>
+              </div>
+              <div className="rounded-xl bg-white/[0.03] px-4 py-3">
                 <dt className="text-[11px] font-medium text-white/40">Trip type</dt>
                 <dd className="mt-1 text-sm font-medium text-white">{trip.tripType}</dd>
               </div>

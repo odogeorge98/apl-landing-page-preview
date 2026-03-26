@@ -33,6 +33,10 @@ import {
   Inbox,
   SlidersHorizontal,
   Shield,
+  Bus,
+  Route,
+  ListOrdered,
+  MapPinned,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -40,6 +44,9 @@ import type { LucideIcon } from "lucide-react";
 function isNavSubActive(pathname: string, subHref: string): boolean {
   if (subHref === "/system/settings") {
     return pathname === "/system/settings" || pathname === "/system/settings/";
+  }
+  if (subHref === "/dashboard/trips") {
+    return pathname === "/dashboard/trips" || pathname === "/dashboard/trips/";
   }
   return pathname === subHref || pathname.startsWith(`${subHref}/`);
 }
@@ -91,7 +98,18 @@ const mainNav: NavEntry[] = [
       { name: "Admin users", href: "/dashboard/users/admins", icon: Shield },
     ],
   },
-  { name: "Trips", href: "/dashboard/trips", icon: Car },
+  {
+    name: "Trips",
+    href: "#",
+    icon: Car,
+    expandable: true,
+    subItems: [
+      { name: "All trips", href: "/dashboard/trips", icon: ListOrdered },
+      { name: "Intra state", href: "/dashboard/trips/intra-state", icon: MapPinned },
+      { name: "Inter state", href: "/dashboard/trips/inter-state", icon: Route },
+      { name: "PEPP vehicles", href: "/dashboard/trips/intra-state/vehicles", icon: Bus },
+    ],
+  },
   {
     name: "Payments",
     href: "#",
@@ -173,6 +191,9 @@ function SidebarNav({
     if (pathname.startsWith("/dashboard/support")) {
       setOpen((s) => ({ ...s, Support: true }));
     }
+    if (pathname.startsWith("/dashboard/trips")) {
+      setOpen((s) => ({ ...s, Trips: true }));
+    }
   }, [pathname]);
 
   return (
@@ -190,12 +211,15 @@ function SidebarNav({
             pathname.startsWith("/dashboard/transactions"));
         const supportSection =
           item.name === "Support" && pathname.startsWith("/dashboard/support");
+        const tripsSection =
+          item.name === "Trips" && pathname.startsWith("/dashboard/trips");
         const sectionActive =
           item.name === "Dashboard"
             ? pathname === "/dashboard/overview"
             : stationsSection ||
               paymentsSection ||
               supportSection ||
+              tripsSection ||
               subItemMatch ||
               (item.href !== "#" && pathname.startsWith(baseHref));
 
