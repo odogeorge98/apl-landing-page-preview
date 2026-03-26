@@ -32,6 +32,7 @@ import {
   LogOut,
   Inbox,
   SlidersHorizontal,
+  Shield,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -87,6 +88,7 @@ const mainNav: NavEntry[] = [
     subItems: [
       { name: "Riders", href: "/dashboard/users/riders", icon: User },
       { name: "Drivers", href: "/dashboard/users/drivers", icon: ShipWheel },
+      { name: "Admin users", href: "/dashboard/users/admins", icon: Shield },
     ],
   },
   { name: "Trips", href: "/dashboard/trips", icon: Car },
