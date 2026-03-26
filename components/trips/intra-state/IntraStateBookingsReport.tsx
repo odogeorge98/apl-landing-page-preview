@@ -55,68 +55,109 @@ export default function IntraStateBookingsReport() {
     });
   }, [q, stateFilter, slotFilter, statusFilter]);
 
+  const summary = useMemo(() => {
+    const rows = filtered;
+    const confirmed = rows.filter((b) => b.status === "confirmed").length;
+    const pending = rows.filter((b) => b.status === "pending").length;
+    const canceled = rows.filter((b) => b.status === "canceled").length;
+    const revenueNgn = rows.reduce((sum, b) => {
+      const digits = b.price.replace(/\D/g, "");
+      return sum + (digits ? parseInt(digits, 10) : 0);
+    }, 0);
+    return { rows: rows.length, confirmed, pending, canceled, revenueNgn };
+  }, [filtered]);
+
   return (
     <div className={cn(card)}>
-      <div className="flex flex-col gap-3 border-b border-white/[0.06] p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div>
+      <div className="grid gap-3 border-b border-white/[0.06] p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Rows (filtered)</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{summary.rows}</p>
+        </div>
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Confirmed</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-200">{summary.confirmed}</p>
+        </div>
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Pending</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-amber-200">{summary.pending}</p>
+        </div>
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Fare (filtered)</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-[#00d7c4] sm:text-2xl">
+            ₦{summary.revenueNgn.toLocaleString("en-NG")}
+          </p>
+          {summary.canceled > 0 ? (
+            <p className="mt-1 text-[10px] text-white/35">{summary.canceled} canceled in view</p>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 border-b border-white/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0 shrink">
           <h2 className="text-base font-semibold text-white">Complete bookings report</h2>
           <p className="mt-0.5 text-xs text-white/45">
             All intra-state trips: terminals, passengers, seats, next of kin, vehicle & driver.
           </p>
         </div>
-        <div className="flex w-full min-w-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-end lg:gap-2">
-          <div className="relative w-full max-w-[240px] shrink-0">
+        <div
+          className="flex min-w-0 items-center gap-2 overflow-x-auto pb-0.5 sm:max-w-[min(100%,820px)] sm:flex-1 sm:justify-end sm:overflow-visible sm:pb-0"
+          role="search"
+          aria-label="Bookings search and filters"
+        >
+          <div className="relative h-9 w-[168px] shrink-0 sm:w-[180px]">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-white/35" />
             <input
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Ref, passenger, terminal…"
-              className="h-9 w-full rounded-xl bg-white/[0.07] py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/35 outline-none ring-[#8247E5]/25 transition focus:ring-2 sm:text-sm"
+              placeholder="Ref, passenger…"
+              className="h-9 w-full rounded-xl border border-white/[0.08] bg-white/[0.07] py-0 pl-8 pr-2 text-xs text-white placeholder:text-white/35 outline-none ring-[#8247E5]/25 transition focus:ring-2"
               aria-label="Search bookings"
             />
           </div>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:max-w-[720px] lg:justify-end">
-            <div className="w-[min(100%,160px)] shrink-0 sm:w-[150px]">
-              <AdminSelect
-                icon={Filter}
-                size="sm"
-                options={[
-                  { value: "all", label: "All states" },
-                  ...NIGERIA_STATES_INTRA.map((s) => ({ value: s, label: s })),
-                ]}
-                value={stateFilter}
-                onValueChange={setStateFilter}
-                aria-label="State"
-              />
-            </div>
-            <div className="w-[min(100%,140px)] shrink-0 sm:w-[130px]">
-              <AdminSelect
-                size="sm"
-                options={[
-                  { value: "all", label: "All slots" },
-                  { value: "Morning", label: "Morning" },
-                  { value: "Afternoon", label: "Afternoon" },
-                ]}
-                value={slotFilter}
-                onValueChange={setSlotFilter}
-                aria-label="Time slot"
-              />
-            </div>
-            <div className="w-[min(100%,150px)] shrink-0 sm:w-[140px]">
-              <AdminSelect
-                size="sm"
-                options={[
-                  { value: "all", label: "All status" },
-                  { value: "confirmed", label: "Confirmed" },
-                  { value: "pending", label: "Pending" },
-                  { value: "canceled", label: "Canceled" },
-                ]}
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-                aria-label="Booking status"
-              />
-            </div>
+          <div className="h-9 w-[148px] shrink-0 sm:w-[156px]">
+            <AdminSelect
+              icon={Filter}
+              size="sm"
+              triggerClassName="h-9 min-h-9 py-0 text-xs"
+              options={[
+                { value: "all", label: "All states" },
+                ...NIGERIA_STATES_INTRA.map((s) => ({ value: s, label: s })),
+              ]}
+              value={stateFilter}
+              onValueChange={setStateFilter}
+              aria-label="State"
+            />
+          </div>
+          <div className="h-9 w-[128px] shrink-0 sm:w-[136px]">
+            <AdminSelect
+              size="sm"
+              triggerClassName="h-9 min-h-9 py-0 text-xs"
+              options={[
+                { value: "all", label: "All slots" },
+                { value: "Morning", label: "Morning" },
+                { value: "Afternoon", label: "Afternoon" },
+              ]}
+              value={slotFilter}
+              onValueChange={setSlotFilter}
+              aria-label="Time slot"
+            />
+          </div>
+          <div className="h-9 w-[136px] shrink-0 sm:w-[144px]">
+            <AdminSelect
+              size="sm"
+              triggerClassName="h-9 min-h-9 py-0 text-xs"
+              options={[
+                { value: "all", label: "All status" },
+                { value: "confirmed", label: "Confirmed" },
+                { value: "pending", label: "Pending" },
+                { value: "canceled", label: "Canceled" },
+              ]}
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              aria-label="Booking status"
+            />
           </div>
         </div>
       </div>

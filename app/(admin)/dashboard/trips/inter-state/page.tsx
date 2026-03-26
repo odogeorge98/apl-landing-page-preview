@@ -19,10 +19,10 @@ export default function InterStateTripsPage() {
           <p className="mt-1 max-w-2xl text-sm text-white/45">
             Dedicated inter-state admin views can extend the global trips list with routes, pricing, and
             partner legs. For now, use{" "}
-            <Link href="/dashboard/trips" className="font-semibold text-[#00d7c4] hover:underline">
+            <Link href="/dashboard/trips?line=inter_state" className="font-semibold text-[#00d7c4] hover:underline">
               All trips
             </Link>{" "}
-            and filter by <span className="text-white/70">Inter state</span> in the service line column.
+            with the service line filter preset to <span className="text-white/70">Inter state</span>.
           </p>
         </div>
       </div>

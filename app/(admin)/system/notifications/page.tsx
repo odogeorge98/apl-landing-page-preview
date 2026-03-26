@@ -201,7 +201,7 @@ export default function NotificationsPage() {
             hint="Unread system or critical"
           />
           <StatTile label="System" value={stats.system} icon={Activity} hint="System-generated" />
-        </div>
+            </div>
 
         <section className={cn(cardBase, "flex flex-col overflow-hidden")}>
           <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
@@ -231,13 +231,13 @@ export default function NotificationsPage() {
                   aria-label="Filter by status"
                 />
               </div>
+              </div>
             </div>
-          </div>
 
           <div className="hidden md:block">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[880px] text-left text-sm">
-                <thead>
+                  <thead>
                   <tr className="border-b border-white/[0.06] text-[11px] font-semibold uppercase tracking-wider text-white/40">
                     <th className="px-4 py-3 font-medium">Type</th>
                     <th className="px-4 py-3 font-medium">Message</th>
@@ -245,8 +245,8 @@ export default function NotificationsPage() {
                     <th className="px-4 py-3 font-medium">Date</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 text-right font-medium"> </th>
-                  </tr>
-                </thead>
+                    </tr>
+                  </thead>
                 <tbody className="divide-y divide-white/[0.05]">
                   {paginated.map((row, idx) => (
                     <tr
@@ -266,7 +266,7 @@ export default function NotificationsPage() {
                       <td className="whitespace-nowrap px-4 py-3.5 text-white/50">{row.date}</td>
                       <td className="px-4 py-3.5">
                         <StatusPill status={row.status} />
-                      </td>
+                        </td>
                       <td className="relative px-4 py-3.5 text-right">
                         <button
                           type="button"
@@ -290,13 +290,13 @@ export default function NotificationsPage() {
                             </button>
                           </div>
                         ) : null}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
           <div className="flex flex-col gap-3 p-4 md:hidden">
             {paginated.map((row, idx) => (
@@ -310,20 +310,20 @@ export default function NotificationsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <TypePill type={row.type} />
                   <StatusPill status={row.status} />
-                </div>
+                    </div>
                 <p className="mt-3 text-sm font-medium leading-snug text-white/90">{row.message}</p>
                 <p className="mt-2 text-xs text-white/45">{row.leadAgent}</p>
                 <p className="mt-1 text-xs text-white/35">{row.date}</p>
-                <button
+                    <button
                   type="button"
                   onClick={() => openDetails(row)}
                   className="mt-4 w-full rounded-xl border border-[#8247E5]/40 bg-[#8247E5]/15 py-2.5 text-sm font-semibold text-[#e9d5ff] transition hover:bg-[#8247E5]/25"
-                >
-                  View details
-                </button>
-              </div>
-            ))}
-          </div>
+                    >
+                      View details
+                    </button>
+                </div>
+              ))}
+            </div>
 
           <nav
             className="flex flex-col gap-3 border-t border-white/[0.06] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"

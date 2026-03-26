@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Car,
   CheckCircle2,
@@ -92,11 +93,21 @@ function TripStatusPill({ status }: { status: TripStatus }) {
   );
 }
 
+const validLineParams = new Set<TripServiceLine>(["inter_state", "intra_state", "fleet"]);
+
 export default function TripsList() {
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
+  const searchParams = useSearchParams();
   const [tripFilter, setTripFilter] = useState("all");
   const [serviceLineFilter, setServiceLineFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const raw = searchParams.get("line");
+    if (raw && validLineParams.has(raw as TripServiceLine)) {
+      setServiceLineFilter(raw);
+    }
+  }, [searchParams]);
 
   const filteredTrips = useMemo(() => {
     const q = search.trim().toLowerCase();

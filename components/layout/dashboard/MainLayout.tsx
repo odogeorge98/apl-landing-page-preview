@@ -37,6 +37,7 @@ import {
   Route,
   ListOrdered,
   MapPinned,
+  Truck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -107,7 +108,8 @@ const mainNav: NavEntry[] = [
       { name: "All trips", href: "/dashboard/trips", icon: ListOrdered },
       { name: "Intra state", href: "/dashboard/trips/intra-state", icon: MapPinned },
       { name: "Inter state", href: "/dashboard/trips/inter-state", icon: Route },
-      { name: "PEPP vehicles", href: "/dashboard/trips/intra-state/vehicles", icon: Bus },
+      { name: "Fleet", href: "/dashboard/trips/fleet", icon: Truck },
+      { name: "Vehicles", href: "/dashboard/trips/intra-state/vehicles", icon: Bus },
     ],
   },
   {

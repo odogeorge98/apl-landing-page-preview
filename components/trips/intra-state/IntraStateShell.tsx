@@ -16,7 +16,7 @@ const tabs: {
   },
   {
     href: "/dashboard/trips/intra-state/vehicles",
-    label: "PEPP vehicles",
+    label: "Vehicles",
     isActive: (p) => p.startsWith("/dashboard/trips/intra-state/vehicles"),
   },
   {

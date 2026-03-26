@@ -71,11 +71,6 @@ class HttpClient {
           }
         }
 
-        const pk = config.api.productKey;
-        if (pk) {
-          (config.headers as Record<string, string>)["x-product-key"] = pk;
-        }
-
         // Remove custom property from config
         delete (config as any).requiresAuth;
 

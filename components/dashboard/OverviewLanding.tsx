@@ -19,7 +19,6 @@ import {
   Timer,
   ArrowUp,
 } from "lucide-react";
-import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import AdminSelect from "@/components/ui/AdminSelect";
 
@@ -130,7 +129,6 @@ function KpiCard({
 }
 
 function RevenueChart({ className }: { className?: string }) {
-  const reduceMotion = useReducedMotion();
   const plotL = 52;
   const plotR = 688;
   const plotT = 36;
@@ -206,68 +204,29 @@ function RevenueChart({ className }: { className?: string }) {
           </text>
         ))}
 
-        <motion.path
-          d={smoothAreaPath(expPts, plotB)}
-          fill="url(#fillExp)"
-          initial={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: reduceMotion ? 0 : 0.85, ease: "easeOut" }}
-        />
-        <motion.path
-          d={smoothAreaPath(revPts, plotB)}
-          fill="url(#fillRev)"
-          initial={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: reduceMotion ? 0 : 0.85, delay: reduceMotion ? 0 : 0.08, ease: "easeOut" }}
-        />
+        <path d={smoothAreaPath(expPts, plotB)} fill="url(#fillExp)" />
+        <path d={smoothAreaPath(revPts, plotB)} fill="url(#fillRev)" />
 
-        <motion.path
+        <path
           d={smoothLinePath(expPts)}
           fill="none"
           stroke="#22d3ee"
           strokeWidth="2.25"
           strokeLinecap="round"
           strokeLinejoin="round"
-          initial={reduceMotion ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0.35 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{
-            pathLength: { duration: reduceMotion ? 0 : 1.25, ease: [0.22, 1, 0.36, 1] },
-            opacity: { duration: reduceMotion ? 0 : 0.5 },
-          }}
         />
-        <motion.path
+        <path
           d={smoothLinePath(revPts)}
           fill="none"
           stroke="#c084fc"
           strokeWidth="2.25"
           strokeLinecap="round"
           strokeLinejoin="round"
-          initial={reduceMotion ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0.35 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{
-            pathLength: { duration: reduceMotion ? 0 : 1.25, ease: [0.22, 1, 0.36, 1], delay: reduceMotion ? 0 : 0.1 },
-            opacity: { duration: reduceMotion ? 0 : 0.5, delay: reduceMotion ? 0 : 0.1 },
-          }}
         />
 
-        <motion.circle
-          cx={tipX}
-          cy={tipY}
-          r="6"
-          fill="#0e0b16"
-          stroke="#a855f7"
-          strokeWidth="2.5"
-          initial={reduceMotion ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 320, damping: 22, delay: reduceMotion ? 0 : 0.95 }}
-        />
+        <circle cx={tipX} cy={tipY} r="6" fill="#0e0b16" stroke="#a855f7" strokeWidth="2.5" />
 
-        <motion.g
-          transform={`translate(${tipX}, ${tipY - 58})`}
-          initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: reduceMotion ? 0 : 0.4, delay: reduceMotion ? 0 : 1.05, ease: "easeOut" }}
-        >
+        <g transform={`translate(${tipX}, ${tipY - 58})`}>
           <rect
             x="-66"
             y="-40"
@@ -286,14 +245,13 @@ function RevenueChart({ className }: { className?: string }) {
           <text x="0" y="-4" textAnchor="middle" fill="rgba(255,255,255,0.42)" fontSize="9" fontWeight="500">
             June 21, 2023
           </text>
-        </motion.g>
+        </g>
       </svg>
     </div>
   );
 }
 
 function ProfitChart() {
-  const reduceMotion = useReducedMotion();
   const plotL = 44;
   const plotR = 300;
   const plotT = 22;
@@ -346,20 +304,14 @@ function ProfitChart() {
         const bh = (plotB - plotT) * h;
         const y0 = plotB - bh;
         return (
-          <motion.rect
+          <rect
             key={i}
             x={x}
-            y={reduceMotion ? y0 : plotB}
+            y={y0}
             width={barW}
-            height={reduceMotion ? bh : 0}
+            height={bh}
             rx={3}
             fill={i % 2 === 0 ? "rgba(168,85,247,0.88)" : "rgba(34,211,238,0.78)"}
-            animate={{ y: y0, height: bh }}
-            transition={{
-              duration: reduceMotion ? 0 : 0.45,
-              delay: reduceMotion ? 0 : i * 0.015,
-              ease: [0.22, 1, 0.36, 1],
-            }}
           />
         );
       })}
@@ -387,7 +339,6 @@ function ProfitChart() {
 }
 
 function TripsChart() {
-  const reduceMotion = useReducedMotion();
   const plotL = 44;
   const plotR = 300;
   const plotT = 18;
@@ -441,26 +392,14 @@ function TripsChart() {
         );
       })}
 
-      <motion.path
-        d={smoothAreaPath(pts, plotB)}
-        fill="url(#tripAreaFill)"
-        initial={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: reduceMotion ? 0 : 0.75, ease: "easeOut" }}
-      />
-      <motion.path
+      <path d={smoothAreaPath(pts, plotB)} fill="url(#tripAreaFill)" />
+      <path
         d={smoothLinePath(pts)}
         fill="none"
         stroke="#c084fc"
         strokeWidth="2.25"
         strokeLinecap="round"
         strokeLinejoin="round"
-        initial={reduceMotion ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0.3 }}
-        animate={{ pathLength: 1, opacity: 1 }}
-        transition={{
-          pathLength: { duration: reduceMotion ? 0 : 1.2, ease: [0.22, 1, 0.36, 1] },
-          opacity: { duration: reduceMotion ? 0 : 0.45 },
-        }}
       />
 
       {[

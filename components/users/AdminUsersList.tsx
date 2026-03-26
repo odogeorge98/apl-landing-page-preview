@@ -134,24 +134,29 @@ export default function AdminUsersList() {
       </div>
 
       <div className={tableCard}>
-        <div className="flex flex-col gap-3 border-b border-white/[0.06] p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-3 sm:gap-y-2">
+        <div className="flex flex-col gap-3 border-b border-white/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <h2 className="shrink-0 text-base font-semibold text-white">Directory</h2>
-          <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 sm:justify-end">
-            <div className="relative min-w-0 max-w-[200px] flex-1 sm:flex-initial sm:max-w-[220px]">
+          <div
+            className="flex min-w-0 items-center gap-2 overflow-x-auto pb-0.5 sm:max-w-none sm:justify-end sm:overflow-visible sm:pb-0"
+            role="search"
+            aria-label="Directory search and filters"
+          >
+            <div className="relative h-9 w-[152px] shrink-0 sm:w-[160px]">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-white/35" />
               <input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search…"
-                className="w-full rounded-lg bg-white/[0.07] py-2 pl-8 pr-2.5 text-xs text-white placeholder:text-white/35 outline-none ring-[#8247E5]/30 transition focus:ring-2"
+                placeholder="Name, email…"
+                className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.07] py-0 pl-8 pr-2 text-xs text-white placeholder:text-white/35 outline-none ring-[#8247E5]/30 transition focus:ring-2"
                 aria-label="Search admin users"
               />
             </div>
-            <div className="w-[min(100%,160px)] shrink-0 sm:w-[150px]">
+            <div className="h-9 w-[140px] shrink-0 sm:w-[148px]">
               <AdminSelect
                 icon={Filter}
-                size="md"
+                size="sm"
+                triggerClassName="h-9 min-h-9 py-0 text-xs"
                 options={[
                   { value: "all", label: "All roles" },
                   ...ADMIN_ROLE_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
@@ -161,9 +166,10 @@ export default function AdminUsersList() {
                 aria-label="Filter by role"
               />
             </div>
-            <div className="w-[min(100%,150px)] shrink-0 sm:w-[140px]">
+            <div className="h-9 w-[128px] shrink-0 sm:w-[136px]">
               <AdminSelect
-                size="md"
+                size="sm"
+                triggerClassName="h-9 min-h-9 py-0 text-xs"
                 options={[
                   { value: "all", label: "All statuses" },
                   { value: "active", label: "Active" },

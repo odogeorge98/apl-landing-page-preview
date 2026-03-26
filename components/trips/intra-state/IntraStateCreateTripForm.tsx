@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Calendar, Car } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Calendar, Car, ChevronDown } from "lucide-react";
 import {
   NIGERIA_STATES_INTRA,
   peppFleetMock,
@@ -34,6 +34,14 @@ export default function IntraStateCreateTripForm() {
   const [slot, setSlot] = useState<"Morning" | "Afternoon">("Morning");
   const [departureTime, setDepartureTime] = useState("06:45");
   const [vehicleId, setVehicleId] = useState(peppFleetMock[0]?.id ?? "");
+  const [passengerOpen, setPassengerOpen] = useState(true);
+  const [passengerName, setPassengerName] = useState("");
+  const [passengerEmail, setPassengerEmail] = useState("");
+  const [passengerPhone, setPassengerPhone] = useState("");
+  const [seat, setSeat] = useState("5");
+  const [luggage, setLuggage] = useState("Small");
+  const [nextOfKinName, setNextOfKinName] = useState("");
+  const [nextOfKinPhone, setNextOfKinPhone] = useState("");
 
   const activeFleet = useMemo(
     () => peppFleetMock.filter((v) => v.status === "active"),
@@ -54,6 +62,24 @@ export default function IntraStateCreateTripForm() {
     [terminals.dest],
   );
 
+  const seatOptions = useMemo(() => {
+    const cap = selectedVehicle?.capacity ?? 7;
+    return Array.from({ length: cap }, (_, i) => ({
+      value: String(i + 1),
+      label: String(i + 1),
+    }));
+  }, [selectedVehicle?.capacity]);
+
+  useEffect(() => {
+    const cap = selectedVehicle?.capacity ?? 7;
+    setSeat((s) => {
+      const n = Number.parseInt(s, 10);
+      if (!Number.isFinite(n) || n < 1) return "1";
+      if (n > cap) return String(cap);
+      return s;
+    });
+  }, [vehicleId, selectedVehicle?.capacity]);
+
   const onStateChange = (s: string) => {
     setState(s);
     const t = terminalPairsByState[s];
@@ -64,8 +90,9 @@ export default function IntraStateCreateTripForm() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!pickup || !destination || !tripDate || !vehicleId) return;
+    if (!passengerName.trim() || !passengerEmail.trim() || !passengerPhone.trim()) return;
     showSuccess(
-      `Trip draft saved (mock). ${selectedVehicle?.type ?? "Vehicle"} · ${pickup} → ${destination} on ${tripDate}.`,
+      `Trip draft saved (mock). ${selectedVehicle?.type ?? "Vehicle"} · ${pickup} → ${destination} on ${tripDate} · ${passengerName} · seat ${seat}.`,
     );
   };
 
@@ -182,7 +209,7 @@ export default function IntraStateCreateTripForm() {
             />
           </div>
           <div>
-            <span className={labelCls}>PEPP vehicle (assigned driver)</span>
+            <span className={labelCls}>Vehicle (assigned driver)</span>
             <div className="mt-1.5">
               <AdminSelect
                 options={activeFleet.map((v) => ({
@@ -203,6 +230,128 @@ export default function IntraStateCreateTripForm() {
               </p>
             ) : null}
           </div>
+        </div>
+
+        <div className="lg:col-span-2">
+          <button
+            type="button"
+            onClick={() => setPassengerOpen((v) => !v)}
+            className="flex w-full items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-left transition hover:bg-white/[0.06]"
+            aria-expanded={passengerOpen}
+          >
+            <span className="text-sm font-semibold text-white">Passenger 01 details</span>
+            <ChevronDown
+              className={cn(
+                "size-5 shrink-0 text-[#00d7c4] transition-transform",
+                passengerOpen ? "rotate-180" : "rotate-0",
+              )}
+              strokeWidth={2}
+              aria-hidden
+            />
+          </button>
+          {passengerOpen ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="p-name" className={labelCls}>
+                  Passenger&apos;s name
+                </label>
+                <input
+                  id="p-name"
+                  type="text"
+                  required
+                  value={passengerName}
+                  onChange={(e) => setPassengerName(e.target.value)}
+                  placeholder="Enter name"
+                  className={input}
+                  autoComplete="name"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="p-email" className={labelCls}>
+                  Email
+                </label>
+                <input
+                  id="p-email"
+                  type="email"
+                  required
+                  value={passengerEmail}
+                  onChange={(e) => setPassengerEmail(e.target.value)}
+                  placeholder="Enter email address"
+                  className={input}
+                  autoComplete="email"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="p-phone" className={labelCls}>
+                  Phone
+                </label>
+                <input
+                  id="p-phone"
+                  type="tel"
+                  required
+                  value={passengerPhone}
+                  onChange={(e) => setPassengerPhone(e.target.value)}
+                  placeholder="Enter phone"
+                  className={input}
+                  autoComplete="tel"
+                />
+              </div>
+              <div>
+                <span className={labelCls}>Seat</span>
+                <div className="mt-1.5">
+                  <AdminSelect
+                    options={seatOptions}
+                    value={seat}
+                    onValueChange={setSeat}
+                    aria-label="Seat number"
+                  />
+                </div>
+              </div>
+              <div>
+                <span className={labelCls}>Luggage</span>
+                <div className="mt-1.5">
+                  <AdminSelect
+                    options={[
+                      { value: "Small", label: "Small" },
+                      { value: "Medium", label: "Medium" },
+                      { value: "Large", label: "Large" },
+                    ]}
+                    value={luggage}
+                    onValueChange={setLuggage}
+                    aria-label="Luggage size"
+                  />
+                </div>
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="p-nok-name" className={labelCls}>
+                  Next of kin name
+                </label>
+                <input
+                  id="p-nok-name"
+                  type="text"
+                  value={nextOfKinName}
+                  onChange={(e) => setNextOfKinName(e.target.value)}
+                  placeholder="Enter name"
+                  className={input}
+                  autoComplete="name"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="p-nok-phone" className={labelCls}>
+                  Next of kin phone
+                </label>
+                <input
+                  id="p-nok-phone"
+                  type="tel"
+                  value={nextOfKinPhone}
+                  onChange={(e) => setNextOfKinPhone(e.target.value)}
+                  placeholder="Enter phone"
+                  className={input}
+                  autoComplete="tel"
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-3 border-t border-white/[0.06] pt-6 lg:col-span-2 lg:flex-row lg:justify-end">
