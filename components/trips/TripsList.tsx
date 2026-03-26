@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import dayjs from "dayjs";
+import Link from "next/link";
 import {
   Car,
   CheckCircle2,
@@ -87,8 +88,28 @@ function TripStatusPill({ status }: { status: TripStatus }) {
 export default function TripsList() {
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
   const [tripFilter, setTripFilter] = useState("all");
-  const pageStart = 1;
-  const pageEnd = mockTrips.length;
+  const [search, setSearch] = useState("");
+
+  const filteredTrips = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return mockTrips.filter((t) => {
+      if (tripFilter !== "all") {
+        const want = tripFilter === "canceled" ? "Canceled" : tripFilter === "active" ? "Active" : "Completed";
+        if (t.status !== want) return false;
+      }
+      if (!q) return true;
+      return (
+        t.tripId.includes(q) ||
+        t.passenger.name.toLowerCase().includes(q) ||
+        t.driver.name.toLowerCase().includes(q) ||
+        t.passenger.email.toLowerCase().includes(q) ||
+        t.driver.email.toLowerCase().includes(q)
+      );
+    });
+  }, [tripFilter, search]);
+
+  const pageStart = filteredTrips.length ? 1 : 0;
+  const pageEnd = filteredTrips.length;
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-8">
@@ -111,19 +132,21 @@ export default function TripsList() {
       </div>
 
       <div className={tableCard}>
-        <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-base font-semibold text-white">All Trips</h2>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <div className="relative min-w-0 flex-1 sm:min-w-[280px]">
+        <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 lg:flex-row lg:items-center lg:justify-between">
+          <h2 className="shrink-0 text-base font-semibold text-white">All Trips</h2>
+          <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3 lg:max-w-3xl lg:flex-1 lg:justify-end">
+            <div className="relative min-w-0 w-full flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
               <input
                 type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search ID, driver or rider name…"
                 className="w-full rounded-xl bg-white/[0.07] py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-white/35 outline-none ring-[#8247E5]/30 transition focus:ring-2"
                 aria-label="Search trips"
               />
             </div>
-            <div className="w-full shrink-0 sm:min-w-[160px]">
+            <div className="w-full shrink-0 sm:w-[min(100%,200px)] sm:shrink-0">
               <AdminSelect
                 icon={Filter}
                 size="lg"
@@ -156,7 +179,7 @@ export default function TripsList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.05]">
-              {mockTrips.map((trip, idx) => (
+              {filteredTrips.map((trip, idx) => (
                 <tr key={trip.id} className="text-white/85 transition hover:bg-white/[0.02]">
                   <td className="px-4 py-3.5 font-mono text-sm tabular-nums text-white">{trip.tripId}</td>
                   <td className="px-4 py-3.5">
@@ -187,12 +210,15 @@ export default function TripsList() {
                   <td className="px-4 py-3.5 tabular-nums font-medium text-white">{trip.fare}</td>
                   <td className="px-4 py-3.5 tabular-nums text-white/65">{trip.dateTime}</td>
                   <td className="px-4 py-3.5 text-right">
-                    <button
-                      type="button"
-                      className="text-sm font-semibold text-[#00d7c4] transition hover:text-[#5eead4]"
+                    <Link
+                      href={`/dashboard/trips/${trip.id}`}
+                      className="inline-flex cursor-pointer items-center gap-1 text-sm font-semibold text-[#00d7c4] underline-offset-4 transition hover:text-[#5eead4] hover:underline"
                     >
-                      View Details &gt;
-                    </button>
+                      View details
+                      <span aria-hidden className="translate-y-px">
+                        →
+                      </span>
+                    </Link>
                   </td>
                 </tr>
               ))}

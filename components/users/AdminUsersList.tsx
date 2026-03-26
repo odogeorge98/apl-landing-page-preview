@@ -134,10 +134,10 @@ export default function AdminUsersList() {
       </div>
 
       <div className={tableCard}>
-        <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <h2 className="text-base font-semibold text-white">Directory</h2>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="relative min-w-0 flex-1 sm:min-w-[240px] sm:max-w-[320px]">
+        <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 lg:flex-row lg:items-start lg:justify-between">
+          <h2 className="shrink-0 text-base font-semibold text-white">Directory</h2>
+          <div className="flex w-full min-w-0 flex-col gap-3 lg:max-w-4xl lg:flex-1 lg:items-stretch">
+            <div className="relative w-full min-w-0 lg:max-w-xl">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
               <input
                 type="search"
@@ -148,8 +148,8 @@ export default function AdminUsersList() {
                 aria-label="Search admin users"
               />
             </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2">
-              <div className="min-w-0 sm:min-w-[180px]">
+            <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:gap-2 sm:justify-end">
+              <div className="w-full shrink-0 sm:w-[min(100%,220px)]">
                 <AdminSelect
                   icon={Filter}
                   size="lg"
@@ -162,7 +162,7 @@ export default function AdminUsersList() {
                   aria-label="Filter by role"
                 />
               </div>
-              <div className="min-w-0 sm:min-w-[160px]">
+              <div className="w-full shrink-0 sm:w-[min(100%,200px)]">
                 <AdminSelect
                   size="lg"
                   options={[

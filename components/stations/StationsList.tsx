@@ -99,10 +99,10 @@ export default function StationsList({ segment }: { segment: StationSegment }) {
 
       <div className="space-y-4">
         <div className={tableCard}>
-          <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-base font-semibold text-white">All Stations</h2>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-              <div className="relative min-w-0 flex-1 sm:min-w-[260px]">
+          <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 lg:flex-row lg:items-center lg:justify-between">
+            <h2 className="shrink-0 text-base font-semibold text-white">All Stations</h2>
+            <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3 lg:max-w-3xl lg:flex-1 lg:justify-end">
+              <div className="relative min-w-0 w-full flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
                 <input
                   type="search"
@@ -111,7 +111,7 @@ export default function StationsList({ segment }: { segment: StationSegment }) {
                   aria-label="Search stations"
                 />
               </div>
-              <div className="w-full shrink-0 sm:min-w-[160px]">
+              <div className="w-full shrink-0 sm:w-[min(100%,200px)] sm:shrink-0">
                 <AdminSelect
                   icon={Filter}
                   size="lg"
