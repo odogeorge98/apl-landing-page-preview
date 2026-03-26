@@ -92,23 +92,10 @@ function TripStatusPill({ status }: { status: TripStatus }) {
   );
 }
 
-export type TripsListProps = {
-  /** Initial service line filter (e.g. inter-state route). Users can still change it. */
-  defaultServiceLineFilter?: TripServiceLine | "all";
-  headingTitle?: string;
-  headingDescription?: string;
-  tableSectionTitle?: string;
-};
-
-export default function TripsList({
-  defaultServiceLineFilter = "all",
-  headingTitle = "Trips",
-  headingDescription = "Monitor and manage every trip",
-  tableSectionTitle = "All Trips",
-}: TripsListProps = {}) {
+export default function TripsList() {
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
   const [tripFilter, setTripFilter] = useState("all");
-  const [serviceLineFilter, setServiceLineFilter] = useState<string>(defaultServiceLineFilter);
+  const [serviceLineFilter, setServiceLineFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
 
   const filteredTrips = useMemo(() => {
@@ -139,8 +126,8 @@ export default function TripsList({
     <div className="mx-auto max-w-[1600px] space-y-8">
       <div>
         <p className="text-xs text-white/40">{dateLine}</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">{headingTitle}</h1>
-        <p className="mt-1 text-sm text-white/45">{headingDescription}</p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Trips</h1>
+        <p className="mt-1 text-sm text-white/45">Monitor and manage every trip</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -157,7 +144,7 @@ export default function TripsList({
 
       <div className={tableCard}>
         <div className="flex flex-col gap-3 border-b border-white/[0.06] p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-3 sm:gap-y-2">
-          <h2 className="shrink-0 text-base font-semibold text-white">{tableSectionTitle}</h2>
+          <h2 className="shrink-0 text-base font-semibold text-white">All Trips</h2>
           <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 sm:justify-end">
             <div className="relative min-w-0 max-w-[260px] flex-1 sm:flex-initial sm:max-w-[280px]">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-white/35" />

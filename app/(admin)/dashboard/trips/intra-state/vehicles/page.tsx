@@ -1,5 +1,15 @@
-import { redirect } from "next/navigation";
+"use client";
 
-export default function LegacyIntraVehiclesRedirectPage() {
-  redirect("/dashboard/pepp-vehicles");
+import { MainLayout } from "@/components/layout/dashboard";
+import IntraStateShell from "@/components/trips/intra-state/IntraStateShell";
+import IntraStateVehiclesTable from "@/components/trips/intra-state/IntraStateVehiclesTable";
+
+export default function IntraStateVehiclesPage() {
+  return (
+    <MainLayout>
+      <IntraStateShell>
+        <IntraStateVehiclesTable />
+      </IntraStateShell>
+    </MainLayout>
+  );
 }

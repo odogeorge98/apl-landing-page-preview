@@ -1,13 +1,15 @@
 "use client";
 
-import OverviewLanding from "@/components/dashboard/OverviewLanding";
 import { MainLayout } from "@/components/layout/dashboard";
+import IntraStateBookingsReport from "@/components/trips/intra-state/IntraStateBookingsReport";
+import IntraStateShell from "@/components/trips/intra-state/IntraStateShell";
 
-/** Same experience as `/dashboard/overview` — intra-state entry in the sidebar. */
 export default function IntraStateTripsPage() {
   return (
     <MainLayout>
-      <OverviewLanding />
+      <IntraStateShell>
+        <IntraStateBookingsReport />
+      </IntraStateShell>
     </MainLayout>
   );
 }
