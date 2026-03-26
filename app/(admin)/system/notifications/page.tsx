@@ -6,7 +6,6 @@ import {
   Activity,
   AlertTriangle,
   Bell,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Inbox,
@@ -339,23 +338,17 @@ export default function NotificationsPage() {
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-2 text-xs text-white/45">
                 <span className="whitespace-nowrap">Per page</span>
-                <div className="relative">
-                  <select
-                    className="h-9 cursor-pointer appearance-none rounded-lg border border-white/[0.1] bg-white/[0.06] py-1.5 pl-2.5 pr-8 text-xs font-medium text-white outline-none focus:ring-2 focus:ring-[#8247E5]/30 [&>option]:bg-[#1c182b]"
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
+                <div className="w-[72px] shrink-0">
+                  <AdminSelect
+                    size="sm"
+                    options={perPageOptions}
+                    value={String(itemsPerPage)}
+                    onValueChange={(v) => {
+                      setItemsPerPage(Number(v));
                       setCurrentPage(1);
                     }}
                     aria-label="Rows per page"
-                  >
-                    {[10, 25, 50].map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-white/45" />
+                  />
                 </div>
               </label>
               <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] bg-white/[0.04] p-0.5">

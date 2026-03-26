@@ -3,10 +3,11 @@
 import dayjs from "dayjs";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ChevronDown, Headphones, MessageSquare, Search, Users } from "lucide-react";
+import { Headphones, MessageSquare, Search, Users } from "lucide-react";
 import { getSupportInboxRows, getSupportKpis } from "@/lib/data/support-mock";
 import type { SupportTicketStatus } from "@/lib/data/support-mock";
 import { cn } from "@/lib/utils";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 const cardBase =
   "rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95 shadow-[0_8px_40px_rgba(0,0,0,0.35)]";
@@ -115,19 +116,18 @@ export default function SupportInbox() {
                 className="h-10 w-full rounded-xl border border-white/[0.1] bg-white/[0.06] py-2 pl-10 pr-3 text-sm text-white placeholder:text-white/35 outline-none focus:ring-2 focus:ring-[#8247E5]/30"
               />
             </div>
-            <div className="relative shrink-0">
-              <select
+            <div className="w-full shrink-0 sm:w-[180px]">
+              <AdminSelect
+                options={[
+                  { value: "all", label: "All statuses" },
+                  { value: "open", label: "Open" },
+                  { value: "pending", label: "Pending" },
+                  { value: "resolved", label: "Resolved" },
+                ]}
                 value={status}
-                onChange={(e) => setStatus(e.target.value as typeof status)}
-                className="h-10 w-full min-w-[140px] cursor-pointer appearance-none rounded-xl border border-white/[0.1] bg-white/[0.06] py-2 pl-3 pr-9 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-[#8247E5]/30 sm:w-[160px] [&>option]:bg-[#1c182b]"
+                onValueChange={(v) => setStatus(v as typeof status)}
                 aria-label="Filter by status"
-              >
-                <option value="all">All statuses</option>
-                <option value="open">Open</option>
-                <option value="pending">Pending</option>
-                <option value="resolved">Resolved</option>
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-white/45" />
+              />
             </div>
           </div>
         </div>

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 const inputClass =
   "mt-2 w-full rounded-xl bg-white/[0.07] px-3 py-2.5 text-sm text-white placeholder:text-white/35 outline-none ring-[#8247E5]/30 transition focus:ring-2";
@@ -16,6 +18,9 @@ const stationTypeOptions = [
 ] as const;
 
 export default function AddStationForm() {
+  const [stationType, setStationType] = useState("");
+  const [location, setLocation] = useState("");
+
   return (
     <div className="mx-auto max-w-[900px] space-y-8">
       <div className="flex items-start gap-3">
@@ -53,26 +58,16 @@ export default function AddStationForm() {
             <label htmlFor="station-type" className={labelClass}>
               Station Type
             </label>
-            <div className="relative mt-2">
-              <select
+            <div className="mt-2">
+              <AdminSelect
                 id="station-type"
-                className={cn(
-                  "h-[42px] w-full cursor-pointer appearance-none rounded-xl bg-white/[0.07] py-2 pl-3 pr-9 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-[#a855f7]/25",
-                  "text-white/90 [&>option]:bg-[#1c182b] [&>option]:text-white",
-                )}
-                defaultValue=""
+                placeholder="Select type"
+                options={stationTypeOptions.map((opt) => ({ value: opt, label: opt }))}
+                value={stationType}
+                onValueChange={setStationType}
                 aria-label="Station type"
-              >
-                <option value="" disabled className="text-white/35">
-                  Select type
-                </option>
-                {stationTypeOptions.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-white/45" />
+                size="lg"
+              />
             </div>
           </div>
           <div>
@@ -90,24 +85,20 @@ export default function AddStationForm() {
             <label htmlFor="city-state" className={labelClass}>
               City / State
             </label>
-            <div className="relative mt-2">
-              <select
+            <div className="mt-2">
+              <AdminSelect
                 id="city-state"
-                className={cn(
-                  "h-[42px] w-full cursor-pointer appearance-none rounded-xl bg-white/[0.07] py-2 pl-3 pr-9 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-[#a855f7]/25",
-                  "text-white/90 [&>option]:bg-[#1c182b] [&>option]:text-white",
-                )}
-                defaultValue=""
+                placeholder="Select location"
+                options={[
+                  { value: "abuja", label: "Abuja, FCT" },
+                  { value: "lagos", label: "Lagos State" },
+                  { value: "kano", label: "Kano State" },
+                ]}
+                value={location}
+                onValueChange={setLocation}
                 aria-label="City or state"
-              >
-                <option value="" disabled className="text-white/35">
-                  Select location
-                </option>
-                <option value="abuja">Abuja, FCT</option>
-                <option value="lagos">Lagos State</option>
-                <option value="kano">Kano State</option>
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-white/45" />
+                size="lg"
+              />
             </div>
           </div>
         </div>

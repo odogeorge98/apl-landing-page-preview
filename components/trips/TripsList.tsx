@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import dayjs from "dayjs";
 import {
   Car,
@@ -15,6 +16,7 @@ import type { LucideIcon } from "lucide-react";
 import { mockTrips, mockTripsTotalCount, tripsKpis, type TripStatus } from "@/lib/data/trips-mock";
 import { TablePaginationBar } from "@/components/users/TablePaginationBar";
 import { cn } from "@/lib/utils";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 const tableCard =
   "overflow-hidden rounded-2xl bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95 shadow-[0_8px_40px_rgba(0,0,0,0.35)]";
@@ -84,6 +86,7 @@ function TripStatusPill({ status }: { status: TripStatus }) {
 
 export default function TripsList() {
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
+  const [tripFilter, setTripFilter] = useState("all");
   const pageStart = 1;
   const pageEnd = mockTrips.length;
 
@@ -120,19 +123,21 @@ export default function TripsList() {
                 aria-label="Search trips"
               />
             </div>
-            <label className="relative flex shrink-0 items-center sm:min-w-[140px]">
-              <Filter className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
-              <select
-                className="h-[42px] w-full cursor-pointer appearance-none rounded-xl bg-white/[0.07] py-2 pl-10 pr-9 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-[#a855f7]/25"
-                defaultValue="all"
+            <div className="w-full shrink-0 sm:min-w-[160px]">
+              <AdminSelect
+                icon={Filter}
+                size="lg"
+                options={[
+                  { value: "all", label: "All statuses" },
+                  { value: "active", label: "Active" },
+                  { value: "completed", label: "Completed" },
+                  { value: "canceled", label: "Canceled" },
+                ]}
+                value={tripFilter}
+                onValueChange={setTripFilter}
                 aria-label="Filter trips"
-              >
-                <option value="all">All statuses</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="canceled">Canceled</option>
-              </select>
-            </label>
+              />
+            </div>
           </div>
         </div>
 

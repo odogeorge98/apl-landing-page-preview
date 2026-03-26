@@ -1,7 +1,9 @@
 "use client";
 
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 export function TablePaginationBar({
   pageStart,
@@ -14,6 +16,8 @@ export function TablePaginationBar({
   total: number;
   className?: string;
 }) {
+  const [rowsPerPage, setRowsPerPage] = useState("10");
+
   return (
     <div
       className={cn(
@@ -27,17 +31,18 @@ export function TablePaginationBar({
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-xs text-white/45">
           <span>Rows per page:</span>
-          <div className="relative">
-            <select
-              className="h-8 cursor-pointer appearance-none rounded-lg bg-white/[0.07] py-1 pl-2 pr-7 text-xs font-medium text-white outline-none focus:ring-2 focus:ring-[#a855f7]/25"
-              defaultValue={10}
+          <div className="w-[68px] shrink-0">
+            <AdminSelect
+              size="sm"
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+              ]}
+              value={rowsPerPage}
+              onValueChange={setRowsPerPage}
               aria-label="Rows per page"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 size-3.5 -translate-y-1/2 text-white/45" />
+            />
           </div>
         </label>
         <div className="flex rounded-lg border border-white/[0.08] bg-white/[0.04]">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import dayjs from "dayjs";
 import Link from "next/link";
 import { ArrowUpRight, Filter, MoreVertical, Plus, Search } from "lucide-react";
@@ -12,6 +13,7 @@ import {
 } from "@/lib/data/stations-mock";
 import { TablePaginationBar } from "@/components/users/TablePaginationBar";
 import { cn } from "@/lib/utils";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 const tableCard =
   "overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95 shadow-[0_8px_40px_rgba(0,0,0,0.35)]";
@@ -55,6 +57,7 @@ export default function StationsList({ segment }: { segment: StationSegment }) {
   const category = STATION_SEGMENT_TO_CATEGORY[segment];
   const rows = mockStationsAll.filter((r) => r.category === category);
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
+  const [stationFilter, setStationFilter] = useState("all");
 
   const pageStart = 1;
   const pageEnd = rows.length;
@@ -108,18 +111,20 @@ export default function StationsList({ segment }: { segment: StationSegment }) {
                   aria-label="Search stations"
                 />
               </div>
-              <label className="relative flex shrink-0 items-center sm:min-w-[140px]">
-                <Filter className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
-                <select
-                  className="h-[42px] w-full cursor-pointer appearance-none rounded-xl bg-white/[0.07] py-2 pl-10 pr-9 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-[#a855f7]/25"
-                  defaultValue="all"
+              <div className="w-full shrink-0 sm:min-w-[160px]">
+                <AdminSelect
+                  icon={Filter}
+                  size="lg"
+                  options={[
+                    { value: "all", label: "Filter" },
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                  ]}
+                  value={stationFilter}
+                  onValueChange={setStationFilter}
                   aria-label="Filter stations"
-               >
-                  <option value="all">Filter</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </label>
+                />
+              </div>
             </div>
           </div>
 

@@ -10,6 +10,7 @@ import { downloadExcel } from "@/lib/utils";
 import { transformInvitationsToTableData } from "@/lib/utils/orgInvitation";
 import dayjs from "dayjs";
 import React, { useState } from "react";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 const tableHeaders = [
   {
@@ -77,11 +78,6 @@ const page = () => {
     setCurrentPage(1);
   }
 
-  function handleStatusChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setStatus(e.target.value);
-    setCurrentPage(1);
-  }
-
   function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
     setSelectedDate(e.target.value);
     setCurrentPage(1);
@@ -135,18 +131,24 @@ const page = () => {
                 value={searchQuery}
                 onChange={handleSearchChange}
               />
-              <div className="w-max py-2 px-4 rounded-full text-[#344054] bg-[#F7F7F7]">
-                <select
-                  className="border-0 outline-0 cursor-pointer"
-                  onChange={handleStatusChange}
+              <div className="min-w-[160px] max-w-[220px]">
+                <AdminSelect
+                  variant="light"
+                  placeholder="Status"
+                  options={[
+                    { value: "", label: "All statuses" },
+                    { value: "ACCEPTED", label: "Accepted" },
+                    { value: "PENDING", label: "Pending" },
+                    { value: "EXPIRED", label: "Expired" },
+                    { value: "REJECTED", label: "Rejected" },
+                  ]}
                   value={status}
-                >
-                  <option value="">Status</option>
-                  <option value="ACCEPTED">Accepted</option>
-                  <option value="PENDING">Pending</option>
-                  <option value="EXPIRED">Expired</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
+                  onValueChange={(v) => {
+                    setStatus(v);
+                    setCurrentPage(1);
+                  }}
+                  aria-label="Filter by status"
+                />
               </div>
             </div>
             <div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import dayjs from "dayjs";
 import Link from "next/link";
 import { Filter, Plus, Search } from "lucide-react";
@@ -8,12 +9,14 @@ import { UsersListKpi } from "./UsersListKpi";
 import { DriverStatusBadge, KycStatusText } from "./UserStatusBadge";
 import { RowActionsMenu } from "./RowActionsMenu";
 import { TablePaginationBar } from "./TablePaginationBar";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 const tableCard =
   "overflow-hidden rounded-2xl bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95 shadow-[0_8px_40px_rgba(0,0,0,0.35)]";
 
 export default function DriversList() {
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
+  const [driverFilter, setDriverFilter] = useState("all");
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-8">
@@ -53,18 +56,20 @@ export default function DriversList() {
                 aria-label="Search drivers"
               />
             </div>
-            <label className="relative flex shrink-0 items-center sm:min-w-[140px]">
-              <Filter className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
-              <select
-                className="h-[42px] w-full cursor-pointer appearance-none rounded-xl bg-white/[0.07] py-2 pl-10 pr-9 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-[#a855f7]/25"
-                defaultValue="all"
+            <div className="w-full shrink-0 sm:min-w-[160px]">
+              <AdminSelect
+                icon={Filter}
+                size="lg"
+                options={[
+                  { value: "all", label: "All filters" },
+                  { value: "active", label: "Active" },
+                  { value: "kyc", label: "KYC pending" },
+                ]}
+                value={driverFilter}
+                onValueChange={setDriverFilter}
                 aria-label="Filter drivers"
-              >
-                <option value="all">All filters</option>
-                <option value="active">Active</option>
-                <option value="kyc">KYC pending</option>
-              </select>
-            </label>
+              />
+            </div>
           </div>
         </div>
 

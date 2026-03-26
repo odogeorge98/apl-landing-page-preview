@@ -1,6 +1,14 @@
 "use client";
 
 import React, { useState } from 'react'
+import AdminSelect from '@/components/ui/AdminSelect'
+
+const timeZoneOptions = [
+  { value: '(GMT +01:00) West Africa Time - Lagos', label: '(GMT +01:00) West Africa Time - Lagos' },
+  { value: '(GMT +00:00) Greenwich Mean Time', label: '(GMT +00:00) Greenwich Mean Time' },
+  { value: '(GMT -05:00) Eastern Time', label: '(GMT -05:00) Eastern Time' },
+  { value: '(GMT -08:00) Pacific Time', label: '(GMT -08:00) Pacific Time' },
+]
 
 const GeneralSettings = () => {
   const [isEditing, setIsEditing] = useState(false)
@@ -104,16 +112,14 @@ const GeneralSettings = () => {
             </div>
             <div className='md:w-[300px] flex-shrink-0'>
               {isEditing ? (
-                <select
+                <AdminSelect
+                  variant="light"
+                  options={timeZoneOptions}
                   value={timeZone}
-                  onChange={(e) => setTimeZone(e.target.value)}
-                  className='w-full px-4 py-2 border border-[#D5D9DE] rounded-[8px] text-sm text-[#212121] focus:outline-none focus:ring-2 focus:ring-[#5F3DF4] focus:border-transparent bg-white'
-                >
-                  <option value="(GMT +01:00) West Africa Time - Lagos">(GMT +01:00) West Africa Time - Lagos</option>
-                  <option value="(GMT +00:00) Greenwich Mean Time">(GMT +00:00) Greenwich Mean Time</option>
-                  <option value="(GMT -05:00) Eastern Time">(GMT -05:00) Eastern Time</option>
-                  <option value="(GMT -08:00) Pacific Time">(GMT -08:00) Pacific Time</option>
-                </select>
+                  onValueChange={setTimeZone}
+                  placeholder="Select time zone"
+                  aria-label="Time zone"
+                />
               ) : (
                 <span className='text-sm md:text-base text-[#212121] font-medium'>{timeZone}</span>
               )}

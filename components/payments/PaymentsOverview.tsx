@@ -7,7 +7,6 @@ import {
   ArrowUpRight,
   Calendar,
   Car,
-  ChevronDown,
   ChevronRight,
   Clock,
   MoreVertical,

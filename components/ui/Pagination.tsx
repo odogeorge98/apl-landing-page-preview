@@ -1,6 +1,11 @@
+"use client";
+
 import React from 'react'
 import { cn } from '@/lib/utils';
 import { ArrowLeftIcon, ArrowRightIcon } from './Icons';
+import AdminSelect from '@/components/ui/AdminSelect';
+
+const itemsPerPageOptions = ['5', '10', '15', '20', '25'].map((v) => ({ value: v, label: v }));
 
 
 interface IPagination {
