@@ -24,6 +24,7 @@ import {
   paymentsTrendRevenue,
 } from "@/lib/data/payments-mock";
 import { cn } from "@/lib/utils";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 const cardBase =
   "rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95 shadow-[0_8px_40px_rgba(0,0,0,0.35)]";
@@ -44,39 +45,6 @@ function smoothLinePath(points: { x: number; y: number }[]): string {
 function smoothAreaPath(points: { x: number; y: number }[], baseY: number): string {
   if (points.length === 0) return "";
   return `${smoothLinePath(points)} L ${points[points.length - 1]!.x} ${baseY} L ${points[0]!.x} ${baseY} Z`;
-}
-
-function ChartFilterSelect({
-  icon: Icon,
-  className,
-  children,
-  ...rest
-}: React.ComponentProps<"select"> & {
-  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-}) {
-  return (
-    <label className={cn("relative inline-flex w-full max-w-[220px] shrink-0", className)}>
-      {Icon ? (
-        <Icon
-          className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-white/40"
-          strokeWidth={1.75}
-        />
-      ) : null}
-      <select
-        className={cn(
-          "h-9 w-full min-w-[180px] cursor-pointer appearance-none rounded-xl bg-white/[0.07] py-2 text-xs font-medium text-white outline-none transition hover:bg-white/[0.09] focus:ring-2 focus:ring-[#a855f7]/25",
-          Icon ? "pl-9 pr-9" : "pl-3 pr-9",
-        )}
-        {...rest}
-      >
-        {children}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-white/45"
-        strokeWidth={1.75}
-      />
-    </label>
-  );
 }
 
 const kpiIcons: Record<(typeof paymentsKpis)[number]["key"], LucideIcon> = {
@@ -381,7 +349,14 @@ function PersonCell({ name, email }: { name: string; email: string }) {
 
 const linkClass = "text-sm font-semibold text-[#00d7c4] transition hover:text-[#5eead4]";
 
+const paymentsPeriodOptions = [
+  { value: "2024", label: "Jan 2024 - Dec 2024" },
+  { value: "2023", label: "Jan 2023 - Dec 2023" },
+] as const;
+
 export default function PaymentsOverview() {
+  const [paymentsPeriod, setPaymentsPeriod] = React.useState("2024");
+
   return (
     <div className="mx-auto max-w-[1600px] space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -433,10 +408,15 @@ export default function PaymentsOverview() {
                 Payout
               </span>
             </div>
-            <ChartFilterSelect icon={Calendar} defaultValue="2024" aria-label="Payments period">
-              <option value="2024">Jan 2024 - Dec 2024</option>
-              <option value="2023">Jan 2023 - Dec 2023</option>
-            </ChartFilterSelect>
+            <AdminSelect
+              icon={Calendar}
+              size="sm"
+              className="inline-flex w-full max-w-[220px] shrink-0"
+              options={[...paymentsPeriodOptions]}
+              value={paymentsPeriod}
+              onValueChange={setPaymentsPeriod}
+              aria-label="Payments period"
+            />
           </div>
           <div className="relative min-h-0 w-full flex-1">
             <PaymentsTrendChart />

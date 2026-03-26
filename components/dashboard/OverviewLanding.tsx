@@ -20,6 +20,7 @@ import {
   ArrowUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 const kpi = [
   {
@@ -85,44 +86,6 @@ function smoothAreaPath(points: { x: number; y: number }[], baseY: number): stri
   const last = points[points.length - 1]!;
   const first = points[0]!;
   return `${line} L ${last.x} ${baseY} L ${first.x} ${baseY} Z`;
-}
-
-function ChartFilterSelect({
-  icon: Icon,
-  className,
-  children,
-  ...rest
-}: React.ComponentProps<"select"> & {
-  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-}) {
-  return (
-    <label
-      className={cn(
-        "relative inline-flex w-full max-w-[220px] shrink-0 sm:max-w-none",
-        className,
-      )}
-    >
-      {Icon ? (
-        <Icon
-          className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-white/40"
-          strokeWidth={1.75}
-        />
-      ) : null}
-      <select
-        className={cn(
-          "h-9 min-h-[36px] w-full min-w-[118px] cursor-pointer appearance-none rounded-xl bg-white/[0.07] py-2 text-left text-xs font-medium text-white outline-none transition hover:bg-white/[0.09] focus:ring-2 focus:ring-[#a855f7]/25",
-          Icon ? "pl-9 pr-9" : "pl-3 pr-9",
-        )}
-        {...rest}
-      >
-        {children}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-white/45"
-        strokeWidth={1.75}
-      />
-    </label>
-  );
 }
 
 function TrendPill({ children }: { children: React.ReactNode }) {
@@ -461,8 +424,23 @@ function TripsChart() {
   );
 }
 
+const revenueRangeOptions = [
+  { value: "2024", label: "Jan 2024 - Dec 2024" },
+  { value: "2023", label: "Jan 2023 - Dec 2023" },
+  { value: "q4", label: "Oct 2024 - Dec 2024" },
+] as const;
+
+const shortPeriodOptions = [
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "week", label: "This week" },
+] as const;
+
 export default function OverviewLanding() {
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
+  const [revenueRange, setRevenueRange] = React.useState("2024");
+  const [profitPeriod, setProfitPeriod] = React.useState("today");
+  const [tripsPeriod, setTripsPeriod] = React.useState("today");
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-8">
@@ -512,16 +490,15 @@ export default function OverviewLanding() {
               </span>
             </div>
             <div className="flex justify-stretch lg:justify-self-end">
-              <ChartFilterSelect
+              <AdminSelect
                 icon={Calendar}
-                defaultValue="2024"
+                size="sm"
                 className="w-full sm:min-w-[200px]"
+                options={[...revenueRangeOptions]}
+                value={revenueRange}
+                onValueChange={setRevenueRange}
                 aria-label="Revenue date range"
-              >
-                <option value="2024">Jan 2024 - Dec 2024</option>
-                <option value="2023">Jan 2023 - Dec 2023</option>
-                <option value="q4">Oct 2024 - Dec 2024</option>
-              </ChartFilterSelect>
+              />
             </div>
           </div>
           <div className="relative mt-2 min-h-0 flex-1">
@@ -547,11 +524,14 @@ export default function OverviewLanding() {
                   </TrendPill>
                 </div>
               </div>
-              <ChartFilterSelect defaultValue="today" className="sm:max-w-[120px]" aria-label="Profit period">
-                <option value="today">Today</option>
-                <option value="yesterday">Yesterday</option>
-                <option value="week">This week</option>
-              </ChartFilterSelect>
+              <AdminSelect
+                size="sm"
+                className="sm:max-w-[140px]"
+                options={[...shortPeriodOptions]}
+                value={profitPeriod}
+                onValueChange={setProfitPeriod}
+                aria-label="Profit period"
+              />
             </div>
             <ProfitChart />
           </section>
@@ -571,11 +551,14 @@ export default function OverviewLanding() {
                   </TrendPill>
                 </div>
               </div>
-              <ChartFilterSelect defaultValue="today" className="sm:max-w-[120px]" aria-label="Trips period">
-                <option value="today">Today</option>
-                <option value="yesterday">Yesterday</option>
-                <option value="week">This week</option>
-              </ChartFilterSelect>
+              <AdminSelect
+                size="sm"
+                className="sm:max-w-[140px]"
+                options={[...shortPeriodOptions]}
+                value={tripsPeriod}
+                onValueChange={setTripsPeriod}
+                aria-label="Trips period"
+              />
             </div>
             <TripsChart />
             <div className="mt-4 flex items-center gap-2">

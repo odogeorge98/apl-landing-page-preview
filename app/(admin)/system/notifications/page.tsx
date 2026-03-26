@@ -16,12 +16,17 @@ import { MainLayout } from "@/components/layout/dashboard";
 import Modals from "@/components/ui/dashboard/modals";
 import { notificationsData } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 const cardBase =
   "rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95 shadow-[0_8px_40px_rgba(0,0,0,0.35)]";
 
-const selectClass =
-  "h-10 w-full min-w-[140px] cursor-pointer appearance-none rounded-xl border border-white/[0.1] bg-white/[0.06] py-2 pl-3 pr-9 text-sm font-medium text-white outline-none transition hover:bg-white/[0.08] focus:ring-2 focus:ring-[#8247E5]/30 sm:w-auto [&>option]:bg-[#1c182b]";
+const typeFilterOptions = ["All Type", "Lead", "System", "Meeting", "Agent", "Team"].map((o) => ({
+  value: o,
+  label: o,
+}));
+const statusFilterOptions = ["All Status", "Unread", "Read"].map((o) => ({ value: o, label: o }));
+const perPageOptions = [10, 25, 50].map((n) => ({ value: String(n), label: String(n) }));
 
 type NotificationRow = (typeof notificationsData)[number];
 
@@ -203,41 +208,29 @@ export default function NotificationsPage() {
           <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <h2 className="text-sm font-semibold text-white">Activity feed</h2>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-              <div className="relative w-full sm:w-[170px]">
-                <select
-                  className={selectClass}
+              <div className="w-full sm:w-[170px]">
+                <AdminSelect
+                  size="md"
+                  options={typeFilterOptions}
                   value={selectedType}
-                  onChange={(e) => {
-                    setSelectedType(e.target.value);
+                  onValueChange={(v) => {
+                    setSelectedType(v);
                     setCurrentPage(1);
                   }}
                   aria-label="Filter by type"
-                >
-                  {["All Type", "Lead", "System", "Meeting", "Agent", "Team"].map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-white/45" />
+                />
               </div>
-              <div className="relative w-full sm:w-[170px]">
-                <select
-                  className={selectClass}
+              <div className="w-full sm:w-[170px]">
+                <AdminSelect
+                  size="md"
+                  options={statusFilterOptions}
                   value={selectedStatus}
-                  onChange={(e) => {
-                    setSelectedStatus(e.target.value);
+                  onValueChange={(v) => {
+                    setSelectedStatus(v);
                     setCurrentPage(1);
                   }}
                   aria-label="Filter by status"
-                >
-                  {["All Status", "Unread", "Read"].map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-white/45" />
+                />
               </div>
             </div>
           </div>

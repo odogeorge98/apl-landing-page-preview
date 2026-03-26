@@ -31,8 +31,17 @@ import {
   ArrowRightLeft,
   LogOut,
   Inbox,
+  SlidersHorizontal,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
+/** General settings lives at `/system/settings` only (not `/system/settings/trips`, etc.). */
+function isNavSubActive(pathname: string, subHref: string): boolean {
+  if (subHref === "/system/settings") {
+    return pathname === "/system/settings" || pathname === "/system/settings/";
+  }
+  return pathname === subHref || pathname.startsWith(`${subHref}/`);
+}
 
 const headerNotifications = [
   {
@@ -121,7 +130,16 @@ const mainNav: NavEntry[] = [
       },
     ],
   },
-  { name: "Settings", href: "/system/settings?page=profile", icon: Settings, expandable: true },
+  {
+    name: "Settings",
+    href: "#",
+    icon: Settings,
+    expandable: true,
+    subItems: [
+      { name: "General", href: "/system/settings", icon: SlidersHorizontal },
+      { name: "Trips", href: "/system/settings/trips", icon: Car },
+    ],
+  },
 ];
 
 function SidebarNav({
@@ -161,9 +179,7 @@ function SidebarNav({
         const Icon = item.icon;
         const baseHref = item.href.split("?")[0];
         const subItemMatch =
-          item.subItems?.some(
-            (s) => pathname === s.href || pathname.startsWith(`${s.href}/`),
-          ) ?? false;
+          item.subItems?.some((s) => isNavSubActive(pathname, s.href)) ?? false;
         const stationsSection =
           item.name === "Stations" && pathname.startsWith("/dashboard/stations");
         const paymentsSection =
@@ -228,8 +244,7 @@ function SidebarNav({
                 <ul className="mt-1 space-y-0.5 border-l border-white/[0.06] pl-3 ml-4">
                   {item.subItems.map((sub) => {
                     const SubIcon = sub.icon;
-                    const subActive =
-                      pathname === sub.href || pathname.startsWith(`${sub.href}/`);
+                    const subActive = isNavSubActive(pathname, sub.href);
                     return (
                       <li key={sub.href}>
                         <Link
@@ -589,7 +604,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                       ) : null}
                     </div>
                     <Link
-                      href="/system/settings?page=profile"
+                      href="/system/settings"
                       role="menuitem"
                       className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/85 transition hover:bg-white/[0.06]"
                       onClick={() => setAccountOpen(false)}

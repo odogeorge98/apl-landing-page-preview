@@ -6,12 +6,20 @@ import { MainLayout } from "@/components/layout/dashboard";
 import { Modal } from "@/components/ui/Modal";
 import { Pencil, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 const cardBase =
   "rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95 shadow-[0_8px_40px_rgba(0,0,0,0.35)]";
 
 const inputDark =
   "w-full rounded-xl border border-white/[0.1] bg-white/[0.06] px-4 py-2.5 text-sm text-white placeholder:text-white/35 outline-none transition focus:ring-2 focus:ring-[#8247E5]/35";
+
+const timeZoneOptions = [
+  { value: "(GMT +01:00) West Africa Time - Lagos", label: "(GMT +01:00) West Africa Time - Lagos" },
+  { value: "(GMT +00:00) Greenwich Mean Time", label: "(GMT +00:00) Greenwich Mean Time" },
+  { value: "(GMT -05:00) Eastern Time", label: "(GMT -05:00) Eastern Time" },
+  { value: "(GMT -08:00) Pacific Time", label: "(GMT -08:00) Pacific Time" },
+];
 
 const SettingsContent = () => {
   const [showEditModal, setShowEditModal] = useState(false);
@@ -140,19 +148,14 @@ const SettingsContent = () => {
             <label htmlFor="tz" className="text-sm font-medium text-white/70">
               Time zone <span className="text-rose-400">*</span>
             </label>
-            <select
+            <AdminSelect
               id="tz"
+              options={timeZoneOptions}
               value={timeZone}
-              onChange={(e) => setTimeZone(e.target.value)}
-              className={cn(inputDark, "cursor-pointer [&>option]:bg-[#1c182b]")}
-            >
-              <option value="(GMT +01:00) West Africa Time - Lagos">
-                (GMT +01:00) West Africa Time - Lagos
-              </option>
-              <option value="(GMT +00:00) Greenwich Mean Time">(GMT +00:00) Greenwich Mean Time</option>
-              <option value="(GMT -05:00) Eastern Time">(GMT -05:00) Eastern Time</option>
-              <option value="(GMT -08:00) Pacific Time">(GMT -08:00) Pacific Time</option>
-            </select>
+              onValueChange={setTimeZone}
+              placeholder="Select time zone"
+              aria-label="Time zone"
+            />
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <button
