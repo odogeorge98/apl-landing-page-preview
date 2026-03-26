@@ -107,8 +107,12 @@ const mainNav: NavEntry[] = [
       { name: "All trips", href: "/dashboard/trips", icon: ListOrdered },
       { name: "Intra state", href: "/dashboard/trips/intra-state", icon: MapPinned },
       { name: "Inter state", href: "/dashboard/trips/inter-state", icon: Route },
-      { name: "PEPP vehicles", href: "/dashboard/trips/intra-state/vehicles", icon: Bus },
     ],
+  },
+  {
+    name: "PEPP vehicles",
+    href: "/dashboard/pepp-vehicles",
+    icon: Bus,
   },
   {
     name: "Payments",

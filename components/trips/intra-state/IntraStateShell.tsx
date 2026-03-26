@@ -11,13 +11,13 @@ const tabs: {
 }[] = [
   {
     href: "/dashboard/trips/intra-state",
-    label: "Bookings report",
+    label: "Overview",
     isActive: (p) => p === "/dashboard/trips/intra-state" || p === "/dashboard/trips/intra-state/",
   },
   {
-    href: "/dashboard/trips/intra-state/vehicles",
-    label: "PEPP vehicles",
-    isActive: (p) => p.startsWith("/dashboard/trips/intra-state/vehicles"),
+    href: "/dashboard/trips/intra-state/bookings",
+    label: "Bookings report",
+    isActive: (p) => p.startsWith("/dashboard/trips/intra-state/bookings"),
   },
   {
     href: "/dashboard/trips/intra-state/create",
@@ -34,11 +34,14 @@ export default function IntraStateShell({ children }: { children: React.ReactNod
       <div>
         <p className="text-xs text-white/40">Trips · Intra state</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-          Intra state operations
+          Intra state
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-white/45">
-          Terminal bookings, PEPP fleet assigned to drivers, and scheduled departures — aligned with the
-          mobile intra-state flow.
+          Dashboard overview, terminal bookings, and trip creation. PEPP fleet lives under{" "}
+          <Link href="/dashboard/pepp-vehicles" className="font-semibold text-[#00d7c4] hover:underline">
+            PEPP vehicles
+          </Link>
+          .
         </p>
       </div>
 
