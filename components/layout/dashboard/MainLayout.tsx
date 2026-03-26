@@ -323,7 +323,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div
-      className="relative min-h-[100dvh] overflow-x-hidden font-sans antialiased text-white"
+      className="relative min-h-[100dvh] font-sans antialiased text-white"
       style={{
         background:
           "radial-gradient(ellipse 85% 55% at 10% -10%, rgba(168,85,247,0.22), transparent 52%), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(59,130,246,0.08), transparent 45%), #0e0b16",
@@ -473,7 +473,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Main column */}
       <div className={cn("min-h-[100dvh] transition-[padding] duration-300", mainPad)}>
-        <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0e0b16]/80 px-4 py-4 backdrop-blur-lg sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-[38] border-b border-white/[0.06] bg-[#0e0b16]/92 px-4 py-4 shadow-[0_4px_24px_rgba(0,0,0,0.18)] backdrop-blur-xl backdrop-saturate-150 sm:px-6 lg:px-8 supports-[backdrop-filter]:bg-[#0e0b16]/88">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-1 items-start gap-3">
               <button
@@ -631,7 +631,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </header>
 
-        <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
     </div>
   );

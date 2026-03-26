@@ -3,10 +3,20 @@
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Mail, MessageSquare, Phone, Send, User } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Mail,
+  MessageSquare,
+  Phone,
+  RotateCcw,
+  Send,
+  User,
+} from "lucide-react";
 import type { SupportCustomer, SupportMessage, SupportTicket } from "@/lib/data/support-mock";
 import { getSupportCustomer } from "@/lib/data/support-mock";
 import { cn } from "@/lib/utils";
+import { showSuccess } from "@/lib/utils/error-handler";
 
 const cardBase =
   "rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95 shadow-[0_8px_40px_rgba(0,0,0,0.35)]";
@@ -146,6 +156,50 @@ export default function SupportCustomerView() {
     window.setTimeout(() => setSending(false), 280);
   };
 
+  const formatNow = () =>
+    new Date().toLocaleString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+  const resolveTicket = () => {
+    if (!activeTicketId) return;
+    const sentAt = formatNow();
+    setCustomer((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tickets: prev.tickets.map((t) =>
+          t.id === activeTicketId
+            ? { ...t, status: "resolved" as const, updatedAt: sentAt }
+            : t,
+        ),
+      };
+    });
+    showSuccess("Ticket marked as resolved.");
+  };
+
+  const reopenTicket = () => {
+    if (!activeTicketId) return;
+    const sentAt = formatNow();
+    setCustomer((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tickets: prev.tickets.map((t) =>
+          t.id === activeTicketId
+            ? { ...t, status: "open" as const, updatedAt: sentAt }
+            : t,
+        ),
+      };
+    });
+    showSuccess("Ticket reopened.");
+  };
+
   return (
     <div className="mx-auto max-w-[1600px] space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -274,6 +328,42 @@ export default function SupportCustomerView() {
                 })}
               </div>
 
+              <div className="border-t border-white/[0.06] bg-white/[0.02] p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+                      <CheckCircle2 className="size-5" strokeWidth={1.75} />
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">Resolve ticket</h3>
+                      <p className="mt-0.5 text-xs leading-relaxed text-white/45">
+                        Close this thread when the issue is fixed or no further action is needed. The
+                        customer can still open a new ticket later.
+                      </p>
+                    </div>
+                  </div>
+                  {activeTicket.status === "resolved" ? (
+                    <button
+                      type="button"
+                      onClick={reopenTicket}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.1] sm:self-center"
+                    >
+                      <RotateCcw className="size-4" strokeWidth={1.75} />
+                      Reopen ticket
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={resolveTicket}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-emerald-600/90 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-emerald-600 sm:self-center"
+                    >
+                      <CheckCircle2 className="size-4" strokeWidth={1.75} />
+                      Mark as resolved
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="border-t border-white/[0.06] p-4 sm:p-5">
                 <label htmlFor="support-reply" className="sr-only">
                   Reply to customer
@@ -284,16 +374,18 @@ export default function SupportCustomerView() {
                   onChange={(e) => setDraft(e.target.value)}
                   rows={3}
                   placeholder="Write a reply to the customer…"
-                  className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder:text-white/35 outline-none focus:ring-2 focus:ring-[#8247E5]/35"
+                  disabled={activeTicket.status === "resolved"}
+                  className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder:text-white/35 outline-none focus:ring-2 focus:ring-[#8247E5]/35 disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <p className="text-xs text-white/35">
-                    Replies appear instantly for this demo. Ticket stays pending until you resolve it in
-                    your process.
+                    {activeTicket.status === "resolved"
+                      ? "This ticket is resolved. Reopen it above to send another reply."
+                      : "Replies are saved for this demo. Use Resolve ticket when the case is closed."}
                   </p>
                   <button
                     type="button"
-                    disabled={!draft.trim() || sending}
+                    disabled={!draft.trim() || sending || activeTicket.status === "resolved"}
                     onClick={sendReply}
                     className="inline-flex items-center gap-2 rounded-xl bg-[#8B5CF6] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#7c3aed] disabled:cursor-not-allowed disabled:opacity-45"
                   >

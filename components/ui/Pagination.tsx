@@ -103,19 +103,20 @@ const Pagination = ({
             <div>
                 <p className="text-gray-700">Showing {startCount} - {endCount} of {totalData} results</p>
             </div>
-            <div className="inline-flex gap-3 text-gray-700">
+            <div className="inline-flex items-center gap-3 text-gray-700">
                 <span>Item per page</span>
-                <select
-                onChange={(e) => onChange(e)}
-                value={itemsPerPage}
-                className="border border-gray-500/20 px-2 py-1 rounded-sm"
-                >
-                    <option>5</option>
-                    <option>10</option>
-                    <option>15</option>
-                    <option>20</option>
-                    <option>25</option>
-                </select>
+                <div className="w-[76px]">
+                  <AdminSelect
+                    variant="light"
+                    size="sm"
+                    options={itemsPerPageOptions}
+                    value={String(itemsPerPage)}
+                    onValueChange={(v) =>
+                      onChange({ target: { value: v } } as React.ChangeEvent<HTMLSelectElement>)
+                    }
+                    aria-label="Items per page"
+                  />
+                </div>
             </div>
         </div>
         <ul className="flex items-center space-x-2">

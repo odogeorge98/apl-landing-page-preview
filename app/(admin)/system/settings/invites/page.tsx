@@ -136,7 +136,7 @@ const page = () => {
                   variant="light"
                   placeholder="Status"
                   options={[
-                    { value: "", label: "All statuses" },
+                    { value: "", label: "Status" },
                     { value: "ACCEPTED", label: "Accepted" },
                     { value: "PENDING", label: "Pending" },
                     { value: "EXPIRED", label: "Expired" },
