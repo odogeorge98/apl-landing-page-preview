@@ -136,6 +136,7 @@ class HttpClient {
         ? endpoint
         : `${config.api.baseUrl}/admin${endpoint}`;
 
+      console.log('Url: ', url);
       const response: AxiosResponse<T> = await this.axiosInstance.request({
         method,
         url,

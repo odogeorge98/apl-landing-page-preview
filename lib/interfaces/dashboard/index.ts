@@ -4,6 +4,20 @@ export interface StatisticItem {
   isPositive: boolean;
 }
 
+export interface DashboardKpiResponse {
+  status: string;
+  statusCode: number;
+  message: string;
+  data: DashboardKpi;
+}
+
+export interface DashboardKpi {
+  ongoingTrips: number;
+  activeDrivers: number;
+  activeUsers: number;
+  pendingDisputes?: number;
+  pendingPayouts?: number;
+}
 export interface DashboardStatistics {
   totalOrganizationsOnboarded: StatisticItem;
   totalSubscriptions: StatisticItem;

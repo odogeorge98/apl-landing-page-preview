@@ -19,41 +19,12 @@ import {
   Timer,
   ArrowUp,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+
 import { cn } from "@/lib/utils";
 import AdminSelect from "@/components/ui/AdminSelect";
-
-const kpi = [
-  {
-    title: "Ongoing Trips (live)",
-    value: "113",
-    trend: "+20% from yesterday",
-    icon: Route,
-  },
-  {
-    title: "Active Drivers",
-    value: "182",
-    trend: "+12% from yesterday",
-    icon: Users,
-  },
-  {
-    title: "Active Passengers",
-    value: "327",
-    trend: "+8% from yesterday",
-    icon: UserCircle,
-  },
-  {
-    title: "Pending Disputes",
-    value: "5",
-    trend: "Stable",
-    icon: AlertCircle,
-  },
-  {
-    title: "Pending Payouts",
-    value: "5",
-    trend: "+3% from yesterday",
-    icon: Wallet,
-  },
-];
+import { fetchDashboardKpi } from "@/lib/api/dashboard/index";
+import { mapKpiData } from "@/lib/utils/dashboard/mapKpi";
 
 const attention = [
   { text: "3 Drivers Awaiting approval…", link: "#" },
@@ -436,11 +407,32 @@ const shortPeriodOptions = [
   { value: "week", label: "This week" },
 ] as const;
 
+// --------------------
+// Skeleton Loader
+// --------------------
+function KpiSkeleton() {
+  return (
+    <div className="h-[120px] animate-pulse rounded-2xl bg-white/5" />
+  );
+}
+
 export default function OverviewLanding() {
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
   const [revenueRange, setRevenueRange] = React.useState("2024");
   const [profitPeriod, setProfitPeriod] = React.useState("today");
   const [tripsPeriod, setTripsPeriod] = React.useState("today");
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["dashboard-kpi"],
+    queryFn: fetchDashboardKpi,
+    refetchInterval: 60000, // auto refresh every 30s
+  });
+
+  if (isError) {
+    console.error("Dashboard KPI error: ", error);
+  }
+
+  const kpiData = data ? mapKpiData(data.data) : [];
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-8">
@@ -453,9 +445,20 @@ export default function OverviewLanding() {
 
       {/* KPI row */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {kpi.map((card) => (
-          <KpiCard key={card.title} {...card} />
-        ))}
+        {isLoading
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <KpiSkeleton key={i} />
+            ))
+          : isError
+          ? (
+            <div className="col-span-full text-red-400 text-sm">
+              Failed to load dashboard metrics
+            </div>
+          )
+          : kpiData.map((card) => (
+              <KpiCard key={card.title} {...card} />
+            ))
+          }
       </div>
 
       {/* Charts row */}

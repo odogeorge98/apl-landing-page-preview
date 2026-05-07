@@ -7,6 +7,7 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { loginUser } from "@/lib/api/auth/index";
 import { LoginData } from "@/lib/interfaces/auth";
 import useAuthStore from "@/lib/store/auth";
 import {
@@ -42,24 +43,50 @@ const Login = () => {
       setVisible((prev) => !prev);
     },
 
-    handleSubmit(e: React.FormEvent) {
+    async handleSubmit(e: React.FormEvent) {
       e.preventDefault();
+      // const emailTrim = loginData.email.trim();
+      // storeLogin(
+      //   {
+      //     ...MOCK_ADMIN_USER,
+      //     email: emailTrim || MOCK_ADMIN_USER.email,
+      //   },
+      //   MOCK_PREVIEW_TOKEN
+      // );
+      // showSuccess("Login successful!");
+      // if (rememberMe && typeof window !== "undefined") {
+      //   try {
+      //     window.localStorage.setItem("peppcruise_admin_remember", "7d");
+      //   } catch {
+      //     /* ignore */
+      //   }
+      // }
       const emailTrim = loginData.email.trim();
-      storeLogin(
-        {
-          ...MOCK_ADMIN_USER,
-          email: emailTrim || MOCK_ADMIN_USER.email,
-        },
-        MOCK_PREVIEW_TOKEN
-      );
+
+      const response = await loginUser({
+        email: emailTrim,
+        password: loginData.password,
+        rememberMe,
+      });
+      console.log('Response: ', response);
+
+      // handle OTP flow
+      // if (response.requiresOtp) {
+      //   router.push(`/verify-otp?email=${encodeURIComponent(emailTrim)}`);
+      //   return;
+      // }
+
+      // store tokens + user
+      useAuthStore.getState().login(response.user, response.token);
+
       showSuccess("Login successful!");
+
       if (rememberMe && typeof window !== "undefined") {
         try {
           window.localStorage.setItem("peppcruise_admin_remember", "7d");
-        } catch {
-          /* ignore */
-        }
+        } catch {}
       }
+
       const redirectTo = searchParams.get("redirect") || "/dashboard/overview";
       router.push(redirectTo);
     },

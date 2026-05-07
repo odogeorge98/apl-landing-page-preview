@@ -17,6 +17,7 @@ export async function loginUser(data: LoginData): Promise<LoginResponse> {
     const response = await http.publicRequest<any>("POST", "/auth/login", {
       email: data.email,
       password: data.password,
+      rememberMe: data.rememberMe,
     });
 
     const result = response.data;

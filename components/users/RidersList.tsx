@@ -4,19 +4,44 @@ import { useState } from "react";
 import dayjs from "dayjs";
 import Link from "next/link";
 import { Filter, Plus, Search } from "lucide-react";
-import { mockRiders, ridersKpis } from "@/lib/data/users-mock";
+import { useQuery } from "@tanstack/react-query";
+import { mapRidersKpi } from "@/lib/utils/dashboard/riders/mapKpi";
+import { mockRiders } from "@/lib/data/users-mock";
 import { UsersListKpi } from "./UsersListKpi";
 import { RiderStatusBadge } from "./UserStatusBadge";
 import { RowActionsMenu } from "./RowActionsMenu";
 import { TablePaginationBar } from "./TablePaginationBar";
 import AdminSelect from "@/components/ui/AdminSelect";
 
+import { fetchRidersKpi } from "@/lib/api/users/riders/index";
+
 const tableCard =
   "overflow-hidden rounded-2xl bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95 shadow-[0_8px_40px_rgba(0,0,0,0.35)]";
+
+// --------------------
+// Skeleton Loader
+// --------------------
+function KpiSkeleton() {
+  return (
+    <div className="h-[120px] animate-pulse rounded-2xl bg-white/5" />
+  );
+}
 
 export default function RidersList() {
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
   const [riderFilter, setRiderFilter] = useState("all");
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["riders-kpi"],
+    queryFn: fetchRidersKpi,
+    refetchInterval: 60000, // auto refresh every 30s
+  });
+
+  if (isError) {
+    console.error("Riders KPI error: ", error);
+  }
+
+  const ridersKpis = data ? mapRidersKpi(data.data) : [];
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-8">
@@ -38,9 +63,20 @@ export default function RidersList() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {ridersKpis.map((k) => (
-          <UsersListKpi key={k.title} title={k.title} value={k.value} />
-        ))}
+        {isLoading
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <KpiSkeleton key={i} />
+            ))
+          : isError
+          ? (
+            <div className="col-span-full text-red-400 text-sm">
+              Failed to load riders metrics
+            </div>
+          )
+          : ridersKpis.map((card) => (
+              <UsersListKpi key={card.title} title={card.title} value={card.value} />
+            ))
+          }
       </div>
 
       <div className={tableCard}>

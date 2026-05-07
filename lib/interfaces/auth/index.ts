@@ -1,33 +1,34 @@
 export interface LoginData {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface User {
   id: string;
   email: string;
   role: string;
-  orgRole: string;
-  isVerified: boolean;
-  isActive: boolean;
-  organizationId: string;
-  createdAt: string;
-  updatedAt: string;
-  organization: {
-    id: string;
-    name: string;
-    type: string;
-    email: string;
-    createdAt: string;
-    updatedAt: string;
-  };
+  // orgRole: string;
+  // isVerified: boolean;
+  // isActive: boolean;
+  // organizationId: string;
+  // createdAt: string;
+  // updatedAt: string;
+  // organization: {
+  //   id: string;
+  //   name: string;
+  //   type: string;
+  //   email: string;
+  //   createdAt: string;
+  //   updatedAt: string;
+  // };
 }
 
 export interface LoginResponse {
   success: boolean;
   message?: string;
-  token?: string;
-  user?: User;
+  token: string;
+  user: User;
 }
 
 export interface LoginError {
