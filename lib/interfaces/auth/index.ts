@@ -4,33 +4,74 @@ export interface LoginData {
   rememberMe?: boolean;
 }
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: string;
+}
 export interface User {
   id: string;
   email: string;
   role: string;
-  // orgRole: string;
-  // isVerified: boolean;
-  // isActive: boolean;
-  // organizationId: string;
-  // createdAt: string;
-  // updatedAt: string;
-  // organization: {
-  //   id: string;
-  //   name: string;
-  //   type: string;
-  //   email: string;
-  //   createdAt: string;
-  //   updatedAt: string;
-  // };
+  orgRole: string;
+  isVerified: boolean;
+  isActive: boolean;
+  organizationId: string;
+  createdAt: string;
+  updatedAt: string;
+  organization: {
+    id: string;
+    name: string;
+    type: string;
+    email: string;
+    createdAt: string;
+    updatedAt: string;
+  };
 }
+
+// export interface LoginResponse {
+//   success: boolean;
+//   message?: string;
+//   token: string;
+//   user: User;
+// }
 
 export interface LoginResponse {
   success: boolean;
   message?: string;
-  token: string;
-  user: User;
+  /** Present when login succeeded and a token was issued. */
+  user?: AuthUser;
+  token?: string;
+  /**
+   * True when the backend recognised the credentials but doesn't know this
+   * device yet — an OTP has been sent and the user must verify via /verify-otp.
+   */
+  requiresOtp?: boolean;
 }
 
+// ─── Verify OTP ───────────────────────────────────────────────────────────────
+
+export interface DeviceInfo {
+  /** FCM push token — send empty string if not applicable. */
+  deviceFCMToken: string;
+  /** Human-readable device name, max 50 chars (backend DTO constraint). */
+  name: string;
+}
+
+export interface VerifyOtpData {
+  email: string;
+  password: string;
+  otp: string;
+  rememberMe: boolean;
+  deviceInfo: DeviceInfo;
+}
+
+export interface VerifyOtpResponse {
+  success: boolean;
+  message?: string;
+  user?: any;
+  token: string;
+}
 export interface LoginError {
   message: string;
   field?: string;

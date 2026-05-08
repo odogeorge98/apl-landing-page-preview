@@ -26,6 +26,13 @@ import AdminSelect from "@/components/ui/AdminSelect";
 import { fetchDashboardKpi } from "@/lib/api/dashboard/index";
 import { mapKpiData } from "@/lib/utils/dashboard/mapKpi";
 
+type KpiItem = {
+  title: string;
+  value: string | number;
+  trend: string;
+  icon: React.ElementType;
+};
+
 const attention = [
   { text: "3 Drivers Awaiting approval…", link: "#" },
   { text: "6 Payout requests pending", link: "#" },
@@ -72,7 +79,7 @@ function KpiCard({
   value,
   trend,
   icon: Icon,
-}: (typeof kpi)[number]) {
+}: KpiItem) {
   return (
     <div
       className={cn(

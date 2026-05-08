@@ -10,48 +10,122 @@ import {
   OnboardingResponse,
   AdminOnboardingData,
   AdminOnboardingResponse,
+  VerifyOtpData,
+  VerifyOtpResponse,
 } from "@/lib/interfaces/auth";
+import { getOrCreateDeviceToken } from "@/lib/utils/auth/device-token";
+
+// ─── Auth API functions ───────────────────────────────────────────────────────
+
+// ─── Note on URL construction ─────────────────────────────────────────────────
+// makeRequest prepends `${config.api.baseUrl}/admin` to every non-internal
+// endpoint. So pass paths *without* the leading /admin segment:
+//   "/auth/login"       →  .../admin/auth/login        (login)
+//   "/auth/login-otp"   →  .../admin/auth/login-otp    (verify OTP)
+//
+// Verify these match your backend routes if they ever diverge from the
+// /admin/* convention.
+// ─────────────────────────────────────────────────────────────────────────────
 
 export async function loginUser(data: LoginData): Promise<LoginResponse> {
   try {
-    const response = await http.publicRequest<any>("POST", "/auth/login", {
-      email: data.email,
-      password: data.password,
-      rememberMe: data.rememberMe,
-    });
+    const deviceToken = getOrCreateDeviceToken();
+
+    const response = await http.deviceRequest<any>(
+      "POST",
+      "/auth/login",
+      deviceToken,
+      {
+        email: data.email,
+        password: data.password,
+        rememberMe: data.rememberMe,
+      },
+    );
 
     const result = response.data;
 
-    if (result.status === "error") {
-      const errorMessage = result.message || "An error occurred";
-      throw new Error(errorMessage);
-    }
-
-    // Handle both possible response structures
-    const user = result.data?.user || result.user;
-    const token = result.data?.token || result.token;
-
-    if (result.status === "success") {
+    // Handle explicit OTP-required flag from the backend
+    if (result.requiresOtp === true || result.data?.requiresOtp === true) {
       return {
-        success: true,
-        message: result.message || "Login successful!",
-        user: user,
-        token: token,
+        success: false,
+        requiresOtp: true,
+        message: result.message || "OTP verification required",
       };
     }
+
+    if (result.status === "error") {
+      throw new Error(result.message || "An error occurred");
+    }
+
+    const token = result.data?.token ?? result.token;
+    const user = result.data ?? result.user;
 
     return {
       success: true,
       message: result.message || "Login successful!",
-      user: user,
-      token: token,
+      user,
+      token,
     };
   } catch (error) {
     if (error instanceof Error) {
+      // Backend may signal an unrecognised device via an error message
+      // rather than a structured flag — catch that case here.
+      const lower = error.message.toLowerCase();
+      if (
+        lower.includes("otp") ||
+        lower.includes("device") ||
+        lower.includes("otp_required")
+      ) {
+        return {
+          success: false,
+          requiresOtp: true,
+          message: error.message,
+        };
+      }
       throw error;
     }
-
     throw new Error("Login failed. Please try again.");
+  }
+}
+
+export async function verifyOtp(data: VerifyOtpData): Promise<VerifyOtpResponse> {
+  try {
+    const deviceToken = getOrCreateDeviceToken();
+
+    const response = await http.deviceRequest<any>(
+      "POST",
+      "/auth/login-otp",
+      deviceToken,
+      {
+        email: data.email,
+        password: data.password,
+        otp: data.otp,
+        rememberMe: data.rememberMe,
+        deviceInfo: {
+          deviceFCMToken: data.deviceInfo.deviceFCMToken,
+          name: data.deviceInfo.name,
+        },
+      },
+    );
+
+    const result = response.data;
+
+    if (result.status === "error") {
+      throw new Error(result.message || "An error occurred");
+    }
+
+    const token = result.data?.token ?? result.token;
+    const user = result.data ?? result.user;
+
+    return {
+      success: true,
+      message: result.message || "Login successful!",
+      user,
+      token,
+    };
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error("OTP verification failed. Please try again.");
   }
 }
 

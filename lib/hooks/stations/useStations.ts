@@ -1,10 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchStationsSummary, fetchStations, fetchStationDetail, createStation } from "@/lib/api/stations";
 import type {
-  CreateStationPayload,
+  // CreateStationPayload,
   StationBadge,
   StationSource,
 } from "@/lib/types/stations";
+import type {
+  CreateStationPayload,
+  // CreateStationResponse,
+} from "@/lib/interfaces/stations";
 
 // ─── Query Key Factory ────────────────────────────────────────────────────────
 // Centralised key factory keeps cache invalidation predictable across the app.
@@ -13,8 +17,20 @@ export const stationKeys = {
   all: ["stations"] as const,
   summary: () => [...stationKeys.all, "summary"] as const,
   lists: () => [...stationKeys.all, "list"] as const,
-  list: (badge?: StationBadge, cursor?: string) =>
-    [...stationKeys.lists(), { badge, cursor }] as const,
+  list: ({
+    stationType,
+    cursor,
+    limit,
+    status,
+    search
+  }: {
+    stationType: StationSource;
+    status?: boolean;
+    cursor?: string | null;
+    limit?: number;
+    search?: string;
+  }) =>
+    [...stationKeys.lists(), { stationType, cursor, limit, status, search }] as const,
   details: () => [...stationKeys.all, "detail"] as const,
   detail: (source: StationSource, id: string) =>
     [...stationKeys.details(), source, id] as const,
@@ -34,21 +50,26 @@ export function useStationsSummary() {
 interface UseStationsListParams {
   cursor?: string | null;
   limit?: number;
-  stationType?: StationSource | "ALL";
+  stationType: StationSource;
+  status?: boolean;
+  search?: string;
 }
 
 export function useStationsList({
-//   badge,
   cursor,
   limit,
   stationType,
-}: UseStationsListParams = {}) {
+  status,
+  search,
+}: UseStationsListParams) {
   return useQuery({
     queryKey: stationKeys.list({
     //   badge,
       cursor,
       limit,
       stationType,
+      status,
+      search,
     }),
 
     queryFn: () =>
@@ -56,7 +77,9 @@ export function useStationsList({
         // badge,
         cursor,
         limit,
-        stationType
+        stationType,
+        status,
+        search,
       }),
 
     staleTime: 30_000,

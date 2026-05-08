@@ -21,7 +21,7 @@ export function isStationSegment(s: string): s is StationSegment {
 // `null` means the API does not yet expose a matching source type.
 // TODO: Replace null with "CNG_CONVERSION" once the API supports it.
 
-export const SEGMENT_TO_SOURCE: Record<StationSegment, StationSource | null> = {
+export const SEGMENT_TO_SOURCE: Record<StationSegment, StationSource> = {
   "cng-conversion": "CNG_CONVERSION",
   "cng-stations": "CNG",
   "charging-stations": "EV_CHARGING",

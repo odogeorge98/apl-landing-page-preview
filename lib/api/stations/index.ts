@@ -43,9 +43,11 @@ export async function fetchStationsSummary(): Promise<StationsSummaryResponse> {
  * Returns a paginated list of all stations.
  */
 export async function fetchStations(params?: {
-  badge?: StationBadge;
   cursor?: string | null;
+  limit?: number,
   stationType: StationSource;
+  status?: boolean;
+  search?: string;
 }): Promise<StationsListResponse> {
   try {
     const queryParams = buildQueryParams(params || {});

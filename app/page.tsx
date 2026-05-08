@@ -6,6 +6,7 @@ import InputField from "@/components/ui/InputField";
 import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { AuthUser } from "@/lib/interfaces/auth";
 
 import { loginUser } from "@/lib/api/auth/index";
 import { LoginData } from "@/lib/interfaces/auth";
@@ -15,6 +16,7 @@ import {
   MOCK_PREVIEW_TOKEN,
 } from "@/lib/dev/mock-admin-user";
 import { showSuccess } from "@/lib/utils/error-handler";
+import { saveOtpSession } from "@/lib/utils/auth/otp-session";
 
 const Login = () => {
   const router = useRouter();
@@ -45,22 +47,6 @@ const Login = () => {
 
     async handleSubmit(e: React.FormEvent) {
       e.preventDefault();
-      // const emailTrim = loginData.email.trim();
-      // storeLogin(
-      //   {
-      //     ...MOCK_ADMIN_USER,
-      //     email: emailTrim || MOCK_ADMIN_USER.email,
-      //   },
-      //   MOCK_PREVIEW_TOKEN
-      // );
-      // showSuccess("Login successful!");
-      // if (rememberMe && typeof window !== "undefined") {
-      //   try {
-      //     window.localStorage.setItem("peppcruise_admin_remember", "7d");
-      //   } catch {
-      //     /* ignore */
-      //   }
-      // }
       const emailTrim = loginData.email.trim();
 
       const response = await loginUser({
@@ -68,17 +54,21 @@ const Login = () => {
         password: loginData.password,
         rememberMe,
       });
-      console.log('Response: ', response);
 
-      // handle OTP flow
-      // if (response.requiresOtp) {
-      //   router.push(`/verify-otp?email=${encodeURIComponent(emailTrim)}`);
-      //   return;
-      // }
+      // ── OTP flow ─────────────────────────────────────────────────────────────
+      if (response.requiresOtp) {
+        // Store credentials temporarily so the OTP page can complete the login.
+        // They are cleared immediately after use on the verify-otp page.
+        saveOtpSession(emailTrim, loginData.password, rememberMe);
+        router.push(`/verify-otp`);
+        return;
+      }
 
-      // store tokens + user
-      useAuthStore.getState().login(response.user, response.token);
-
+      // ── Direct login ──────────────────────────────────────────────────────────
+      if (!response.token || !response.user) {
+        throw new Error("Invalid login response: missing token or user");
+      }
+      storeLogin(response.user, response.token);
       showSuccess("Login successful!");
 
       if (rememberMe && typeof window !== "undefined") {

@@ -26,7 +26,7 @@ import AdminSelect from "@/components/ui/AdminSelect";
 
 import { cn } from "@/lib/utils";
 
-import type { StationListItem } from "@/lib/types/stations";
+import type { StationListItem } from "@/lib/interfaces/stations";
 
 // ────────────────────────────────────────────────────────────────────────────────
 // Styles
@@ -164,7 +164,7 @@ export default function StationsList({
   // Queries
   // ────────────────────────────────────────────────────────────────────────────
 
-  const stationType = SEGMENT_TO_SOURCE[segment] ?? undefined;
+  const stationType = SEGMENT_TO_SOURCE[segment];
   const {
     data: summaryData,
     isLoading: summaryLoading,
@@ -179,6 +179,11 @@ export default function StationsList({
     cursor,
     limit: rowsPerPage,
     stationType,
+    search: searchQuery.trim() || undefined,
+    status:
+      statusFilter === "all"
+        ? undefined
+        : statusFilter === "active",
   });
   // ────────────────────────────────────────────────────────────────────────────
   // KPI Data
@@ -216,37 +221,8 @@ export default function StationsList({
   // ────────────────────────────────────────────────────────────────────────────
 
   const rows = useMemo<StationListItem[]>(() => {
-    // const source = SEGMENT_TO_SOURCE[segment];
-
-    let items = listData?.data.items ?? [];
-    console.log('Items: ', items);
-
-    // Filter by station source
-    // if (source !== null) {
-    //   items = items.filter((item) => item.source === source);
-    // }
-
-    // Filter by active status
-    if (statusFilter === "active") {
-      items = items.filter((item) => item.isActive);
-    } else if (statusFilter === "inactive") {
-      items = items.filter((item) => !item.isActive);
-    }
-
-    // Search
-    const q = searchQuery.trim().toLowerCase();
-
-    if (q) {
-      items = items.filter(
-        (item) =>
-          item.name.toLowerCase().includes(q) ||
-          item.address.toLowerCase().includes(q) ||
-          item.location.toLowerCase().includes(q),
-      );
-    }
-
-    return items;
-  }, [listData, segment, statusFilter, searchQuery]);
+    return listData?.data.items ?? [];
+  }, [listData]);
 
   // ────────────────────────────────────────────────────────────────────────────
   // Pagination Values
@@ -310,6 +286,13 @@ export default function StationsList({
     // reset pagination
     setCursor(null);
 
+    setCursorStack([null]);
+  };
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+
+    // reset pagination
+    setCursor(null);
     setCursorStack([null]);
   };
 
@@ -404,7 +387,7 @@ export default function StationsList({
                     { value: "inactive", label: "Inactive" },
                   ]}
                   value={statusFilter}
-                  onValueChange={setStatusFilter}
+                  onValueChange={handleStatusFilterChange}
                   aria-label="Filter by status"
                 />
               </div>

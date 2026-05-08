@@ -25,6 +25,7 @@ const AUTH_ROUTES = [
   '/register',
   '/forgot-password',
   '/reset-password',
+  '/verify-otp',
   '/onboarding',
   '/plans',
 ];

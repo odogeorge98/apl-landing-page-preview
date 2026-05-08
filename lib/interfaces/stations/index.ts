@@ -37,6 +37,7 @@ export interface StationListItem {
 export interface StationsListData {
   items: StationListItem[];
   nextCursor: string | null;
+  total: number;
 }
 
 export interface StationsListResponse {

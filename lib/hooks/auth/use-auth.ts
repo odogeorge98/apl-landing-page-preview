@@ -18,8 +18,8 @@ export const useAuth = () => {
     isLoading: requestLoading,
     isAuthenticated: !!token && !!authUser,
     isAdmin: authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'SONA_ADMIN',
-    isOwner: authUser?.orgRole === 'OWNER',
-    organization: authUser?.organization,
+    isOwner: (authUser as any)?.orgRole === 'OWNER',
+    organization: (authUser as any)?.organization,
     
     // Actions
     setAuthUser,

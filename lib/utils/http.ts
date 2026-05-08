@@ -88,22 +88,46 @@ class HttpClient {
       (error: AxiosError) => {
         if (error.response) {
           const { data, status } = error.response;
+          console.log('Resss data: ', data);
           
           if (status === 401) {
+            const message = (data as any)?.message || "";
+            const url = error.config?.url || "";
+
+            const isAuthEndpoint =
+              url.includes("/auth/login") ||
+              url.includes("/auth/login-otp") ||
+              url.includes("/auth/verify-otp");
+
+            const isOtpFlow =
+              message.toLowerCase().includes("otp") ||
+              message.toLowerCase().includes("otp_required");
+
+            // 1. OTP / device verification flow → DO NOT logout
+            if (isAuthEndpoint || isOtpFlow) {
+              throw new HttpError(
+                message || "OTP required",
+                status,
+                data
+              );
+            }
+
+            // 2. Real session expiry (only after login success exists)
             const token =
               typeof window !== "undefined"
                 ? localStorage.getItem("auth_token")
                 : null;
-            if (token !== MOCK_PREVIEW_TOKEN) {
+
+            if (token) {
               const { logout } = useAuthStore.getState();
               logout();
-
-              if (typeof window !== "undefined") {
-                window.location.href = "/";
-              }
             }
 
-            throw new HttpError("Session expired. Please log in again.", status, data);
+            throw new HttpError(
+              "Session expired. Please log in again.",
+              status,
+              data
+            );
           }
           
           const message =
@@ -225,6 +249,36 @@ class HttpClient {
     return this.makeRequest<T>(method, endpoint, data, {
       requiresAuth: false,
       ...options,
+    });
+  }
+  /**
+   * Makes a public (unauthenticated) request and attaches the
+   * `x-client-device-token` header.
+   *
+   * Used by auth flows that need a device fingerprint before a Bearer token
+   * exists — login and verify-OTP. Builds on `makeRequest` so all existing
+   * interceptors (error normalisation, 401 redirect, etc.) remain in effect.
+   *
+   * Any additional headers passed via `options.headers` are merged and will
+   * not override the device token.
+   */
+  async deviceRequest<T>(
+    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+    endpoint: string,
+    deviceToken: string,
+    data?: any,
+    options: HttpOptions = {},
+  ): Promise<HttpResponse<T>> {
+    const { headers: callerHeaders, ...restOptions } = options;
+
+    return this.makeRequest<T>(method, endpoint, data, {
+      requiresAuth: false,
+      headers: {
+        // Caller-supplied headers first so the device token always wins
+        ...(callerHeaders as Record<string, string> | undefined),
+        "x-client-device-token": deviceToken,
+      },
+      ...restOptions,
     });
   }
 }
