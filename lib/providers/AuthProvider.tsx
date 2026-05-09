@@ -70,7 +70,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Handle protected routes
     if (isProtectedRoute && !isAuthenticated) {
-      router.push('/');
+      router.push(`/?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 
@@ -91,7 +91,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       router.push(`/?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
-  }, [pathname, isInitialized, isAuthenticated, authUser, router]);
+  }, [pathname, isInitialized, isAuthenticated, router]);
 
   // Show loading while initializing
   if (!isInitialized) {

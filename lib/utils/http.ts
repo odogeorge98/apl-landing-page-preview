@@ -88,16 +88,16 @@ class HttpClient {
       (error: AxiosError) => {
         if (error.response) {
           const { data, status } = error.response;
-          console.log('Resss data: ', data);
+          // console.log('Resss data: ', data);
           
           if (status === 401) {
             const message = (data as any)?.message || "";
             const url = error.config?.url || "";
 
             const isAuthEndpoint =
-              url.includes("/auth/login") ||
               url.includes("/auth/login-otp") ||
-              url.includes("/auth/verify-otp");
+              url.includes("/auth/verify-otp") ||
+              url.includes("/auth/login");
 
             const isOtpFlow =
               message.toLowerCase().includes("otp") ||
@@ -121,6 +121,9 @@ class HttpClient {
             if (token) {
               const { logout } = useAuthStore.getState();
               logout();
+              if (typeof window !== "undefined") {
+                window.location.href = "/login";
+              }
             }
 
             throw new HttpError(
@@ -160,7 +163,7 @@ class HttpClient {
         ? endpoint
         : `${config.api.baseUrl}/admin${endpoint}`;
 
-      console.log('Url: ', url);
+      // console.log('Url: ', url);
       const response: AxiosResponse<T> = await this.axiosInstance.request({
         method,
         url,
@@ -293,4 +296,5 @@ export const {
   delete: del,
   upload,
   publicRequest,
+  deviceRequest,
 } = http;

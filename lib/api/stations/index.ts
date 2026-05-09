@@ -51,7 +51,7 @@ export async function fetchStations(params?: {
 }): Promise<StationsListResponse> {
   try {
     const queryParams = buildQueryParams(params || {});
-    console.log('Params: ', params);
+    // console.log('Params: ', params);
     const url = `/stations/all${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
     }`;

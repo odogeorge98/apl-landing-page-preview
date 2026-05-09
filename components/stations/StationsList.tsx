@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import dayjs from "dayjs";
 import Link from "next/link";
 import {
@@ -140,7 +140,23 @@ export default function StationsList({
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
 
   const [statusFilter, setStatusFilter] = useState("all");
+  // `searchQuery`    → bound to the input (updates on every keystroke)
+  // `debouncedSearch` → what actually goes to the API (fires 400ms after typing stops)
+
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = searchQuery.trim();
+
+      // Only reset cursor + fire query when the debounced value actually changes
+      setDebouncedSearch(trimmed);
+      setCursor(null);
+      setCursorStack([null]);
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // ────────────────────────────────────────────────────────────────────────────
   // Cursor Pagination State
@@ -179,7 +195,7 @@ export default function StationsList({
     cursor,
     limit: rowsPerPage,
     stationType,
-    search: searchQuery.trim() || undefined,
+    search: debouncedSearch || undefined,
     status:
       statusFilter === "all"
         ? undefined

@@ -1,46 +1,33 @@
-import { v4 as uuidv4 } from "uuid";
-
-const DEVICE_TOKEN_KEY = "peppcruise_device_id";
-
 /**
- * Returns a stable, browser-scoped device token.
+ * Device token utilities for PEPPCruise admin.
  *
- * Generated once on first visit and persisted in localStorage so the backend
- * can identify trusted devices across sessions and skip OTP for returning logins.
+ * The "device token" is a Firebase Cloud Messaging (FCM) registration token —
+ * a stable, browser-scoped identifier that the backend uses to:
+ *  1. Recognise trusted devices and skip OTP on returning logins.
+ *  2. Deliver push notifications to this browser instance.
  *
- * Gracefully degrades when localStorage is blocked (private mode, sandboxed
- * iframes, etc.) — in that case a session-scoped UUID is returned. The device
- * won't be "remembered" but auth will still work via OTP.
+ * Token lifecycle is managed entirely by lib/firebase/messaging.ts.
+ * This module re-exports the functions under the names the rest of the
+ * codebase already uses so callers need no changes.
  */
-export function getOrCreateDeviceToken(): string {
-  if (typeof window === "undefined") {
-    // SSR path — never used for real auth requests; prevents build-time crashes.
-    return "ssr-placeholder";
-  }
 
-  try {
-    const existing = window.localStorage.getItem(DEVICE_TOKEN_KEY);
-    if (existing) return existing;
+export {
+  getOrCreateFcmToken as getOrCreateDeviceToken,
+  refreshFcmToken,
+  clearFcmToken,
+} from "@/lib/services/firebase/messaging";
 
-    const fresh = uuidv4();
-    window.localStorage.setItem(DEVICE_TOKEN_KEY, fresh);
-    return fresh;
-  } catch {
-    // localStorage unavailable — return a one-off UUID for this session.
-    return uuidv4();
-  }
-}
+// ─── Device name ──────────────────────────────────────────────────────────────
 
 /**
- * Returns a human-readable device name string capped at 50 chars to satisfy
- * the backend DTO's MaxLength(50) constraint.
+ * Returns a human-readable device name string.
+ * Capped at 50 chars to match the backend DTO's MaxLength(50) constraint.
  */
 export function buildDeviceName(): string {
   if (typeof window === "undefined") return "Web Server";
 
   const ua = navigator.userAgent ?? "Web";
 
-  // userAgentData is available in modern Chromium browsers.
   const platform =
     (
       navigator as Navigator & {
