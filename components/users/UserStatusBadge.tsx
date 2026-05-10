@@ -3,6 +3,8 @@
 import { cn } from "@/lib/utils";
 import type { DriverStatus, KycStatus, RiderStatus } from "@/lib/data/users-mock";
 
+export type TripBadgeStatus = "Active" | "Completed" | "Cancelled";
+
 const riderStatusStyles: Record<RiderStatus, string> = {
   Active: "bg-emerald-500/15 text-emerald-400",
   Inactive: "bg-white/10 text-white/55",
@@ -43,12 +45,12 @@ export function KycStatusText({ status }: { status: KycStatus }) {
 export function TripActivityBadge({
   status,
 }: {
-  status: "Active" | "Completed" | "Canceled";
+  status: TripBadgeStatus;
 }) {
   const map = {
     Active: "bg-teal-500/15 text-teal-300",
     Completed: "bg-emerald-500/15 text-emerald-400",
-    Canceled: "bg-white/10 text-white/45",
+    Cancelled: "bg-white/10 text-white/45",
   } as const;
   return (
     <span
