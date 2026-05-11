@@ -9,6 +9,7 @@ export type AdminUserStatus = "pending" | "active" | "expired";
 
 export type AdminUser = {
   id: string;
+  initials?: string;
   name: string;
   email: string;
   phone: string;

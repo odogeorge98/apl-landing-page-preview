@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 import AdminSelect from "@/components/ui/AdminSelect";
 
 interface TablePaginationBarProps {
-  pageStart: number;
-  pageEnd: number;
-  total: number;
+  pageStart?: number;
+  pageEnd?: number;
+  total?: number;
 
   className?: string;
 
@@ -72,9 +72,17 @@ export function TablePaginationBar({
         className,
       )}
     >
-      <p className="text-xs text-white/45">
-        {safePageStart} - {safePageEnd} of {total}
-      </p>
+      <div className="min-h-[20px] flex-1">
+        {total != null &&
+          total > 0 &&
+          pageStart != null &&
+          pageEnd != null && (
+            <p className="text-sm text-white/45">
+              Showing {pageStart.toLocaleString()}–
+              {pageEnd.toLocaleString()} of {total.toLocaleString()}
+            </p>
+          )}
+      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-xs text-white/45">

@@ -36,34 +36,46 @@ export function useRidersList(params: FindRidersFilter) {
   });
 }
 
-export function useUserDetail(userId: string) {
+export function useUserDetail(
+  userId: string,
+  enabled = true,
+) {
   return useQuery({
     queryKey: [...riderKeys.all, "detail", userId],
     queryFn:  () => fetchUserById(userId),
-    enabled:  Boolean(userId),
+    enabled: enabled && Boolean(userId),
     staleTime: 30_000,
   });
 }
 
-export function useUserActivitySummary(userId: string) {
+export function useUserActivitySummary(
+  userId: string,
+  enabled = true,
+) {
   return useQuery({
     queryKey: riderKeys.activitySummary(userId),
     queryFn:  () => fetchUserActivitySummary(userId),
-    enabled:  Boolean(userId),
+    enabled: enabled && Boolean(userId),
     staleTime: 30_000,
   });
 }
 
-export function useUserRideHistory(
-  userId: string,
-  cursor?: string | null,
+export function useUserRideHistory({
+  userId,
+  cursor,
   limit = 4,
-) {
+  enabled = true,
+}: {
+  userId: string;
+  cursor?: string | null;
+  limit?: number;
+  enabled?: boolean;
+}) {
   return useQuery({
     queryKey: riderKeys.rideHistory(userId, cursor),
-    queryFn:  () => fetchUserRideHistory(userId, cursor, limit),
-    enabled:  Boolean(userId),
+    queryFn: () => fetchUserRideHistory(userId, cursor, limit),
+    enabled: enabled && Boolean(userId),
     staleTime: 30_000,
-    placeholderData: (prev) => prev, // keeps previous page visible while fetching next
+    placeholderData: (prev) => prev,
   });
 }

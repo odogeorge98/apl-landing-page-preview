@@ -26,6 +26,11 @@ import {
   useUserActivitySummary,
   useUserRideHistory,
 } from "@/lib/hooks/users/riders/use-riders";
+import {
+  useDriverDetail,
+  useDriverActivitySummary,
+  useDriverRideHistory,
+} from "@/lib/hooks/users/drivers/use-drivers";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -146,27 +151,104 @@ export function UserRecordDetail({
   const [ridesCursorStack, setRidesCursorStack] = useState<(string | null)[]>([null]);
 
   // ── Queries ───────────────────────────────────────────────────────────────
+  const isDriver = kind === "driver";
+
+  // ─── Rider queries ──────────────────────────────────────────────────────────
+
+  const riderDetailQuery = useUserDetail(
+    userId,
+    !isDriver,
+  );
+
+  const riderSummaryQuery = useUserActivitySummary(
+    userId,
+    !isDriver,
+  );
+
+  const riderRidesQuery = useUserRideHistory({
+    userId,
+    cursor: ridesCursor,
+    enabled: !isDriver,
+  });
+
+  // ─── Driver queries ─────────────────────────────────────────────────────────
+
+  const driverDetailQuery = useDriverDetail(
+    userId,
+    isDriver,
+  );
+
+  const driverSummaryQuery = useDriverActivitySummary(
+    userId,
+    isDriver,
+  );
+
+  const driverRidesQuery = useDriverRideHistory({
+    driverId: userId,
+    cursor: ridesCursor,
+    enabled: isDriver,
+  });
+
+  // ─── Active source selection ───────────────────────────────────────────────
+
+  const detailQuery =
+    kind === "driver"
+      ? driverDetailQuery
+      : riderDetailQuery;
+
+  const summaryQuery =
+    kind === "driver"
+      ? driverSummaryQuery
+      : riderSummaryQuery;
+
+  const ridesQuery =
+    kind === "driver"
+      ? driverRidesQuery
+      : riderRidesQuery;
+
+  // ─── Extract values ────────────────────────────────────────────────────────
+
   const {
     data: userResponse,
     isLoading: profileLoading,
     isError: profileError,
     refetch: refetchProfile,
-  } = useUserDetail(userId);
+  } = detailQuery;
 
   const {
     data: activitySummaryResponse,
     isLoading: summaryLoading,
     isError: summaryError,
-  } = useUserActivitySummary(userId);
+  } = summaryQuery;
 
   const {
     data: ridesResponse,
     isLoading: ridesLoading,
     isFetching: ridesFetching,
     isError: ridesError,
-  } = useUserRideHistory(userId, ridesCursor);
+  } = ridesQuery;
 
-  const profile          = userResponse?.data;
+  const rawProfile = userResponse?.data;
+
+  const profile = rawProfile
+    ? {
+        ...rawProfile,
+
+        fullName:
+          "fullName" in rawProfile
+            ? rawProfile.fullName
+            : "Driver",
+
+        phoneNumber:
+          "phoneNumber" in rawProfile
+            ? rawProfile.phoneNumber
+            : rawProfile.phoneNo,
+
+        shortDescription:
+          rawProfile.shortDescription ?? null,
+      }
+    : null;
+
   const activitySummary  = activitySummaryResponse?.data;
   const rides            = ridesResponse?.data.items ?? [];
   const ridesNextCursor  = ridesResponse?.data.nextCursor ?? null;
@@ -299,19 +381,34 @@ export function UserRecordDetail({
                   <div className={divider}>
                     <div className={row}>
                       <span className="text-sm text-white/45">Email</span>
-                      <span className="text-sm font-medium text-white">{profile.email}</span>
+                      <span className="text-sm font-medium text-white">{profile.email ?? "—"}</span>
                     </div>
                   </div>
                   <div className={divider}>
                     <div className={row}>
                       <span className="text-sm text-white/45">Phone Number</span>
                       {editing ? (
-                        <input defaultValue={profile.phoneNumber} className="w-full max-w-md rounded-xl bg-white/[0.08] px-3 py-2 text-right text-sm text-white outline-none ring-[#8247E5]/30 focus:ring-2 sm:text-left" />
+                        <input defaultValue={profile.phoneNumber ?? "—"} className="w-full max-w-md rounded-xl bg-white/[0.08] px-3 py-2 text-right text-sm text-white outline-none ring-[#8247E5]/30 focus:ring-2 sm:text-left" />
                       ) : (
-                        <span className="text-sm font-medium tabular-nums text-white">{profile.phoneNumber}</span>
+                        <span className="text-sm font-medium tabular-nums text-white">{profile.phoneNumber ?? "—"}</span>
                       )}
                     </div>
                   </div>
+                  {kind === "driver" && (
+                    <div className={divider}>
+                      <div className={row}>
+                        <span className="text-sm text-white/45">Vehicle</span>
+
+                        <span className="text-sm font-medium text-white">
+                          {profile.vehicleName || profile.vehiclePlate
+                            ? [profile.vehicleName, profile.vehiclePlate]
+                                .filter(Boolean)
+                                .join(" • ")
+                            : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   <div className={divider}>
                     <div className={cn(row, "!items-start")}>
                       <span className="text-sm text-white/45">Photo</span>

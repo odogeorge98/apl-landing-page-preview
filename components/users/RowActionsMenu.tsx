@@ -16,7 +16,6 @@ export function RowActionsMenu({ profileHref }: { profileHref: string }) {
   const [pos, setPos]     = useState<MenuPosition>({ top: 0, right: 0 });
   const triggerRef        = useRef<HTMLButtonElement>(null);
   const menuRef           = useRef<HTMLDivElement>(null);
-  const rafRef            = useRef<number | null>(null);
 
   // ── Position ──────────────────────────────────────────────────────────────
   // Reads the trigger's viewport rect. Called on open and on every scroll
@@ -42,35 +41,46 @@ export function RowActionsMenu({ profileHref }: { profileHref: string }) {
   useEffect(() => {
     if (!open) return;
 
-    // On any scroll (table horizontal, page vertical, sidebar) recompute
-    // position on the next animation frame — smooth and no layout thrashing.
-    const handleScroll = () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(syncPosition);
-    };
-
     const handleClickOutside = (e: MouseEvent) => {
       if (
         triggerRef.current?.contains(e.target as Node) ||
         menuRef.current?.contains(e.target as Node)
-      ) return;
+      ) {
+        return;
+      }
+
       setOpen(false);
     };
 
-    // Resize changes viewport dimensions so close is the safe fallback.
-    const handleResize = () => setOpen(false);
+    // Close menu on scroll instead of recalculating position
+    const handleScroll = () => {
+      setOpen(false);
+    };
+
+    // Resize can invalidate positioning
+    const handleResize = () => {
+      setOpen(false);
+    };
 
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("scroll",    handleScroll,      { capture: true, passive: true });
-    window.addEventListener("resize",      handleResize);
+
+    document.addEventListener("scroll", handleScroll, {
+      capture: true,
+      passive: true,
+    });
+
+    window.addEventListener("resize", handleResize);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("scroll",    handleScroll,  { capture: true });
-      window.removeEventListener("resize",      handleResize);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+      document.removeEventListener("scroll", handleScroll, {
+        capture: true,
+      });
+
+      window.removeEventListener("resize", handleResize);
     };
-  }, [open, syncPosition]);
+  }, [open]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
