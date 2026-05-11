@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchAdminUsers, fetchAdminSummary } from "@/lib/api/admin";
-import type { FindAdminFilter } from "@/lib/interfaces/admin";
+import { fetchAdminUsers, fetchAdminSummary } from "@/lib/api/admin/admin";
+import type { FindAdminFilter } from "@/lib/interfaces/admin/admin";
 
 // ─── Query key factory ────────────────────────────────────────────────────────
 
@@ -25,7 +25,11 @@ export function useAdminSummary() {
 export function useAdminList(params: FindAdminFilter = {}) {
   return useQuery({
     queryKey: adminKeys.list(params),
-    queryFn:  () => fetchAdminUsers(params),
+
+    queryFn: () => fetchAdminUsers(params),
+
     staleTime: 30_000,
+
+    placeholderData: (previousData) => previousData,
   });
 }

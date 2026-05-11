@@ -400,11 +400,15 @@ export function UserRecordDetail({
                         <span className="text-sm text-white/45">Vehicle</span>
 
                         <span className="text-sm font-medium text-white">
-                          {profile.vehicleName || profile.vehiclePlate
-                            ? [profile.vehicleName, profile.vehiclePlate]
-                                .filter(Boolean)
-                                .join(" • ")
-                            : "—"}
+                          {("vehicleName" in profile && profile.vehicleName) ||
+                            ("vehiclePlate" in profile && profile.vehiclePlate)
+                              ? [
+                                  "vehicleName" in profile ? profile.vehicleName : null,
+                                  "vehiclePlate" in profile ? profile.vehiclePlate : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" • ")
+                              : "No vehicle assigned"}
                         </span>
                       </div>
                     </div>
