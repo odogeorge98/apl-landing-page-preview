@@ -88,7 +88,6 @@ class HttpClient {
       (error: AxiosError) => {
         if (error.response) {
           const { data, status } = error.response;
-          // console.log('Resss data: ', data);
           
           if (status === 401) {
             const message = (data as any)?.message || "";
@@ -163,7 +162,6 @@ class HttpClient {
         ? endpoint
         : `${config.api.baseUrl}/admin${endpoint}`;
 
-      // console.log('Url: ', url);
       const response: AxiosResponse<T> = await this.axiosInstance.request({
         method,
         url,

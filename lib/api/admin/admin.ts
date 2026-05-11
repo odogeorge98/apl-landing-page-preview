@@ -48,10 +48,6 @@ export async function fetchAdminUsers(
       ? `?${params.toString()}`
       : "";
 
-    console.log(
-      "Fetching admin users with endpoint:",
-      endpoint,
-    );
 
     const response = await http.get<any>(endpoint);
 
@@ -66,8 +62,6 @@ export async function fetchAdminUsers(
       body?.data?.nextCursor ??
       body?.nextCursor ??
       null;
-
-    console.log("Fetched admin data:", items);
 
     return {
       items,

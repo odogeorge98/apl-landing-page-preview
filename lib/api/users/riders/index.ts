@@ -60,11 +60,8 @@ export async function fetchRiders(
       ...(status !== undefined ? { status } : {}),
     });
 
-    console.log("Params: ", { cursor, ...rest, status });
 
     const url = `/users${params.toString() ? `?${params.toString()}` : ""}`;
-
-    console.log("Url: ", `${process.env.NEXT_PUBLIC_API_BASE_URL}${url}`);
 
     const response = await http.get<any>(url);
 
