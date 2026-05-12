@@ -1,42 +1,49 @@
 /**
  * Device token utilities for PEPPCruise admin.
  *
- * The "device token" is a Firebase Cloud Messaging (FCM) registration token —
- * a stable, browser-scoped identifier that the backend uses to:
- *  1. Recognise trusted devices and skip OTP on returning logins.
- *  2. Deliver push notifications to this browser instance.
+ * The "device token" is a Firebase Cloud Messaging (FCM)
+ * registration token used by the backend to:
  *
- * Token lifecycle is managed entirely by lib/firebase/messaging.ts.
- * This module re-exports the functions under the names the rest of the
- * codebase already uses so callers need no changes.
+ * 1. Recognise trusted devices.
+ * 2. Optionally support push notifications.
+ *
+ * Token lifecycle is managed by:
+ * "@/lib/services/firebase/messaging"
  */
 
 export {
   getOrCreateFcmToken as getOrCreateDeviceToken,
-  refreshFcmToken,
   clearFcmToken,
 } from "@/lib/services/firebase/messaging";
 
-// ─── Device name ──────────────────────────────────────────────────────────────
+// ─── Device name ─────────────────────────────────────────────────────────────
 
 /**
  * Returns a human-readable device name string.
- * Capped at 50 chars to match the backend DTO's MaxLength(50) constraint.
+ * Limited to 50 chars to satisfy backend DTO validation.
  */
 export function buildDeviceName(): string {
-  if (typeof window === "undefined") return "Web Server";
+  if (typeof window === "undefined") {
+    return "Web Server";
+  }
 
   const ua = navigator.userAgent ?? "Web";
 
   const platform =
     (
       navigator as Navigator & {
-        userAgentData?: { platform: string };
+        userAgentData?: {
+          platform?: string;
+        };
       }
     ).userAgentData?.platform ||
     navigator.platform ||
     "";
 
-  const name = platform ? `${platform} — ${ua}` : ua;
+  const name =
+    platform.length > 0
+      ? `${platform} — ${ua}`
+      : ua;
+
   return name.slice(0, 50);
 }
