@@ -63,29 +63,54 @@ async function cleanupOldServiceWorkers() {
 }
 
 async function registerMessagingServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    throw new Error("Service Worker not supported");
+  }
+
   await cleanupOldServiceWorkers();
 
+  // Try reuse first
   const existing =
     await navigator.serviceWorker.getRegistration(
       "/firebase-messaging-sw.js"
     );
 
-  // Reuse existing worker but force update check
-  if (existing) {
-    await existing.update();
-    return existing;
+  let registration = existing;
+
+  if (!registration) {
+    registration =
+      await navigator.serviceWorker.register(
+        "/firebase-messaging-sw.js",
+        {
+          updateViaCache: "none",
+        }
+      );
+  } else {
+    await registration.update();
   }
-  
-  // VERY IMPORTANT: wait until SW is active
+
+  // CRITICAL: wait until SW is ACTIVE and controlling the page
   await navigator.serviceWorker.ready;
 
-  // Fresh registration
-  return navigator.serviceWorker.register(
-    "/firebase-messaging-sw.js",
-    {
-      updateViaCache: "none",
-    }
-  );
+  // Extra safety: ensure controlling worker exists
+  if (!navigator.serviceWorker.controller) {
+    await new Promise((resolve) => {
+      const handler = () => {
+        navigator.serviceWorker.removeEventListener(
+          "controllerchange",
+          handler
+        );
+        resolve(true);
+      };
+
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        handler
+      );
+    });
+  }
+
+  return registration;
 }
 
 export async function getOrCreateFcmToken(): Promise<string> {
@@ -106,14 +131,11 @@ export async function getOrCreateFcmToken(): Promise<string> {
   }
 
   try {
-    const messaging = getMessaging(firebaseApp);
-
     const registration =
       await registerMessagingServiceWorker();
 
-    // extra safety: wait again for activation
-    await navigator.serviceWorker.ready;
-  
+    const messaging = getMessaging(firebaseApp);
+
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: registration,
