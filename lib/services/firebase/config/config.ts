@@ -14,6 +14,6 @@ const firebaseConfig = {
  * Safe to import in any module — `getApps()` prevents double-initialisation
  * in hot-reload environments (Next.js dev server, unit tests, etc.).
  */
-export const firebaseApp = getApps().length
+export const firebaseApp = getApps().length > 0
   ? getApp()
   : initializeApp(firebaseConfig);
