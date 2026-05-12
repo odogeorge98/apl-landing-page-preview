@@ -25,9 +25,63 @@ function storageClear(key: string): void {
   } catch {}
 }
 
+async function cleanupOldServiceWorkers() {
+  if (!("serviceWorker" in navigator)) return;
+
+  try {
+    const registrations =
+      await navigator.serviceWorker.getRegistrations();
+
+    await Promise.all(
+      registrations.map(async (registration) => {
+        const scriptUrl =
+          registration.active?.scriptURL || "";
+
+        if (
+          scriptUrl.includes("firebase") ||
+          scriptUrl.includes("messaging")
+        ) {
+          await registration.unregister();
+        }
+      })
+    );
+
+    // Clear stale SW caches
+    if ("caches" in window) {
+      const cacheKeys = await caches.keys();
+
+      await Promise.all(
+        cacheKeys.map((key) => caches.delete(key))
+      );
+    }
+  } catch (error) {
+    console.error(
+      "[SW CLEANUP ERROR]",
+      error
+    );
+  }
+}
+
 async function registerMessagingServiceWorker() {
+  await cleanupOldServiceWorkers();
+
+  const existing =
+    await navigator.serviceWorker.getRegistration(
+      "/firebase-messaging-sw.js"
+    );
+
+  // Reuse existing worker but force update check
+  if (existing) {
+    await existing.update();
+    return existing;
+  }
+
+  // Fresh registration
   return navigator.serviceWorker.register(
-    "/firebase-messaging-sw.js"
+    "/firebase-messaging-sw.js",
+    {
+      updateViaCache: "none",
+    }
   );
 }
 

@@ -1,51 +1,52 @@
-/**
- * Firebase Cloud Messaging service worker.
- *
- * Handles background push notifications when the admin tab is not in focus.
- *
- * ⚠️  Service workers cannot access process.env.  The Firebase config is
- * injected at runtime via postMessage from lib/firebase/messaging.ts — see
- * registerMessagingServiceWorker() for the sender side.
- */
+/* eslint-disable no-undef */
 
 importScripts(
   "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"
 );
+
 importScripts(
   "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"
 );
 
-// Config is received from the main thread and held in module scope.
-let messaging = null;
+firebase.initializeApp({
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+});
 
-self.addEventListener("message", (event) => {
-  if (!event.data || event.data.type !== "FIREBASE_CONFIG") return;
+const messaging = firebase.messaging();
 
-  // Guard against re-initialisation if the SW is reused across hot-reloads.
-  if (firebase.apps.length === 0) {
-    firebase.initializeApp(event.data.config);
-  }
+messaging.onBackgroundMessage((payload) => {
+  const title =
+    payload.notification?.title || "PEPPCruise";
 
-  messaging = firebase.messaging();
-
-  // Handle messages received while the app is in the background or closed.
-  messaging.onBackgroundMessage((payload) => {
-    const title = payload.notification?.title ?? "PEPPCruise Admin";
-    const body = payload.notification?.body ?? "";
-    const icon = payload.notification?.icon ?? "/assets/peppcruise_logo.png";
-
-    self.registration.showNotification(title, {
-      body,
-      icon,
-      badge: "/assets/peppcruise_logo.png",
-      data: payload.data ?? {},
-    });
+  self.registration.showNotification(title, {
+    body: payload.notification?.body || "",
+    icon: "/assets/peppcruise_logo.png",
+    badge: "/assets/peppcruise_logo.png",
   });
 });
 
-// Allow the new SW to activate immediately without waiting for existing tabs
-// to close — important in an admin SPA where the tab may be open for hours.
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (event) =>
-  event.waitUntil(self.clients.claim())
-);
+// Immediately activate new worker
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
+});
+
+// Take over ALL tabs immediately
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      // Remove old caches
+      const keys = await caches.keys();
+
+      await Promise.all(
+        keys.map((key) => caches.delete(key))
+      );
+
+      await clients.claim();
+    })()
+  );
+});
