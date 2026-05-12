@@ -106,10 +106,10 @@ export async function getOrCreateFcmToken(): Promise<string> {
   }
 
   try {
+    const messaging = getMessaging(firebaseApp);
+
     const registration =
       await registerMessagingServiceWorker();
-
-    const messaging = getMessaging(firebaseApp);
 
     // extra safety: wait again for activation
     await navigator.serviceWorker.ready;
