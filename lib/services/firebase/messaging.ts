@@ -75,6 +75,9 @@ async function registerMessagingServiceWorker() {
     await existing.update();
     return existing;
   }
+  
+  // VERY IMPORTANT: wait until SW is active
+  await navigator.serviceWorker.ready;
 
   // Fresh registration
   return navigator.serviceWorker.register(
@@ -108,6 +111,9 @@ export async function getOrCreateFcmToken(): Promise<string> {
 
     const messaging = getMessaging(firebaseApp);
 
+    // extra safety: wait again for activation
+    await navigator.serviceWorker.ready;
+  
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: registration,
