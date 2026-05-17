@@ -76,8 +76,8 @@ function normaliseRideStatus(status: string): TripBadgeStatus {
  * totalSpend is returned in kobo (smallest unit). Divide by 100 for naira.
  * TODO: Confirm unit with backend team if values look off.
  */
-function formatNaira(kobo: number): string {
-  return `₦ ${(kobo / 100).toLocaleString("en-NG", {
+function formatNaira(naira: number): string {
+  return `₦ ${naira.toLocaleString("en-NG", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -388,7 +388,7 @@ export function UserRecordDetail({
                     <div className={row}>
                       <span className="text-sm text-white/45">Phone Number</span>
                       {editing ? (
-                        <input defaultValue={profile.phoneNumber ?? "—"} className="w-full max-w-md rounded-xl bg-white/[0.08] px-3 py-2 text-right text-sm text-white outline-none ring-[#8247E5]/30 focus:ring-2 sm:text-left" />
+                        <input defaultValue={profile.phoneNumber ? `+${profile.phoneNumber}` : "—"} className="w-full max-w-md rounded-xl bg-white/[0.08] px-3 py-2 text-right text-sm text-white outline-none ring-[#8247E5]/30 focus:ring-2 sm:text-left" />
                       ) : (
                         <span className="text-sm font-medium tabular-nums text-white">{profile.phoneNumber ?? "—"}</span>
                       )}

@@ -1,11 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { AuthUser } from "@/lib/interfaces/auth";
-import { dashboardAuthBypass } from "@/lib/config/dashboard-auth";
-import {
-  MOCK_ADMIN_USER,
-  MOCK_PREVIEW_TOKEN,
-} from "@/lib/dev/mock-admin-user";
 
 interface AuthState {
   authUser: AuthUser | null;
@@ -39,21 +34,22 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       isInitialized: false,
       isAuthenticated: false,
 
-      setAuthUser: (user) => set({ authUser: user }),
+      setAuthUser: (user) =>
+        set({
+          authUser: user,
+          isAuthenticated: !!user && !!get().token,
+        }),
 
-      setToken: (token) => {
-        set({ token });
+      setToken: (token) =>
+        set({
+          token,
+          isAuthenticated: !!token && !!get().authUser,
+        }),
 
-        if (typeof window !== "undefined") {
-          if (token) {
-            localStorage.setItem("auth_token", token);
-          } else {
-            localStorage.removeItem("auth_token");
-          }
-        }
-      },
-
-      setNewToken: (token) => set({ newToken: token }),
+      setNewToken: (token) =>
+        set({
+          newToken: token,
+        }),
 
       removeAuthUser: () =>
         set({
@@ -62,10 +58,14 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }),
 
       setRequestLoading: (loading) =>
-        set({ requestLoading: loading }),
+        set({
+          requestLoading: loading,
+        }),
 
       setInitialized: (initialized) =>
-        set({ isInitialized: initialized }),
+        set({
+          isInitialized: initialized,
+        }),
 
       login: (user, token) => {
         set({
@@ -74,14 +74,6 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           isInitialized: true,
           isAuthenticated: true,
         });
-
-        if (typeof window !== "undefined") {
-          localStorage.setItem("auth_token", token);
-          localStorage.setItem(
-            "auth_user",
-            JSON.stringify(user),
-          );
-        }
       },
 
       logout: () => {
@@ -94,69 +86,18 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         });
 
         if (typeof window !== "undefined") {
-          localStorage.removeItem("auth_token");
-          localStorage.removeItem("auth_user");
+          sessionStorage.removeItem("auth_redirecting");
         }
       },
 
       initialize: () => {
-        if (typeof window !== "undefined") {
-          if (dashboardAuthBypass) {
-            const token =
-              localStorage.getItem("auth_token");
-
-            const userStr =
-              localStorage.getItem("auth_user");
-
-            if (!token || !userStr) {
-              get().login(
-                MOCK_ADMIN_USER,
-                MOCK_PREVIEW_TOKEN,
-              );
-
-              return;
-            }
-          }
-
-          const token =
-            localStorage.getItem("auth_token");
-
-          const userStr =
-            localStorage.getItem("auth_user");
-
-          if (token && userStr) {
-            try {
-              const user = JSON.parse(userStr);
-
-              set({
-                authUser: user,
-                token,
-                isInitialized: true,
-                isAuthenticated: true,
-              });
-
-              return;
-            } catch (error) {
-              console.error(
-                "Error parsing stored user data:",
-                error,
-              );
-
-              localStorage.removeItem("auth_token");
-              localStorage.removeItem("auth_user");
-            }
-          }
-        }
-
         set({
           isInitialized: true,
         });
       },
 
       checkAuthStatus: () => {
-        const state = get();
-
-        return !!state.token && !!state.authUser;
+        return get().isAuthenticated;
       },
     }),
     {
@@ -165,7 +106,6 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       partialize: (state) => ({
         authUser: state.authUser,
         token: state.token,
-        isInitialized: state.isInitialized,
         isAuthenticated: state.isAuthenticated,
       }),
 
@@ -178,5 +118,5 @@ export const useAuthStore = create<AuthState & AuthActions>()(
   )
 );
 
-// Add default export for compatibility
 export default useAuthStore;
+
