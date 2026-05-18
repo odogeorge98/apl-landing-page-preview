@@ -17,7 +17,7 @@ interface AuthProviderProps {
 }
 
 const PROTECTED_ROUTES = [
-  "/dashboard/overview",
+  "/dashboard",
   "/organization",
   "/admin",
   "/settings",
@@ -34,17 +34,6 @@ const AUTH_ROUTES = [
   "/forgot-password",
   "/reset-password",
   "/verify-otp",
-  "/onboarding",
-  "/plans",
-];
-
-const PUBLIC_ROUTES = [
-  "/",
-  "/about",
-  "/pricing",
-  "/privacy",
-  "/terms",
-  ...AUTH_ROUTES,
 ];
 
 function matchesPattern(
@@ -52,6 +41,12 @@ function matchesPattern(
   patterns: string[]
 ): boolean {
   return patterns.some((pattern) => {
+    // Root route must match EXACTLY
+    if (pattern === "/") {
+      return pathname === "/";
+    }
+
+    // Wildcard support
     if (pattern.endsWith("*")) {
       return pathname.startsWith(
         pattern.slice(0, -1)
@@ -72,13 +67,17 @@ export function AuthProvider({
 
   const pathname = usePathname();
 
-  const {
-    isInitialized,
-    isAuthenticated,
-  } = useAuthStore();
+  const isInitialized =
+    useAuthStore(
+      (state) => state.isInitialized
+    );
+
+  const isAuthenticated =
+    useAuthStore(
+      (state) => state.isAuthenticated
+    );
 
   useEffect(() => {
-    // Wait for Zustand persist hydration
     if (!isInitialized) return;
 
     const isProtectedRoute =
@@ -93,47 +92,22 @@ export function AuthProvider({
         AUTH_ROUTES
       );
 
-    const isPublicRoute =
-      matchesPattern(
-        pathname,
-        PUBLIC_ROUTES
-      );
-
-    // User NOT authenticated trying to access protected page
+    // NOT authenticated
     if (
       isProtectedRoute &&
       !isAuthenticated
     ) {
-      router.replace(
-        `/?redirect=${encodeURIComponent(
-          pathname
-        )}`
-      );
-
+      router.replace("/");
       return;
     }
 
-    // Authenticated user trying to access auth pages
+    // Already authenticated
     if (
       isAuthRoute &&
       isAuthenticated
     ) {
       router.replace(
         "/dashboard/overview"
-      );
-
-      return;
-    }
-
-    // Non-public route protection
-    if (
-      !isPublicRoute &&
-      !isAuthenticated
-    ) {
-      router.replace(
-        `/?redirect=${encodeURIComponent(
-          pathname
-        )}`
       );
     }
   }, [
@@ -143,9 +117,14 @@ export function AuthProvider({
     router,
   ]);
 
-  // Prevent rendering before hydration completes
+  // IMPORTANT
+  // Prevent blank screen during hydration
   if (!isInitialized) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
   }
 
   return <>{children}</>;
