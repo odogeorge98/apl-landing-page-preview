@@ -1,105 +1,151 @@
 "use client";
 
-import { useEffect, ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import useAuthStore from '@/lib/store/auth';
+import {
+  useEffect,
+  ReactNode,
+} from "react";
+
+import {
+  useRouter,
+  usePathname,
+} from "next/navigation";
+
+import useAuthStore from "@/lib/store/auth";
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 const PROTECTED_ROUTES = [
-  '/dashboard/overview',
-  '/organization',
-  '/admin',
-  '/settings',
-  '/profile',
-  '/notifications',
-  '/invites',
-  '/calendar',
-  '/conversations',
+  "/dashboard/overview",
+  "/organization",
+  "/admin",
+  "/settings",
+  "/profile",
+  "/notifications",
+  "/invites",
+  "/calendar",
+  "/conversations",
 ];
 
 const AUTH_ROUTES = [
-  '/',
-  '/register',
-  '/forgot-password',
-  '/reset-password',
-  '/verify-otp',
-  '/onboarding',
-  '/plans',
+  "/",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-otp",
+  "/onboarding",
+  "/plans",
 ];
 
 const PUBLIC_ROUTES = [
-  '/',
-  '/about',
-  '/pricing',
-  '/privacy',
-  '/terms',
+  "/",
+  "/about",
+  "/pricing",
+  "/privacy",
+  "/terms",
   ...AUTH_ROUTES,
 ];
 
-function matchesPattern(pathname: string, patterns: string[]): boolean {
+function matchesPattern(
+  pathname: string,
+  patterns: string[]
+): boolean {
   return patterns.some((pattern) => {
-    if (pattern.endsWith('*')) {
-      return pathname.startsWith(pattern.slice(0, -1));
+    if (pattern.endsWith("*")) {
+      return pathname.startsWith(
+        pattern.slice(0, -1)
+      );
     }
-    return pathname === pattern || pathname.startsWith(pattern + '/');
+
+    return (
+      pathname === pattern ||
+      pathname.startsWith(pattern + "/")
+    );
   });
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({
+  children,
+}: AuthProviderProps) {
   const router = useRouter();
-  const pathname = usePathname();
-  const { initialize, isInitialized, isAuthenticated, authUser } = useAuthStore();
 
-  // useEffect(() => {
-  //   // Initialize auth state from localStorage
-  //   if (!isInitialized) {
-  //     initialize();
-  //   }
-  // }, [initialize, isInitialized]);
+  const pathname = usePathname();
+
+  const {
+    isInitialized,
+    isAuthenticated,
+  } = useAuthStore();
 
   useEffect(() => {
-    // Don't run route protection until auth is initialized
+    // Wait for Zustand persist hydration
     if (!isInitialized) return;
 
-    const isProtectedRoute = matchesPattern(pathname, PROTECTED_ROUTES);
-    const isAuthRoute = matchesPattern(pathname, AUTH_ROUTES);
-    const isPublicRoute = matchesPattern(pathname, PUBLIC_ROUTES);
+    const isProtectedRoute =
+      matchesPattern(
+        pathname,
+        PROTECTED_ROUTES
+      );
 
-    // Handle protected routes
-    if (isProtectedRoute && !isAuthenticated) {
-      router.push(`/?redirect=${encodeURIComponent(pathname)}`);
+    const isAuthRoute =
+      matchesPattern(
+        pathname,
+        AUTH_ROUTES
+      );
+
+    const isPublicRoute =
+      matchesPattern(
+        pathname,
+        PUBLIC_ROUTES
+      );
+
+    // User NOT authenticated trying to access protected page
+    if (
+      isProtectedRoute &&
+      !isAuthenticated
+    ) {
+      router.replace(
+        `/?redirect=${encodeURIComponent(
+          pathname
+        )}`
+      );
+
       return;
     }
 
-    // Handle auth routes (redirect authenticated users away)
-    if (isAuthRoute && isAuthenticated) {
-      router.push('/dashboard/overview');
+    // Authenticated user trying to access auth pages
+    if (
+      isAuthRoute &&
+      isAuthenticated
+    ) {
+      router.replace(
+        "/dashboard/overview"
+      );
+
       return;
     }
 
-    // Handle root path
-    if (pathname === '/' && isAuthenticated) {
-      router.push('/dashboard/overview');
-      return;
+    // Non-public route protection
+    if (
+      !isPublicRoute &&
+      !isAuthenticated
+    ) {
+      router.replace(
+        `/?redirect=${encodeURIComponent(
+          pathname
+        )}`
+      );
     }
+  }, [
+    pathname,
+    isInitialized,
+    isAuthenticated,
+    router,
+  ]);
 
-    // For any other route that's not public, redirect to login if not authenticated
-    if (!isPublicRoute && !isAuthenticated) {
-      router.push(`/?redirect=${encodeURIComponent(pathname)}`);
-      return;
-    }
-  }, [pathname, isInitialized, isAuthenticated, router]);
-
-  // Show loading while initializing
+  // Prevent rendering before hydration completes
   if (!isInitialized) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
-    );
+    return null;
   }
 
   return <>{children}</>;
