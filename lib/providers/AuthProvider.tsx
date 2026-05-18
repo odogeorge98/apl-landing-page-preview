@@ -51,41 +51,43 @@ function matchesPattern(pathname: string, patterns: string[]): boolean {
 // ─── Inner guard (needs useSearchParams → must be under a Suspense boundary) ─
 
 function AuthGuard({ children }: { children: ReactNode }) {
-  const router      = useRouter();
-  const pathname    = usePathname();
+  const router       = useRouter();
+  const pathname     = usePathname();
   const searchParams = useSearchParams();
   const { isInitialized, isAuthenticated } = useAuthStore();
 
+  // ── Safety net: if rehydration hasn't fired within 500ms, unblock the UI ──
+  const [forceReady, setForceReady] = useState(false);
   useEffect(() => {
-    if (!isInitialized) return;
+    const t = setTimeout(() => setForceReady(true), 500);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialized && !forceReady) return; // still waiting
 
     const isProtectedRoute = matchesPattern(pathname, PROTECTED_ROUTES);
     const isAuthRoute      = matchesPattern(pathname, AUTH_ROUTES);
     const isPublicRoute    = matchesPattern(pathname, PUBLIC_ROUTES);
 
-    // ── Unauthenticated on a protected route → send to login ──────────────
     if (isProtectedRoute && !isAuthenticated) {
       router.replace(`/?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 
-    // ── Authenticated on an auth page (login, OTP, etc.) → send to dashboard
-    // Reads the ?redirect= param so deep-link URLs are preserved after login.
     if (isAuthRoute && isAuthenticated) {
       const redirectTo = searchParams.get("redirect") || "/dashboard/overview";
       router.replace(redirectTo);
       return;
     }
 
-    // ── Non-public, non-auth, non-protected route without auth → login ────
     if (!isPublicRoute && !isProtectedRoute && !isAuthRoute && !isAuthenticated) {
       router.replace(`/?redirect=${encodeURIComponent(pathname)}`);
     }
-  }, [pathname, isInitialized, isAuthenticated, router, searchParams]);
+  }, [pathname, isInitialized, forceReady, isAuthenticated, router, searchParams]);
 
-  // Block rendering until Zustand persist rehydrates — prevents flash of
-  // protected content and premature route decisions.
-  if (!isInitialized) return null;
+  // Block render only until either Zustand rehydrates OR the 500ms fallback fires
+  if (!isInitialized && !forceReady) return null;
 
   return <>{children}</>;
 }

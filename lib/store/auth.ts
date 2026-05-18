@@ -94,18 +94,19 @@ export const useAuthStore =
         partialize: (state) => ({
           authUser: state.authUser,
           token: state.token,
-          isAuthenticated: state.isAuthenticated,
+          isAuthenticated: state.isAuthenticated, // ✅ persist this
         }),
 
-        onRehydrateStorage: () => {
-          return (state) => {
-            useAuthStore.setState({
-              isInitialized: true,
-              isAuthenticated:
-                !!state?.token &&
-                !!state?.authUser,
-            });
-          };
+        onRehydrateStorage: () => (state, error) => {
+          if (error) {
+            // Rehydration failed — still mark initialized so the app doesn't freeze
+            useAuthStore.setState({ isInitialized: true, isAuthenticated: false });
+            return;
+          }
+          useAuthStore.setState({
+            isInitialized: true,
+            isAuthenticated: !!state?.token && !!state?.authUser,
+          });
         },
       }
     )
