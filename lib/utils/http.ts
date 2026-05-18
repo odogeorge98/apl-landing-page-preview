@@ -89,6 +89,7 @@ class HttpClient {
         if (error.response) {
           const { data, status } = error.response;
           
+          // Replace this entire if(status === 401) block:
           if (status === 401) {
             const message = (data as any)?.message || "";
             const url = error.config?.url || "";
@@ -102,34 +103,23 @@ class HttpClient {
               message.toLowerCase().includes("otp") ||
               message.toLowerCase().includes("otp_required");
 
-            // 1. OTP / device verification flow → DO NOT logout
             if (isAuthEndpoint || isOtpFlow) {
-              throw new HttpError(
-                message || "OTP required",
-                status,
-                data
-              );
+              throw new HttpError(message || "OTP required", status, data);
             }
 
-            // 2. Real session expiry (only after login success exists)
-            const token =
-              typeof window !== "undefined"
-                ? this.getAuthToken()
-                : null;
-
+            // ── Only logout if the user was actually authenticated ─────────────────
+            // Do NOT use window.location.href — it creates a race condition where
+            // localStorage hasn't been updated by Zustand persist yet, causing the
+            // expired token to survive the reload and triggering a redirect loop.
+            // AuthProvider reacts to isAuthenticated → false and redirects safely.
+            const token = this.getAuthToken();
             if (token) {
               const { logout } = useAuthStore.getState();
-              logout();
-              if (typeof window !== "undefined") {
-                window.location.href = "/";
-              }
+              logout(); // Zustand persist writes to localStorage synchronously,
+                        // then AuthProvider's useEffect fires and redirects to "/"
             }
 
-            throw new HttpError(
-              "Session expired. Please log in again.",
-              status,
-              data
-            );
+            throw new HttpError("Session expired. Please log in again.", status, data);
           }
           
           const message =

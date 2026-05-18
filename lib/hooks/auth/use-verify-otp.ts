@@ -46,13 +46,11 @@ export const useVerifyOtp = (options?: UseVerifyOtpOptions) => {
   // here directly (or the 5-min TTL elapsed), so we send them back to login.
   useEffect(() => {
     const session = otpSession.read();
-
     if (!session) {
       setSessionStatus("invalid");
-      router.replace("/login");
+      router.replace("/");   // ← was "/login"
       return;
     }
-
     setMaskedEmail(maskEmail(session.email));
     setSessionStatus("valid");
   }, [router]);
@@ -83,17 +81,15 @@ export const useVerifyOtp = (options?: UseVerifyOtpOptions) => {
     },
 
     onSuccess: (data) => {
-      // Clear sensitive credentials immediately after a single successful use.
       otpSession.clear();
-
       if (data.user && data.token) {
-        // console.log("LOGIN USER:", data.user);
         login(data.user, data.token);
+        // AuthProvider detects isAuthenticated = true on the /verify-otp
+        // auth route and redirects to /dashboard/overview automatically.
       }
-
       showSuccess(data.message || "Login successful!");
       options?.onSuccess?.(data);
-      router.replace("/dashboard/overview");
+      // router.push removed — AuthProvider owns this navigation.
     },
 
     onError: (error) => {

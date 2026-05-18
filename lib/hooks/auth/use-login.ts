@@ -49,35 +49,33 @@ export const useLogin = (options?: UseLoginOptions) => {
     },
 
     onSuccess: (data, variables) => {
-      // console.log('Loginnn data: ', data);
-      // ── OTP branch ────────────────────────────────────────────────────────
+      // OTP flow still routes itself (user isn't authenticated yet)
       if (data.requiresOtp) {
         saveOtpSession(
           variables.email.trim(),
           variables.password,
           variables.rememberMe ?? false,
         );
-        router.replace("/verify-otp");
+        router.push("/verify-otp");
         return;
       }
 
-      // ── Direct login branch ───────────────────────────────────────────────
       if (data.user && data.token) {
-        // console.log("LOGIN USER:", data.user);
         login(data.user, data.token);
+        // ↑ Sets isAuthenticated = true.
+        // AuthProvider's useEffect fires, reads ?redirect= from searchParams,
+        // and calls router.replace(redirectTo). No navigation needed here.
       }
 
       if (variables.rememberMe && typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem("peppcruise_admin_remember", "7d");
-        } catch {}
+        try { window.localStorage.setItem("peppcruise_admin_remember", "7d"); } catch {}
       }
 
       showSuccess(data.message || "Login successful!");
       options?.onSuccess?.(data);
 
-      const redirectTo = searchParams.get("redirect") || "/dashboard/overview";
-      router.replace(redirectTo);
+      // ── Navigation intentionally removed ──────────────────────────────────
+      // AuthProvider handles redirect to ?redirect param or /dashboard/overview.
     },
 
     onError: (error) => {
