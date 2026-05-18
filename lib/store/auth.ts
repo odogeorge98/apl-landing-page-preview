@@ -97,12 +97,11 @@ export const useAuthStore =
         }),
 
         onRehydrateStorage: () => (state) => {
-          useAuthStore.setState({
-            isInitialized: true,
-            isAuthenticated:
-              !!state?.token &&
-              !!state?.authUser,
-          });
+          if (!state) return;
+
+          state.isInitialized = true;
+          state.isAuthenticated =
+            !!state.token && !!state.authUser;
         },
       }
     )
