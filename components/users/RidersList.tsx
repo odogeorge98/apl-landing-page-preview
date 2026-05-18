@@ -131,10 +131,10 @@ export default function RidersList() {
 
   // ── Pagination values ────────────────────────────────────────────────────
   const nextCursor   = listData?.data.nextCursor ?? null;
-  const total        = listData?.data.total ?? 0;
+  // const total        = listData?.data.total ?? 0;
   const currentPage  = cursorStack.length;
-  const pageStart    = total === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
-  const pageEnd      = total === 0 ? 0 : Math.min(pageStart + rows.length - 1, total);
+  // const pageStart    = total === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+  // const pageEnd      = total === 0 ? 0 : Math.min(pageStart + rows.length - 1, total);
   const canGoPrev    = cursorStack.length > 1;
   const canGoNext    = Boolean(nextCursor);
 
@@ -361,9 +361,9 @@ export default function RidersList() {
 
       {/* Pagination */}
       <TablePaginationBar
-        pageStart={pageStart}
-        pageEnd={pageEnd}
-        total={total}
+        // pageStart={pageStart}
+        // pageEnd={pageEnd}
+        // total={total}
         rowsPerPage={rowsPerPage}
         canGoNext={canGoNext}
         canGoPrev={canGoPrev}

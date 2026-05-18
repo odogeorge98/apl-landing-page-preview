@@ -23,7 +23,24 @@ export const useLogin = (options?: UseLoginOptions) => {
       // getOrCreateDeviceToken returns "" gracefully if FCM isn't available
       // (permission denied, unsupported browser) — the backend will still
       // process the login, just without device recognition.
-      const deviceToken = await getOrCreateDeviceToken();
+      let deviceToken = "";
+
+      if (typeof window !== "undefined") {
+        if (Notification.permission !== "granted") {
+          const permission =
+            await Notification.requestPermission();
+
+          if (permission === "granted") {
+            deviceToken =
+              await getOrCreateDeviceToken();
+          }
+        } else {
+          deviceToken =
+            await getOrCreateDeviceToken();
+        }
+      }
+
+      console.log('Device token in hook script: ', deviceToken);
       return loginUser(data, deviceToken);
     },
 
@@ -32,6 +49,7 @@ export const useLogin = (options?: UseLoginOptions) => {
     },
 
     onSuccess: (data, variables) => {
+      console.log('Loginnn data: ', data);
       // ── OTP branch ────────────────────────────────────────────────────────
       if (data.requiresOtp) {
         saveOtpSession(
@@ -45,6 +63,7 @@ export const useLogin = (options?: UseLoginOptions) => {
 
       // ── Direct login branch ───────────────────────────────────────────────
       if (data.user && data.token) {
+        console.log("LOGIN USER:", data.user);
         login(data.user, data.token);
       }
 

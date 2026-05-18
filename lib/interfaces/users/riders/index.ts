@@ -52,7 +52,6 @@ export interface RidersKpi {
 export interface RidersListData {
   items: RiderListItem[];
   nextCursor: string | null;
-  total: number;
 }
 
 export interface RidersListResponse {

@@ -67,7 +67,7 @@ async function registerMessagingServiceWorker() {
     throw new Error("Service Worker not supported");
   }
 
-  await cleanupOldServiceWorkers();
+  // await cleanupOldServiceWorkers();
 
   // Try reuse first
   const existing =
@@ -117,10 +117,12 @@ export async function getOrCreateFcmToken(): Promise<string> {
   if (typeof window === "undefined") return "";
 
   const cached = storageGet(FCM_TOKEN_KEY);
+  console.log('Cached: ', cached);
 
   if (cached) return cached;
 
   const supported = await isSupported().catch(() => false);
+  console.log('Supported: ', supported);
 
   if (!supported) return "";
 
@@ -141,13 +143,17 @@ export async function getOrCreateFcmToken(): Promise<string> {
       serviceWorkerRegistration: registration,
     });
 
+   console.log('fcm token: ', token);
     if (!token) return "";
 
     storageSet(FCM_TOKEN_KEY, token);
 
     return token;
   } catch (error) {
-    console.error("[FCM TOKEN ERROR]", error);
+    console.error(
+      "[FCM TOKEN ERROR]",
+      error instanceof Error ? error.message : error
+    );
     return "";
   }
 }

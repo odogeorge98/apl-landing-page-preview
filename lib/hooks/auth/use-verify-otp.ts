@@ -87,6 +87,7 @@ export const useVerifyOtp = (options?: UseVerifyOtpOptions) => {
       otpSession.clear();
 
       if (data.user && data.token) {
+        console.log("LOGIN USER:", data.user);
         login(data.user, data.token);
       }
 

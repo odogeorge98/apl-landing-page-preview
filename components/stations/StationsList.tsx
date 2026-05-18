@@ -246,37 +246,48 @@ export default function StationsList({
 
   const nextCursor = listData?.data.nextCursor ?? null;
 
-  const total = listData?.data.total ?? 0;
+  // const total = listData?.data.total ?? 0;
 
   const currentPage = cursorStack.length;
 
-  const pageStart =
-    total === 0
-      ? 0
-      : (currentPage - 1) * rowsPerPage + 1;
+  // const pageStart =
+  //   total === 0
+  //     ? 0
+  //     : (currentPage - 1) * rowsPerPage + 1;
 
-  const pageEnd =
-    total === 0
-      ? 0
-      : Math.min(
-          pageStart + rows.length - 1,
-          total,
-        );
+  // const pageEnd =
+  //   total === 0
+  //     ? 0
+  //     : Math.min(
+  //         pageStart + rows.length - 1,
+  //         total,
+  //       );
 
   const canGoPrev = cursorStack.length > 1;
 
-  const canGoNext = Boolean(nextCursor);
+  console.log('Next cursor: ', nextCursor);
+
+  const canGoNext =
+    !isFetching &&
+    nextCursor !== null;
+  console.log('Can go next: ', canGoNext);
 
   // ────────────────────────────────────────────────────────────────────────────
   // Pagination Actions
   // ────────────────────────────────────────────────────────────────────────────
 
   const handleNextPage = () => {
-    if (!nextCursor || isFetching) return;
+    const latestCursor =
+      listData?.data?.nextCursor;
 
-    setCursorStack((prev) => [...prev, nextCursor]);
+    if (!latestCursor || isFetching) return;
 
-    setCursor(nextCursor);
+    setCursorStack((prev) => [
+      ...prev,
+      latestCursor,
+    ]);
+
+    setCursor(latestCursor);
   };
 
   const handlePrevPage = () => {
@@ -521,9 +532,9 @@ export default function StationsList({
 
         {/* Pagination */}
         <TablePaginationBar
-          pageStart={pageStart}
-          pageEnd={pageEnd}
-          total={total}
+          // pageStart={pageStart}
+          // pageEnd={pageEnd}
+          // total={total}
           rowsPerPage={rowsPerPage}
           canGoNext={canGoNext}
           canGoPrev={canGoPrev}

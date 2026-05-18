@@ -229,7 +229,7 @@ export default function DriversList() {
       {/* Table card */}
       <div className={tableCard}>
         {/* Toolbar */}
-        <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 border-b border-white/[0.06] p-4 sm:flex-row lg:items-center lg:justify-between">
           <h2 className="shrink-0 text-base font-semibold text-white">All Drivers</h2>
 
           <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3 lg:max-w-3xl lg:flex-1 lg:justify-end">

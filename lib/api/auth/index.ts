@@ -27,6 +27,7 @@ export async function loginUser(
   deviceToken: string,
 ): Promise<LoginResponse> {
   try {
+    console.log('Token in api.ts: ', deviceToken);
     const response = await http.deviceRequest<any>(
       "POST",
       "/auth/login",
@@ -47,7 +48,7 @@ export async function loginUser(
     return {
       success: true,
       message: result.message || "Login successful!",
-      user: result.data ?? result.user,
+      user: result.data?.user ?? result.user,
       token: result.data?.token ?? result.token,
     };
   } catch (error) {
@@ -60,6 +61,7 @@ export async function loginUser(
         (error.response as any)?.message ?? error.message ?? "";
 
       if (msg === "OTP_REQUIRED" || msg.toLowerCase().includes("otp")) {
+        console.log('Otp required');
         return {
           success: false,
           requiresOtp: true,
@@ -101,7 +103,7 @@ export async function verifyOtp(data: VerifyOtpData): Promise<VerifyOtpResponse>
     return {
       success: true,
       message: result.message || "Login successful!",
-      user: result.data ?? result.user,
+      user: result.data?.user ?? result.user,
       token: result.data?.token ?? result.token,
     };
   } catch (error) {

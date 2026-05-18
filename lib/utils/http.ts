@@ -7,7 +7,7 @@ import axios, {
 import { config } from "@/lib/config";
 import { getAuthToken } from "@/lib/utils/token";
 import useAuthStore from "@/lib/store/auth";
-import { MOCK_PREVIEW_TOKEN } from "@/lib/dev/mock-admin-user";
+// import { MOCK_PREVIEW_TOKEN } from "@/lib/dev/mock-admin-user";
 
 export interface HttpOptions extends AxiosRequestConfig {
   requiresAuth?: boolean;
@@ -114,7 +114,7 @@ class HttpClient {
             // 2. Real session expiry (only after login success exists)
             const token =
               typeof window !== "undefined"
-                ? localStorage.getItem("auth_token")
+                ? this.getAuthToken()
                 : null;
 
             if (token) {
@@ -275,6 +275,7 @@ class HttpClient {
   ): Promise<HttpResponse<T>> {
     const { headers: callerHeaders, ...restOptions } = options;
 
+    console.log('Device token: ', deviceToken);
     return this.makeRequest<T>(method, endpoint, data, {
       requiresAuth: false,
       headers: {

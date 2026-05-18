@@ -9,12 +9,12 @@ importScripts(
 );
 
 firebase.initializeApp({
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyC3OeYId1y5i-K9U5A-IwFb2o7ZYC56NVE",
+  authDomain: "pepp-571f1.firebaseapp.com",
+  projectId: "pepp-571f1",
+  storageBucket: "pepp-571f1.firebasestorage.app",
+  messagingSenderId: "262571770782",
+  appId: "1:262571770782:web:e415ce56473a4866f38c8f",
 });
 
 const messaging = firebase.messaging();
