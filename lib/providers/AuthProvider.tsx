@@ -18,6 +18,7 @@ const PROTECTED_ROUTES = [
   "/invites*",
   "/calendar*",
   "/conversations*",
+  "/system*"
 ];
 
 const AUTH_ROUTES = [

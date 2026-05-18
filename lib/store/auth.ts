@@ -94,6 +94,7 @@ export const useAuthStore =
         partialize: (state) => ({
           authUser: state.authUser,
           token: state.token,
+          isAuthenticated: state.isAuthenticated,
         }),
 
         onRehydrateStorage: () => {

@@ -324,14 +324,6 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (dashboardAuthBypass) return;
-    if (typeof window === "undefined") return;
-    if (!localStorage.getItem("auth_token")) {
-      window.location.href = "/";
-    }
-  }, [pathname]);
-
-  useEffect(() => {
     const close = (e: MouseEvent) => {
       const t = e.target as Node;
       if (notifRef.current && !notifRef.current.contains(t)) setNotifOpen(false);
