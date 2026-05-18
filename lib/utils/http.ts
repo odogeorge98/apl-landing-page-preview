@@ -5,7 +5,6 @@ import axios, {
   AxiosError,
 } from "axios";
 import { config } from "@/lib/config";
-import { getAuthToken } from "@/lib/utils/token";
 import useAuthStore from "@/lib/store/auth";
 // import { MOCK_PREVIEW_TOKEN } from "@/lib/dev/mock-admin-user";
 
@@ -52,8 +51,7 @@ class HttpClient {
   }
 
   private getAuthToken(): string | null {
-    // Get token from Zustand store
-    return getAuthToken();
+    return useAuthStore.getState().token;
   }
 
   private setupInterceptors(): void {
@@ -275,7 +273,7 @@ class HttpClient {
   ): Promise<HttpResponse<T>> {
     const { headers: callerHeaders, ...restOptions } = options;
 
-    console.log('Device token: ', deviceToken);
+    // console.log('Device token: ', deviceToken);
     return this.makeRequest<T>(method, endpoint, data, {
       requiresAuth: false,
       headers: {

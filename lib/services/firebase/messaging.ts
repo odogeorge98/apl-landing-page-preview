@@ -117,12 +117,12 @@ export async function getOrCreateFcmToken(): Promise<string> {
   if (typeof window === "undefined") return "";
 
   const cached = storageGet(FCM_TOKEN_KEY);
-  console.log('Cached: ', cached);
+  // console.log('Cached: ', cached);
 
   if (cached) return cached;
 
   const supported = await isSupported().catch(() => false);
-  console.log('Supported: ', supported);
+  // console.log('Supported: ', supported);
 
   if (!supported) return "";
 
@@ -143,7 +143,7 @@ export async function getOrCreateFcmToken(): Promise<string> {
       serviceWorkerRegistration: registration,
     });
 
-   console.log('fcm token: ', token);
+  //  console.log('fcm token: ', token);
     if (!token) return "";
 
     storageSet(FCM_TOKEN_KEY, token);

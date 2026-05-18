@@ -344,7 +344,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const sidebarW = collapsed ? "w-[76px]" : "w-[260px]";
   const mainPad = collapsed ? "md:pl-[76px]" : "md:pl-[260px]";
 
-  console.log('User: ', user);
+  // console.log('User: ', user);
   const greeting =
     user?.email && getDisplayNameFromEmail(user.email) !== "Guest User"
       ? `Hey ${getDisplayNameFromEmail(user.email).split(/[._]/)[0]} 👋`

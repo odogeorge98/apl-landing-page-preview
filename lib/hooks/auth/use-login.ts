@@ -40,7 +40,7 @@ export const useLogin = (options?: UseLoginOptions) => {
         }
       }
 
-      console.log('Device token in hook script: ', deviceToken);
+      // console.log('Device token in hook script: ', deviceToken);
       return loginUser(data, deviceToken);
     },
 
@@ -49,7 +49,7 @@ export const useLogin = (options?: UseLoginOptions) => {
     },
 
     onSuccess: (data, variables) => {
-      console.log('Loginnn data: ', data);
+      // console.log('Loginnn data: ', data);
       // ── OTP branch ────────────────────────────────────────────────────────
       if (data.requiresOtp) {
         saveOtpSession(
@@ -63,7 +63,7 @@ export const useLogin = (options?: UseLoginOptions) => {
 
       // ── Direct login branch ───────────────────────────────────────────────
       if (data.user && data.token) {
-        console.log("LOGIN USER:", data.user);
+        // console.log("LOGIN USER:", data.user);
         login(data.user, data.token);
       }
 
