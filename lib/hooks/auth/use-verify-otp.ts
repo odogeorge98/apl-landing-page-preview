@@ -93,7 +93,7 @@ export const useVerifyOtp = (options?: UseVerifyOtpOptions) => {
 
       showSuccess(data.message || "Login successful!");
       options?.onSuccess?.(data);
-      router.push("/dashboard/overview");
+      router.replace("/dashboard/overview");
     },
 
     onError: (error) => {

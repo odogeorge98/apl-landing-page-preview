@@ -10,7 +10,7 @@ export const useLogout = () => {
     try {
       logout();
       
-      router.push('/');
+      router.replace('/');
       
       showSuccess('Logged out successfully');
     } catch (error) {

@@ -5,6 +5,7 @@ import axios, {
   AxiosError,
 } from "axios";
 import { config } from "@/lib/config";
+import { getAuthToken } from "@/lib/utils/token";
 import useAuthStore from "@/lib/store/auth";
 // import { MOCK_PREVIEW_TOKEN } from "@/lib/dev/mock-admin-user";
 
@@ -51,7 +52,8 @@ class HttpClient {
   }
 
   private getAuthToken(): string | null {
-    return useAuthStore.getState().token;
+    // Get token from Zustand store
+    return getAuthToken();
   }
 
   private setupInterceptors(): void {

@@ -53,12 +53,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const pathname = usePathname();
   const { initialize, isInitialized, isAuthenticated, authUser } = useAuthStore();
 
-  useEffect(() => {
-    // Initialize auth state from localStorage
-    if (!isInitialized) {
-      initialize();
-    }
-  }, [initialize, isInitialized]);
+  // useEffect(() => {
+  //   // Initialize auth state from localStorage
+  //   if (!isInitialized) {
+  //     initialize();
+  //   }
+  // }, [initialize, isInitialized]);
 
   useEffect(() => {
     // Don't run route protection until auth is initialized

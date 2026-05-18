@@ -57,7 +57,7 @@ export const useLogin = (options?: UseLoginOptions) => {
           variables.password,
           variables.rememberMe ?? false,
         );
-        router.push("/verify-otp");
+        router.replace("/verify-otp");
         return;
       }
 
@@ -77,7 +77,7 @@ export const useLogin = (options?: UseLoginOptions) => {
       options?.onSuccess?.(data);
 
       const redirectTo = searchParams.get("redirect") || "/dashboard/overview";
-      router.push(redirectTo);
+      router.replace(redirectTo);
     },
 
     onError: (error) => {

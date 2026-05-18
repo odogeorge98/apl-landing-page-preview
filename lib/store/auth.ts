@@ -17,106 +17,95 @@ interface AuthActions {
   setNewToken: (token: string | null) => void;
   removeAuthUser: () => void;
   setRequestLoading: (loading: boolean) => void;
-  setInitialized: (initialized: boolean) => void;
   login: (user: AuthUser, token: string) => void;
   logout: () => void;
-  initialize: () => void;
-  checkAuthStatus: () => boolean;
 }
 
-export const useAuthStore = create<AuthState & AuthActions>()(
-  persist(
-    (set, get) => ({
-      authUser: null,
-      token: null,
-      requestLoading: false,
-      newToken: null,
-      isInitialized: false,
-      isAuthenticated: false,
+export const useAuthStore =
+  create<AuthState & AuthActions>()(
+    persist(
+      (set, get) => ({
+        authUser: null,
+        token: null,
+        requestLoading: false,
+        newToken: null,
+        isInitialized: false,
+        isAuthenticated: false,
 
-      setAuthUser: (user) =>
-        set({
-          authUser: user,
-          isAuthenticated: !!user && !!get().token,
-        }),
+        setAuthUser: (user) =>
+          set({
+            authUser: user,
+            isAuthenticated:
+              !!user && !!get().token,
+          }),
 
-      setToken: (token) =>
-        set({
-          token,
-          isAuthenticated: !!token && !!get().authUser,
-        }),
+        setToken: (token) =>
+          set({
+            token,
+            isAuthenticated:
+              !!token && !!get().authUser,
+          }),
 
-      setNewToken: (token) =>
-        set({
-          newToken: token,
-        }),
+        setNewToken: (token) =>
+          set({
+            newToken: token,
+          }),
 
-      removeAuthUser: () =>
-        set({
-          authUser: null,
-          isAuthenticated: false,
-        }),
+        removeAuthUser: () =>
+          set({
+            authUser: null,
+            token: null,
+            isAuthenticated: false,
+          }),
 
-      setRequestLoading: (loading) =>
-        set({
-          requestLoading: loading,
-        }),
+        setRequestLoading: (loading) =>
+          set({
+            requestLoading: loading,
+          }),
 
-      setInitialized: (initialized) =>
-        set({
-          isInitialized: initialized,
-        }),
+        login: (user, token) => {
+          set({
+            authUser: user,
+            token,
+            isAuthenticated: true,
+            isInitialized: true,
+          });
+        },
 
-      login: (user, token) => {
-        set({
-          authUser: user,
-          token,
-          isInitialized: true,
-          isAuthenticated: true,
-        });
-      },
+        logout: () => {
+          set({
+            authUser: null,
+            token: null,
+            newToken: null,
+            isAuthenticated: false,
+            isInitialized: true,
+          });
 
-      logout: () => {
-        set({
-          authUser: null,
-          token: null,
-          newToken: null,
-          isInitialized: true,
-          isAuthenticated: false,
-        });
-
-        if (typeof window !== "undefined") {
-          sessionStorage.removeItem("auth_redirecting");
-        }
-      },
-
-      initialize: () => {
-        set({
-          isInitialized: true,
-        });
-      },
-
-      checkAuthStatus: () => {
-        return get().isAuthenticated;
-      },
-    }),
-    {
-      name: "auth-storage",
-
-      partialize: (state) => ({
-        authUser: state.authUser,
-        token: state.token,
-        isAuthenticated: state.isAuthenticated,
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem(
+              "auth_redirecting"
+            );
+          }
+        },
       }),
+      {
+        name: "auth-storage",
 
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.isInitialized = true;
-        }
-      },
-    }
-  )
-);
+        partialize: (state) => ({
+          authUser: state.authUser,
+          token: state.token,
+        }),
+
+        onRehydrateStorage: () => (state) => {
+          useAuthStore.setState({
+            isInitialized: true,
+            isAuthenticated:
+              !!state?.token &&
+              !!state?.authUser,
+          });
+        },
+      }
+    )
+  );
 
 export default useAuthStore;
-
