@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, ReactNode, Suspense } from "react";
+import { useEffect, useState, ReactNode, Suspense } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import useAuthStore from "@/lib/store/auth";
 
