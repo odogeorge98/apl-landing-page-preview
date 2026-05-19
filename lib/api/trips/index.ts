@@ -7,6 +7,8 @@ import type {
   TripDetailResponse,
   TripsListResponse,
   TripsSummaryResponse,
+  TripAnalyticsPeriod,
+  TripAnalyticsResponse,
 } from "@/lib/interfaces/trip";
 
 export async function fetchTripsSummary(): Promise<TripsSummaryResponse> {
@@ -53,5 +55,24 @@ export async function fetchTripById(id: string): Promise<TripDetailResponse> {
     );
   } catch (error) {
     throw handleApiError(error, "Failed to fetch trip details. Please try again.");
+  }
+}
+
+export async function fetchTripAnalytics(
+  period: TripAnalyticsPeriod,
+): Promise<TripAnalyticsResponse> {
+  try {
+    // console.log("period:", period);
+    // console.log("typeof:", typeof period);
+    const response = await http.get<any>(
+      `/trips/analytics?period=${period}`,
+    );
+    // console.log('Response analytics: ', response);
+    return handleApiResponse<TripAnalyticsResponse["data"]>(
+      response.data,
+      "Trip analytics retrieved successfully",
+    );
+  } catch (error) {
+    throw handleApiError(error, "Failed to fetch trip analytics. Please try again.");
   }
 }

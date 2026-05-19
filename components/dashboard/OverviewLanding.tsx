@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Timer,
   ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -25,6 +26,8 @@ import { cn } from "@/lib/utils";
 import AdminSelect from "@/components/ui/AdminSelect";
 import { fetchDashboardKpi } from "@/lib/api/dashboard/index";
 import { mapKpiData } from "@/lib/utils/dashboard/mapKpi";
+import { useDashboardKpi, useTripAnalytics } from "@/lib/hooks/dashboard/use-dashboard";
+import type { TripAnalyticsDataPoint, TripAnalyticsPeriod } from "@/lib/interfaces/trip";
 
 type KpiItem = {
   title: string;
@@ -66,9 +69,21 @@ function smoothAreaPath(points: { x: number; y: number }[], baseY: number): stri
   return `${line} L ${last.x} ${baseY} L ${first.x} ${baseY} Z`;
 }
 
-function TrendPill({ children }: { children: React.ReactNode }) {
+function TrendPill({
+  children,
+  negative = false,
+}: {
+  children: React.ReactNode;
+  negative?: boolean;
+}) {
   return (
-    <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold tabular-nums tracking-tight text-emerald-400">
+    <span
+      className={`inline-flex items-center gap-0.5 rounded-md px-2 py-0.5 text-[11px] font-semibold tabular-nums tracking-tight ${
+        negative
+          ? "bg-red-500/20 text-red-400"
+          : "bg-emerald-500/20 text-emerald-400"
+      }`}
+    >
       {children}
     </span>
   );
@@ -316,26 +331,47 @@ function ProfitChart() {
   );
 }
 
-function TripsChart() {
+/**
+ * Renders a smooth line + area chart from real data points.
+ * Shows a pulse skeleton while loading.
+ */
+function TripsChart({
+  dataPoints,
+  isLoading,
+}: {
+  dataPoints: TripAnalyticsDataPoint[];
+  isLoading: boolean;
+}) {
   const plotL = 44;
   const plotR = 300;
   const plotT = 18;
   const plotB = 102;
-  const maxY = 500;
-  const yAt = (v: number) => plotB - (v / maxY) * (plotB - plotT);
-  const n = 36;
-  const vals: number[] = [];
-  for (let i = 0; i < n; i++) {
-    const u = i / (n - 1);
-    const peak = Math.exp(-Math.pow((u - 0.67) / 0.18, 2));
-    const base = 85 + peak * 335 + Math.sin(i * 0.55) * 28;
-    vals.push(Math.min(495, Math.max(40, base)));
+
+  if (isLoading || dataPoints.length === 0) {
+    return (
+      <div className="mt-3 h-[124px] w-full animate-pulse rounded-xl bg-white/[0.04]" />
+    );
   }
-  const pts = vals.map((v, i) => ({
-    x: plotL + (i / (n - 1)) * (plotR - plotL),
-    y: yAt(v),
+
+  const maxVal   = Math.max(...dataPoints.map((d) => d.count), 1);
+  // Round up to a clean tick value so the chart doesn't feel cramped
+  const maxY     = Math.ceil(maxVal / 50) * 50 || 50;
+  const yAt      = (v: number) => plotB - (v / maxY) * (plotB - plotT);
+
+  const pts = dataPoints.map((d, i) => ({
+    x: plotL + (i / (dataPoints.length - 1)) * (plotR - plotL),
+    y: yAt(d.count),
   }));
-  const yTicks = [500, 250, 100, 0];
+
+  const yTicks = [maxY, Math.round(maxY / 2), 0];
+
+  // Pick 4 evenly-spaced x-axis labels
+  const n = dataPoints.length;
+  const xLabelIndices = [0, Math.floor(n * 0.33), Math.floor(n * 0.67), n - 1];
+  const xLabels = xLabelIndices.map((idx) => ({
+    t: dataPoints[idx]?.label ?? "",
+    x: plotL + (idx / (n - 1)) * (plotR - plotL),
+  }));
 
   return (
     <svg
@@ -345,20 +381,18 @@ function TripsChart() {
     >
       <defs>
         <linearGradient id="tripAreaFill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#a855f7" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+          <stop offset="0%"   stopColor="#a855f7" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#a855f7" stopOpacity="0"    />
         </linearGradient>
       </defs>
 
+      {/* Y-axis grid lines + labels */}
       {yTicks.map((tk) => {
         const y = yAt(tk);
         return (
           <g key={tk}>
             <line
-              x1={plotL}
-              x2={plotR}
-              y1={y}
-              y2={y}
+              x1={plotL} x2={plotR} y1={y} y2={y}
               stroke="rgba(255,255,255,0.08)"
               strokeWidth="1"
               strokeDasharray="5 5"
@@ -370,7 +404,10 @@ function TripsChart() {
         );
       })}
 
+      {/* Area fill */}
       <path d={smoothAreaPath(pts, plotB)} fill="url(#tripAreaFill)" />
+
+      {/* Line */}
       <path
         d={smoothLinePath(pts)}
         fill="none"
@@ -380,17 +417,13 @@ function TripsChart() {
         strokeLinejoin="round"
       />
 
-      {[
-        { t: "12 AM", x: plotL },
-        { t: "8 AM", x: plotL + (plotR - plotL) * 0.33 },
-        { t: "4 PM", x: plotL + (plotR - plotL) * 0.67 },
-        { t: "11 PM", x: plotR },
-      ].map(({ t, x }) => (
+      {/* X-axis labels */}
+      {xLabels.map(({ t, x }, i) => (
         <text
           key={t}
           x={x}
           y={116}
-          textAnchor={t === "12 AM" ? "start" : t === "11 PM" ? "end" : "middle"}
+          textAnchor={i === 0 ? "start" : i === xLabels.length - 1 ? "end" : "middle"}
           fill="rgba(255,255,255,0.38)"
           fontSize="9"
           fontWeight="500"
@@ -408,11 +441,12 @@ const revenueRangeOptions = [
   { value: "q4", label: "Oct 2024 - Dec 2024" },
 ] as const;
 
-const shortPeriodOptions = [
-  { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "week", label: "This week" },
-] as const;
+const shortPeriodOptions: { value: TripAnalyticsPeriod; label: string }[] = [
+  { value: "today", label: "Today"      },
+  { value: "yesterday", label: "Yesterday"      },
+  { value: "week",  label: "This week"  },
+  { value: "month", label: "This month" },
+];
 
 // --------------------
 // Skeleton Loader
@@ -427,7 +461,9 @@ export default function OverviewLanding() {
   const dateLine = dayjs().format("dddd, MMM D, YYYY");
   const [revenueRange, setRevenueRange] = React.useState("2024");
   const [profitPeriod, setProfitPeriod] = React.useState("today");
-  const [tripsPeriod, setTripsPeriod] = React.useState("today");
+  // const [tripsPeriod, setTripsPeriod] = React.useState("today");
+  const [tripsPeriod, setTripsPeriod] =
+   React.useState<TripAnalyticsPeriod>("today");
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["dashboard-kpi"],
@@ -438,8 +474,17 @@ export default function OverviewLanding() {
   if (isError) {
     console.error("Dashboard KPI error: ", error);
   }
+  // const kpiQuery = useDashboardKpi();
+  const analyticsQuery = useTripAnalytics(tripsPeriod);
+  // console.log('kpi res: ', kpiQuery?.data);
 
   const kpiData = data ? mapKpiData(data.data) : [];
+  const analytics      = analyticsQuery.data?.data;
+
+  // "Live" trips come from the KPI query — no extra API call
+  const liveTrips      = data?.data?.ongoingTrips ?? 0;
+  
+  // console.log('live trips: ', liveTrips);
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-8">
@@ -546,38 +591,66 @@ export default function OverviewLanding() {
             <ProfitChart />
           </section>
 
+          {/* ── Trips analytics card ────────────────────────────────────────────── */}
           <section className={analyticsCard}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 space-y-3">
                 <div className="flex items-center gap-2">
                   <Timer className="size-4 shrink-0 text-[#a855f7]" strokeWidth={1.75} />
-                  <h3 className="text-sm font-semibold text-white/90">Total Trips Today</h3>
+                  <h3 className="text-sm font-semibold text-white/90">
+                    Total Trips{" "}
+                    <span className="font-normal text-white/45 capitalize">{tripsPeriod}</span>
+                  </h3>
                 </div>
+
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <p className="text-3xl font-bold tracking-tight text-white sm:text-[30px]">400</p>
-                  <TrendPill>
-                    <ArrowUp className="size-3" strokeWidth={2.75} />
-                    16.8%
-                  </TrendPill>
+                  {analyticsQuery.isLoading ? (
+                    <div className="h-9 w-20 animate-pulse rounded-lg bg-white/10" />
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold tracking-tight text-white sm:text-[30px]">
+                        {analytics?.totalTrips.toLocaleString() ?? "—"}
+                      </p>
+
+                      {analytics && analytics.trend !== 0 && (
+                        <TrendPill negative={analytics.trendDirection === "down"}>
+                          {analytics.trendDirection === "down"
+                            ? <ArrowDown className="size-3" strokeWidth={2.75} />
+                            : <ArrowUp   className="size-3" strokeWidth={2.75} />}
+                          {Math.abs(analytics.trend).toFixed(1)}%
+                        </TrendPill>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
+
               <AdminSelect
                 size="sm"
                 className="sm:max-w-[140px]"
-                options={[...shortPeriodOptions]}
+                options={shortPeriodOptions}
                 value={tripsPeriod}
-                onValueChange={setTripsPeriod}
+                onValueChange={(v) => setTripsPeriod(v as TripAnalyticsPeriod)}
                 aria-label="Trips period"
               />
             </div>
-            <TripsChart />
+
+            {/* Chart — real data, skeleton while loading */}
+            <TripsChart
+              dataPoints={analytics?.dataPoints ?? []}
+              isLoading={analyticsQuery.isLoading}
+            />
+
+            {/* Live indicator — uses ongoingTrips from the KPI query */}
             <div className="mt-4 flex items-center gap-2">
               <span className="relative flex size-2">
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400/90 opacity-40" />
                 <span className="relative inline-flex size-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.7)]" />
               </span>
               <span className="text-xs font-semibold text-emerald-400">Live</span>
-              <span className="text-xs tabular-nums text-white/45">23 Trips</span>
+              <span className="text-xs tabular-nums text-white/45">
+                {liveTrips} {liveTrips === 1 ? "Trip" : "Trips"}
+              </span>
             </div>
           </section>
         </div>

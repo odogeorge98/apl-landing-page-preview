@@ -2,6 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchDashboardStatistics, fetchDashboardAnalytics } from "@/lib/api/dashboard";
 import { DashboardStatisticsResponse, DashboardAnalyticsResponse } from "@/lib/interfaces/dashboard";
 import { DashboardFilter } from "@/lib/enums/dashboard-filter";
+import { fetchDashboardKpi } from "@/lib/api/dashboard";
+import { fetchTripAnalytics } from "@/lib/api/trips";
+import type { TripAnalyticsPeriod } from "@/lib/interfaces/trip";
 
 export const useDashboardStatistics = (filter?: DashboardFilter) => {
   return useQuery<DashboardStatisticsResponse, Error>({
@@ -38,3 +41,40 @@ export const useDashboardAnalytics = (filter?: DashboardFilter) => {
     },
   });
 };
+
+// ─── Query key factory ────────────────────────────────────────────────────────
+
+export const dashboardKeys = {
+  all:           ["dashboard"] as const,
+  kpi:           () => [...dashboardKeys.all, "kpi"] as const,
+  tripAnalytics: (period: TripAnalyticsPeriod) =>
+    [...dashboardKeys.all, "trip-analytics", period] as const,
+};
+
+// ─── Hooks ────────────────────────────────────────────────────────────────────
+
+/**
+ * Live KPI row — ongoing trips, active drivers, active passengers, etc.
+ * Refetches every 60 s automatically.
+ */
+export function useDashboardKpi() {
+  return useQuery({
+    queryKey: dashboardKeys.kpi(),
+    queryFn:  fetchDashboardKpi,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+/**
+ * Time-series trip analytics for the selected period.
+ * Returns aggregated buckets ready to feed into the chart.
+ */
+export function useTripAnalytics(period: TripAnalyticsPeriod) {
+  return useQuery({
+    queryKey: dashboardKeys.tripAnalytics(period),
+    queryFn:  () => fetchTripAnalytics(period),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}

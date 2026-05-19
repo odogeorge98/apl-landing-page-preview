@@ -169,3 +169,27 @@ export interface TripDetailResponse {
   message: string;
   data: TripDetailData;
 }
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export type TripAnalyticsPeriod = 'today' | 'yesterday' | 'week' | 'month';
+
+export interface TripAnalyticsDataPoint {
+  label: string;
+  count: number;
+}
+
+export interface TripAnalyticsData {
+  totalTrips: number;
+  /** Percentage change vs the equivalent previous period */
+  trend: number;
+  trendDirection: 'up' | 'down' | 'neutral';
+  dataPoints: TripAnalyticsDataPoint[];
+}
+
+export interface TripAnalyticsResponse {
+  status: string;
+  statusCode: number;
+  message: string;
+  data: TripAnalyticsData;
+}
