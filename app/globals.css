@@ -245,3 +245,7 @@
 .custom-table::-webkit-scrollbar, .nav-container::-webkit-scrollbar  {
   display: none; /* Chrome, Safari and Opera */
 }
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

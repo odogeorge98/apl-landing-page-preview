@@ -23,6 +23,7 @@ export interface ModalProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   showCloseButton?: boolean
+  closeOnOutsideClick?: boolean
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "6xl",
   headerCss?: string
   headerTitleCss?: string;
@@ -50,6 +51,7 @@ export function Modal({
   open,
   onOpenChange,
   showCloseButton = true,
+  closeOnOutsideClick = true,
   size = "lg",
   headerCss,
   headerTitleCss
@@ -60,6 +62,11 @@ export function Modal({
       <DialogContent
         className={cn(sizeClasses[size], className)}
         showCloseButton={showCloseButton}
+        onInteractOutside={(e) => {
+          if (!closeOnOutsideClick) {
+            e.preventDefault()
+          }
+        }}
       >
         {(title || description) && (
           <DialogHeader className={headerCss}>

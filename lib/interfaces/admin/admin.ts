@@ -1,23 +1,17 @@
+import { Admin_Role } from '@/lib/enums/admin-role.enum';
 
-
-export const ADMIN_ROLE_OPTIONS: { value: AdminRole; label: string }[] = [
-  { value: "finance_admin", label: "Finance admin" },
-  { value: "station_admin", label: "Station admin" },
-  { value: "support_admin", label: "Support admin" },
-  { value: "user_admin", label: "User admin" },
+export const ADMIN_ROLE_OPTIONS: { value: Admin_Role; label: string }[] = [
+  { value: Admin_Role.FINANCE_ADMIN, label: "Finance admin" },
+  { value: Admin_Role.STATION_ADMIN, label: "Station admin" },
+  { value: Admin_Role.SUPPORT_ADMIN, label: "Support admin" },
+  { value: Admin_Role.USER_ADMIN, label: "User admin" },
+  { value: Admin_Role.SUPER_ADMIN, label: "Super Admin" },
 ];
 
-export function roleLabel(role: AdminRole): string {
+export function roleLabel(role: Admin_Role): string {
   return ADMIN_ROLE_OPTIONS.find((o) => o.value === role)?.label ?? role;
 }
 
-
-/** Admin portal roles (invitation / assignment). */
-export type AdminRole =
-  | "finance_admin"
-  | "station_admin"
-  | "support_admin"
-  | "user_admin";
 
 export type AdminUserStatus = "pending" | "active" | "expired";
 // ─── List ─────────────────────────────────────────────────────────────────────
@@ -31,7 +25,7 @@ export interface AdminApiUser {
   /** Human-readable label from the API e.g. "Finance Admin" */
   role: string;
   /** Enum key used for filtering e.g. "finance_admin" */
-  roleKey: AdminRole;
+  roleKey: Admin_Role;
   status: AdminUserStatus;
   /** e.g. "Joined Jan 12, 2026" — maps to dateLabel in AdminUser */
   activity: string;
@@ -59,4 +53,37 @@ export interface FindAdminFilter {
   search?: string;
   role?: string;
   status?: string;
+}
+// ─── Invite admin ─────────────────────────────────────────────────────────────
+
+export interface InviteAdminPayload {
+  fullName: string;
+  email: string;
+  phoneNo: string;
+  /** Backend enum e.g. "FINANCE_ADMIN", "USER_ADMIN" */
+  role: string;
+}
+
+export interface InviteAdminResponse {
+  status: string;
+  statusCode: number;
+  message: string;
+  data: {
+    dto: InviteAdminPayload;
+  };
+}
+
+// ─── Admin onboarding (public — invited admin completing signup) ───────────────
+
+export interface AdminOnboardingPayload {
+  token: string;
+  password: string;
+}
+
+export interface AdminOnboardingResponse {
+  status: string;
+  statusCode: number;
+  message: string;
+  /** e.g. "Account setup complete. Please login." */
+  data: string;
 }

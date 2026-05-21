@@ -7,16 +7,17 @@ import { Filter, Plus, Search, Shield } from "lucide-react";
 import {
   ADMIN_ROLE_OPTIONS,
   roleLabel,
-  type AdminRole,
   type AdminUserStatus,
   type FindAdminFilter,
 } from "@/lib/interfaces/admin/admin";
+import { Admin_Role } from '@/lib/enums/admin-role.enum';
 
 import type { AdminUser } from "@/lib/data/admin-users-mock";
 
 import {
   useAdminSummary,
   useAdminList,
+  useInviteAdmin,
 } from "@/lib/hooks/admin/use-admin";
 
 import { UsersListKpi } from "./UsersListKpi";
@@ -109,7 +110,7 @@ const emptyInvite = {
   name: "",
   email: "",
   phone: "",
-  role: "user_admin" as AdminRole,
+  role: Admin_Role.USER_ADMIN,
 };
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -221,10 +222,14 @@ export default function AdminUsersList() {
     }));
   }, [listData]);
 
-  const rows = useMemo(
-    () => [...optimisticInvites, ...apiRows],
-    [optimisticInvites, apiRows],
-  );
+  const rows = useMemo(() => {
+    const merged = [...optimisticInvites, ...apiRows];
+
+    return merged.filter(
+      (row, index, self) =>
+        index === self.findIndex((r) => r.id === row.id),
+    );
+  }, [optimisticInvites, apiRows]);
 
   // ── Pagination data ───────────────────────────────────────────────────────
 
@@ -313,54 +318,34 @@ export default function AdminUsersList() {
   const openInvite = () => {
     setInvite({
       ...emptyInvite,
-      role: "user_admin",
+      role: Admin_Role.USER_ADMIN,
     });
 
     setInviteOpen(true);
   };
 
+  const inviteMutation = useInviteAdmin({
+    onSuccess: () => {
+      setInviteOpen(false);
+      setInvite(emptyInvite);
+      setOptimisticInvites([]); // List will refresh from the invalidated query
+    },
+  });
+
   const submitInvite = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const name = invite.name.trim();
+    const name  = invite.name.trim();
     const email = invite.email.trim();
     const phone = invite.phone.trim();
-
     if (!name || !email || !phone) return;
 
-    const initials = name
-      .split(" ")
-      .filter(Boolean)
-      .map((p) => p[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-
-    const newRow: AdminUser = {
-      id: `optimistic-${Date.now()}`,
-
-      initials,
-
-      name,
+    inviteMutation.mutate({
+      fullName: name,
       email,
-      phone,
-
-      role: invite.role,
-
-      status: "pending",
-
-      dateLabel: `Invited ${dayjs().format("MMM D, YYYY")}`,
-    };
-
-    setOptimisticInvites((prev) => [newRow, ...prev]);
-
-    setInviteOpen(false);
-
-    setInvite(emptyInvite);
-
-    showSuccess(
-      "Invitation sent. User will appear as pending until they accept.",
-    );
+      phoneNo:  phone,
+      // "finance_admin" → "FINANCE_ADMIN" — backend enum format
+      role: invite.role.toUpperCase(),
+    });
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -610,128 +595,137 @@ export default function AdminUsersList() {
           if (!o) {
             setInvite({
               ...emptyInvite,
-              role: "user_admin",
+              role: Admin_Role.USER_ADMIN,
             });
           }
         }}
+        closeOnOutsideClick={false}
         size="md"
         showCloseButton
-        className="border border-white/[0.08] bg-[#161222] text-white sm:max-w-md [&>button]:text-white/70 [&>button]:hover:text-white"
+        className="w-[95vw] max-h-[90vh] overflow-hidden border border-white/[0.08] bg-[#161222] text-white sm:max-w-md [&>button]:text-white/70 [&>button]:hover:text-white"
         title="Invite admin user"
         description="Send an invitation with platform access. They will receive email instructions to complete setup."
         headerTitleCss="text-left text-lg font-semibold text-white"
         headerCss="text-left"
       >
-        <form onSubmit={submitInvite} className="flex flex-col gap-4">
-          <div className="space-y-1.5">
-            <label
-              htmlFor="inv-name"
-              className="text-xs font-medium text-white/60"
-            >
-              Full name
-            </label>
+        <div className="max-h-[70vh] overflow-y-auto pr-1">
+          <form
+            onSubmit={submitInvite}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="flex flex-col gap-4"
+          >
+            <div className="space-y-1.5">
+              <label
+                htmlFor="inv-name"
+                className="text-xs font-medium text-white/60"
+              >
+                Full name
+              </label>
 
-            <input
-              id="inv-name"
-              required
-              autoComplete="name"
-              value={invite.name}
-              onChange={(e) =>
-                setInvite((s) => ({
-                  ...s,
-                  name: e.target.value,
-                }))
-              }
-              placeholder="e.g. Adaora Nwosu"
-              className={inputDark}
-            />
-          </div>
+              <input
+                id="inv-name"
+                required
+                autoComplete="name"
+                value={invite.name}
+                onChange={(e) =>
+                  setInvite((s) => ({
+                    ...s,
+                    name: e.target.value,
+                  }))
+                }
+                placeholder="e.g. Adaora Nwosu"
+                className={inputDark}
+              />
+            </div>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="inv-email"
-              className="text-xs font-medium text-white/60"
-            >
-              Work email
-            </label>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="inv-email"
+                className="text-xs font-medium text-white/60"
+              >
+                Work email
+              </label>
 
-            <input
-              id="inv-email"
-              type="email"
-              required
-              autoComplete="email"
-              value={invite.email}
-              onChange={(e) =>
-                setInvite((s) => ({
-                  ...s,
-                  email: e.target.value,
-                }))
-              }
-              placeholder="name@company.com"
-              className={inputDark}
-            />
-          </div>
+              <input
+                id="inv-email"
+                type="email"
+                required
+                autoComplete="email"
+                value={invite.email}
+                onChange={(e) =>
+                  setInvite((s) => ({
+                    ...s,
+                    email: e.target.value,
+                  }))
+                }
+                placeholder="name@company.com"
+                className={inputDark}
+              />
+            </div>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="inv-phone"
-              className="text-xs font-medium text-white/60"
-            >
-              Phone
-            </label>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="inv-phone"
+                className="text-xs font-medium text-white/60"
+              >
+                Phone
+              </label>
 
-            <input
-              id="inv-phone"
-              type="tel"
-              required
-              autoComplete="tel"
-              value={invite.phone}
-              onChange={(e) =>
-                setInvite((s) => ({
-                  ...s,
-                  phone: e.target.value,
-                }))
-              }
-              placeholder="+234 801 234 5678"
-              className={inputDark}
-            />
-          </div>
+              <input
+                id="inv-phone"
+                type="tel"
+                required
+                autoComplete="tel"
+                value={invite.phone}
+                onChange={(e) =>
+                  setInvite((s) => ({
+                    ...s,
+                    phone: e.target.value,
+                  }))
+                }
+                placeholder="+234 801 234 5678"
+                className={inputDark}
+              />
+            </div>
 
-          <div className="space-y-1.5">
-            <span className="text-xs font-medium text-white/60">
-              Admin role
-            </span>
+            <div className="space-y-1.5">
+              <span className="text-xs font-medium text-white/60">
+                Admin role
+              </span>
 
-            <AdminSelect
-              options={ADMIN_ROLE_OPTIONS}
-              value={invite.role}
-              onValueChange={(v) =>
-                setInvite((s) => ({
-                  ...s,
-                  role: v as AdminRole,
-                }))
-              }
-              aria-label="Admin role"
-            />
-          </div>
+              <AdminSelect
+                options={ADMIN_ROLE_OPTIONS}
+                value={invite.role}
+                onValueChange={(v) =>
+                  setInvite((s) => ({
+                    ...s,
+                    role: v as Admin_Role,
+                  }))
+                }
+                aria-label="Admin role"
+              />
+            </div>
 
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setInviteOpen(false)}
-              className="rounded-xl border border-white/[0.12] bg-transparent px-5 py-2.5 text-sm font-semibold text-white/85 transition hover:bg-white/[0.06]"
-            >
-              Cancel
-            </button>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setInviteOpen(false)}
+                className="rounded-xl border border-white/[0.12] bg-transparent px-5 py-2.5 text-sm font-semibold text-white/85 transition hover:bg-white/[0.06]"
+              >
+                Cancel
+              </button>
 
-            <button
-              type="submit"
-              className="rounded-xl bg-[#8B5CF6] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#7c3aed]"
-            >
-              Send invitation
-            </button>
-          </div>
-        </form>
+              <button
+                type="submit"
+                disabled={inviteMutation.isPending}
+                className="rounded-xl bg-[#8B5CF6] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#7c3aed] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {inviteMutation.isPending ? "Sending…" : "Send invitation"}
+              </button>
+            </div>
+          </form>
+        </div>
       </Modal>
     </div>
   );

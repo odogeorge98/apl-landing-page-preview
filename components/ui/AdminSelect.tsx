@@ -35,41 +35,41 @@ export type AdminSelectProps = {
   variant?: Variant;
 };
 
-function useDropdownPosition(
-  open: boolean,
-  triggerRef: React.RefObject<HTMLElement | null>,
-) {
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+// function useDropdownPosition(
+//   open: boolean,
+//   triggerRef: React.RefObject<HTMLElement | null>,
+// ) {
+//   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
 
-  const update = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el || !open) return;
-    const r = el.getBoundingClientRect();
-    const gap = 6;
-    setPos({
-      top: r.bottom + gap,
-      left: r.left,
-      width: r.width,
-    });
-  }, [open, triggerRef]);
+//   const update = useCallback(() => {
+//     const el = triggerRef.current;
+//     if (!el || !open) return;
+//     const r = el.getBoundingClientRect();
+//     const gap = 6;
+//     setPos({
+//       top: r.bottom + gap,
+//       left: r.left,
+//       width: r.width,
+//     });
+//   }, [open, triggerRef]);
 
-  useLayoutEffect(() => {
-    update();
-  }, [update]);
+//   useLayoutEffect(() => {
+//     update();
+//   }, [update]);
 
-  useEffect(() => {
-    if (!open) return;
-    update();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [open, update]);
+//   useEffect(() => {
+//     if (!open) return;
+//     update();
+//     window.addEventListener("scroll", update, true);
+//     window.addEventListener("resize", update);
+//     return () => {
+//       window.removeEventListener("scroll", update, true);
+//       window.removeEventListener("resize", update);
+//     };
+//   }, [open, update]);
 
-  return pos;
-}
+//   return pos;
+// }
 
 export default function AdminSelect({
   options,
@@ -91,7 +91,7 @@ export default function AdminSelect({
   const listRef = useRef<HTMLDivElement>(null);
   const autoId = useId();
   const listboxId = `${autoId}-listbox`;
-  const pos = useDropdownPosition(open, triggerRef);
+  // const pos = useDropdownPosition(open, triggerRef);
 
   useEffect(() => setMounted(true), []);
 
@@ -163,43 +163,72 @@ export default function AdminSelect({
 
   const portal =
     mounted &&
-    open &&
-    typeof document !== "undefined" &&
-    createPortal(
+    open && (
       <div
         ref={listRef}
         id={listboxId}
         role="listbox"
+        tabIndex={-1}
+        onMouseDown={(e) => e.stopPropagation()}
         className={cn(
-          "fixed z-[300] overflow-hidden rounded-xl py-1",
+          "absolute left-0 top-[calc(100%+6px)] z-[200] rounded-xl py-1 overflow-hidden",
           panelVariant,
         )}
         style={{
-          top: pos.top,
-          left: pos.left,
-          width: Math.max(pos.width, 160),
+          width: "100%",
+          minWidth: 160,
         }}
       >
-        <div className="max-h-[min(280px,calc(100vh-24px))] overflow-y-auto overscroll-contain py-0.5">
+        <div
+          className="
+            max-h-60
+            overflow-y-scroll
+            overscroll-contain
+            py-0.5
+            scrollbar-none
+            [-ms-overflow-style:none]
+            [&::-webkit-scrollbar]:hidden
+            [&::-webkit-scrollbar]:w-0
+            [&::-webkit-scrollbar]:h-0
+          "
+        >
           {options.map((opt) => {
             const isSelected = opt.value === value;
             const isDisabled = opt.disabled;
+
             return (
               <button
                 key={opt.value}
                 type="button"
                 role="option"
                 aria-selected={isSelected}
+                aria-disabled={isDisabled}
                 disabled={isDisabled}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
+
                   if (isDisabled) return;
+
                   onValueChange(opt.value);
                   setOpen(false);
                 }}
+                onKeyDown={(e) => {
+                  if (isDisabled) return;
+
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+
+                    onValueChange(opt.value);
+                    setOpen(false);
+                  }
+                }}
                 className={cn(
-                  "flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors",
+                  "flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors select-none",
+                  "focus:outline-none",
                   optionVariant(isSelected),
-                  isDisabled && "cursor-not-allowed opacity-40 hover:bg-transparent",
+                  isDisabled
+                    ? "cursor-not-allowed opacity-40 hover:bg-transparent"
+                    : "cursor-pointer",
                 )}
               >
                 <span
@@ -216,13 +245,15 @@ export default function AdminSelect({
                 >
                   <Check className="size-3" strokeWidth={2.5} />
                 </span>
-                <span className="min-w-0 flex-1 truncate">{opt.label}</span>
+
+                <span className="min-w-0 flex-1 truncate">
+                  {opt.label}
+                </span>
               </button>
             );
           })}
         </div>
-      </div>,
-      document.body,
+      </div>
     );
 
   return (

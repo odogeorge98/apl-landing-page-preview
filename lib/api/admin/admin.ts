@@ -1,11 +1,16 @@
 
 import { http } from "@/lib/utils/http";
 import { handleApiError } from "@/lib/utils/error-handler";
+import { handleApiResponse } from "@/lib/utils/response-handler";
 import { buildQueryParams } from "@/lib/utils/query-params";
 import type {
   AdminListResponse,
   AdminSummaryData,
   FindAdminFilter,
+  InviteAdminPayload,
+  InviteAdminResponse,
+  AdminOnboardingPayload,
+  AdminOnboardingResponse
 } from "@/lib/interfaces/admin/admin";
 
 /**
@@ -93,6 +98,49 @@ export async function fetchAdminSummary(): Promise<AdminSummaryData> {
     throw handleApiError(
       error,
       "Failed to fetch admin summary. Please try again.",
+    );
+  }
+}
+
+/**
+ * POST ${baseUrl}/admin/auth
+ * Sends an invitation email to a new admin. Requires auth.
+ */
+export async function inviteAdmin(
+  payload: InviteAdminPayload,
+): Promise<InviteAdminResponse> {
+  try {
+    const response = await http.post<any>("/auth", payload);
+    return handleApiResponse<InviteAdminResponse["data"]>(
+      response.data,
+      "Admin invite sent successfully",
+    );
+  } catch (error) {
+    throw handleApiError(error, "Failed to send invitation. Please try again.");
+  }
+}
+
+/**
+ * POST ${baseUrl}/admin/auth/signup
+ * Invited admin completes their account setup. Public — no auth header.
+ */
+export async function completeAdminOnboarding(
+  payload: AdminOnboardingPayload,
+): Promise<AdminOnboardingResponse> {
+  try {
+    const response = await http.publicRequest<any>(
+      "POST",
+      "/auth/signup",
+      payload,
+    );
+    return handleApiResponse<string>(
+      response.data,
+      "Admin onboarding completed successfully",
+    );
+  } catch (error) {
+    throw handleApiError(
+      error,
+      "Failed to complete account setup. The link may have expired.",
     );
   }
 }
