@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { fetchStationsSummary, fetchStations, fetchStationDetail, createStation } from "@/lib/api/stations";
 import type {
   // CreateStationPayload,
@@ -7,8 +8,9 @@ import type {
 } from "@/lib/types/stations";
 import type {
   CreateStationPayload,
-  // CreateStationResponse,
+  CreateStationResponse,
 } from "@/lib/interfaces/stations";
+import { showSuccess, showError } from "@/lib/utils/error-handler";
 
 // ─── Query Key Factory ────────────────────────────────────────────────────────
 // Centralised key factory keeps cache invalidation predictable across the app.
@@ -99,15 +101,32 @@ export function useStationDetail(source: StationSource, id: string) {
   });
 }
 
-export function useCreateStation() {
+interface UseCreateStationOptions {
+  onSuccess?: (data: CreateStationResponse) => void;
+  onError?: (error: Error) => void;
+  redirectTo?: string;
+}
+
+export const useCreateStation = (options?: UseCreateStationOptions) => {
+  const router = useRouter();
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (payload: CreateStationPayload) => createStation(payload),
-    onSuccess: () => {
-      // Invalidate both the list and summary so counts and rows refresh
+  return useMutation<CreateStationResponse, Error, CreateStationPayload>({
+    mutationFn: createStation,
+
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: stationKeys.lists() });
       queryClient.invalidateQueries({ queryKey: stationKeys.summary() });
+
+      showSuccess(data.message || "Station created successfully!");
+      options?.onSuccess?.(data);
+
+      router.push(options?.redirectTo ?? "/dashboard/stations/cng-conversion");
+    },
+
+    onError: (error) => {
+      showError(error.message);
+      options?.onError?.(error);
     },
   });
-}
+};

@@ -145,7 +145,7 @@ export interface TripDetailData {
   cancelledAt?: string | null;
   /** ISO string of when the trip was marked completed */
   completedAt?: string | null;
-  /** e.g. "Intra-state" */
+  /** e.g. "Inter-state" */
   tripType?: string | null;
   /** Waypoint stop details */
   stopLocation?: string | null;

@@ -1,11 +1,11 @@
 /**
- * Mock data for PEPP Cruise intra-state (terminal-to-terminal) bookings and fleet.
+ * Mock data for PEPP Cruise inter-state (terminal-to-terminal) bookings and fleet.
  * Replace with API responses when backend is ready.
  */
 
-export type IntraBookingStatus = "confirmed" | "pending" | "canceled";
+export type InterBookingStatus = "confirmed" | "pending" | "canceled";
 
-export type IntraBooking = {
+export type InterBooking = {
   id: string;
   reference: string;
   state: string;
@@ -27,7 +27,7 @@ export type IntraBooking = {
   luggage: string;
   nextOfKinName: string;
   nextOfKinPhone: string;
-  status: IntraBookingStatus;
+  status: InterBookingStatus;
 };
 
 export type PeppFleetVehicle = {
@@ -41,7 +41,7 @@ export type PeppFleetVehicle = {
   status: "active" | "maintenance" | "unassigned";
 };
 
-export const NIGERIA_STATES_INTRA = [
+export const NIGERIA_STATES_INTER = [
   "Lagos",
   "Ogun",
   "Oyo",
@@ -50,10 +50,10 @@ export const NIGERIA_STATES_INTRA = [
   "Kano",
 ] as const;
 
-export const intraBookingsMock: IntraBooking[] = [
+export const interBookingsMock: InterBooking[] = [
   {
     id: "ib-1",
-    reference: "INTRA-LG-88291",
+    reference: "INTER-LG-88291",
     state: "Lagos",
     pickupTerminal: "Jibowu Terminal",
     destinationTerminal: "MMIA Terminal 2",
@@ -77,7 +77,7 @@ export const intraBookingsMock: IntraBooking[] = [
   },
   {
     id: "ib-2",
-    reference: "INTRA-LG-88292",
+    reference: "INTER-LG-88292",
     state: "Lagos",
     pickupTerminal: "Ikeja Underbridge",
     destinationTerminal: "Lekki Phase 1 Gate",
@@ -101,7 +101,7 @@ export const intraBookingsMock: IntraBooking[] = [
   },
   {
     id: "ib-3",
-    reference: "INTRA-ABJ-44102",
+    reference: "INTER-ABJ-44102",
     state: "FCT",
     pickupTerminal: "Transcorp Hilton",
     destinationTerminal: "Nnamdi Azikiwe Airport",
@@ -125,7 +125,7 @@ export const intraBookingsMock: IntraBooking[] = [
   },
   {
     id: "ib-4",
-    reference: "INTRA-LG-88270",
+    reference: "INTER-LG-88270",
     state: "Lagos",
     pickupTerminal: "CMS Terminal",
     destinationTerminal: "Abule Egba Terminal",
@@ -149,7 +149,7 @@ export const intraBookingsMock: IntraBooking[] = [
   },
   {
     id: "ib-5",
-    reference: "INTRA-PH-22018",
+    reference: "INTER-PH-22018",
     state: "Rivers",
     pickupTerminal: "GRA Junction PH",
     destinationTerminal: "PH International Airport",

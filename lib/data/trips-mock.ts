@@ -2,7 +2,7 @@ export type TripStatus = "Active" | "Canceled" | "Completed";
 
 export type TripType = "Intra-State" | "Inter-State";
 
-/** Product line: rideshare inter-city, scheduled intra-state shuttle, or fleet ops. */
+/** Product line: rideshare intra-city, scheduled inter-state shuttle, or fleet ops. */
 export type TripServiceLine = "inter_state" | "intra_state" | "fleet";
 
 export type TripRow = {

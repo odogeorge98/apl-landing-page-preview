@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import { Filter, Search } from "lucide-react";
 import {
-  intraBookingsMock,
-  NIGERIA_STATES_INTRA,
-  type IntraBooking,
-  type IntraBookingStatus,
-} from "@/lib/data/intra-state-mock";
+  interBookingsMock,
+  NIGERIA_STATES_INTER,
+  type InterBooking,
+  type InterBookingStatus,
+} from "@/lib/data/inter-state-mock";
 import AdminSelect from "@/components/ui/AdminSelect";
 import { cn } from "@/lib/utils";
 import { TablePaginationBar } from "@/components/users/TablePaginationBar";
@@ -15,8 +15,8 @@ import { TablePaginationBar } from "@/components/users/TablePaginationBar";
 const card =
   "overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95 shadow-[0_8px_40px_rgba(0,0,0,0.35)]";
 
-function StatusPill({ status }: { status: IntraBookingStatus }) {
-  const map: Record<IntraBookingStatus, string> = {
+function StatusPill({ status }: { status: InterBookingStatus }) {
+  const map: Record<InterBookingStatus, string> = {
     confirmed: "bg-emerald-500/15 text-emerald-300",
     pending: "bg-amber-500/15 text-amber-200",
     canceled: "bg-white/10 text-white/45",
@@ -28,7 +28,7 @@ function StatusPill({ status }: { status: IntraBookingStatus }) {
   );
 }
 
-export default function IntraStateBookingsReport() {
+export default function InterStateBookingsReport() {
   const [q, setQ] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
   const [slotFilter, setSlotFilter] = useState("all");
@@ -36,7 +36,7 @@ export default function IntraStateBookingsReport() {
 
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
-    return intraBookingsMock.filter((b) => {
+    return interBookingsMock.filter((b) => {
       if (stateFilter !== "all" && b.state !== stateFilter) return false;
       if (slotFilter !== "all" && b.slot !== slotFilter) return false;
       if (statusFilter !== "all" && b.status !== statusFilter) return false;
@@ -97,7 +97,7 @@ export default function IntraStateBookingsReport() {
         <div className="min-w-0 shrink">
           <h2 className="text-base font-semibold text-white">Complete bookings report</h2>
           <p className="mt-0.5 text-xs text-white/45">
-            All intra-state trips: terminals, passengers, seats, next of kin, vehicle & driver.
+            All inter-state trips: terminals, passengers, seats, next of kin, vehicle & driver.
           </p>
         </div>
         <div
@@ -123,7 +123,7 @@ export default function IntraStateBookingsReport() {
               triggerClassName="h-9 min-h-9 py-0 text-xs"
               options={[
                 { value: "all", label: "All states" },
-                ...NIGERIA_STATES_INTRA.map((s) => ({ value: s, label: s })),
+                ...NIGERIA_STATES_INTER.map((s) => ({ value: s, label: s })),
               ]}
               value={stateFilter}
               onValueChange={setStateFilter}

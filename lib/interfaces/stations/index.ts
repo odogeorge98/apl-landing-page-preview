@@ -83,16 +83,54 @@ export interface StationDetailResponse {
 // ─── Create Station ───────────────────────────────────────────────────────────
 // TODO: Fill in once the POST /stations endpoint is documented
 
+// export interface CreateStationPayload {
+//   name: string;
+//   source: StationSource;
+//   address: string;
+//   location: string;
+// }
+
+// export interface CreateStationResponse {
+//   status: string;
+//   statusCode: number;
+//   message: string;
+//   data: StationDetailData;
+// }
+// Add to your existing station interfaces file
+
+export enum StationType {
+  CNG = "CNG",
+  CNG_CONVERSION = "CNG_CONVERSION",
+  EV_CHARGING = "EV_CHARGING",
+}
+
 export interface CreateStationPayload {
   name: string;
-  source: StationSource;
+  stationType: StationType;
   address: string;
-  location: string;
+  state: string;
+  country: string;
+  phoneNo: string;
+  contactEmail: string;
+  // longitude: number;
+  // latitude: number;
+  // stationImage: string;
 }
 
 export interface CreateStationResponse {
   status: string;
   statusCode: number;
   message: string;
-  data: StationDetailData;
+  data: {
+    name: string;
+    stationType: StationType;
+    address: string;
+    state: string;
+    country: string;
+    phoneNo: string;
+    contactEmail: string;
+    // longitude: number;
+    // latitude: number;
+    // stationImage: string;
+  };
 }

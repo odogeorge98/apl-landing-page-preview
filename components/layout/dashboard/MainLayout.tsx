@@ -109,7 +109,7 @@ const mainNav: NavEntry[] = [
       { name: "Intra state", href: "/dashboard/trips/intra-state", icon: MapPinned },
       { name: "Inter state", href: "/dashboard/trips/inter-state", icon: Route },
       { name: "Fleet", href: "/dashboard/trips/fleet", icon: Truck },
-      { name: "Vehicles", href: "/dashboard/trips/intra-state/vehicles", icon: Bus },
+      { name: "Vehicles", href: "/dashboard/trips/inter-state/vehicles", icon: Bus },
     ],
   },
   {

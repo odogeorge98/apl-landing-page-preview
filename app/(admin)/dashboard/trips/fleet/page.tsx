@@ -22,7 +22,7 @@ export default function FleetTripsPage() {
           <p className="mt-1 max-w-2xl text-sm text-white/45">
             Contract and fleet-ops trips appear under the <span className="text-white/70">Fleet</span> service
             line in the global list. Use PEPP vehicles to see shuttle assets assigned to drivers for scheduled
-            runs (intra-state).
+            runs (inter-state).
           </p>
         </div>
 
@@ -38,7 +38,7 @@ export default function FleetTripsPage() {
             <span className="text-xs font-semibold text-[#00d7c4]">View list →</span>
           </Link>
 
-          <Link href="/dashboard/trips/intra-state/vehicles" className={cardBase}>
+          <Link href="/dashboard/trips/inter-state/vehicles" className={cardBase}>
             <div className="flex items-center gap-2 text-white">
               <Bus className="size-4 text-[#c084fc]" strokeWidth={1.75} />
               <span className="text-sm font-semibold">PEPP vehicles</span>
@@ -49,10 +49,10 @@ export default function FleetTripsPage() {
             <span className="text-xs font-semibold text-[#00d7c4]">Manage fleet →</span>
           </Link>
 
-          <Link href="/dashboard/trips/intra-state/create" className={cardBase}>
+          <Link href="/dashboard/trips/inter-state/create" className={cardBase}>
             <div className="flex items-center gap-2 text-white">
               <Truck className="size-4 text-amber-300/90" strokeWidth={1.75} />
-              <span className="text-sm font-semibold">Create intra-state trip</span>
+              <span className="text-sm font-semibold">Create inter-state trip</span>
             </div>
             <p className="text-xs leading-relaxed text-white/45">
               Schedule a run and attach a vehicle (and driver) from the PEPP pool.

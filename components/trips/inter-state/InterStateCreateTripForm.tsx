@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Calendar, Car, ChevronDown } from "lucide-react";
 import {
-  NIGERIA_STATES_INTRA,
+  NIGERIA_STATES_INTER,
   peppFleetMock,
   terminalPairsByState,
-} from "@/lib/data/intra-state-mock";
+} from "@/lib/data/inter-state-mock";
 import AdminSelect from "@/components/ui/AdminSelect";
 import { cn } from "@/lib/utils";
 import { showSuccess } from "@/lib/utils/error-handler";
@@ -24,9 +24,9 @@ function firstTerminals(st: string) {
   return { pu: t?.pickup[0] ?? "", de: t?.dest[0] ?? "" };
 }
 
-export default function IntraStateCreateTripForm() {
-  const [state, setState] = useState<string>(NIGERIA_STATES_INTRA[0]!);
-  const init = firstTerminals(NIGERIA_STATES_INTRA[0]!);
+export default function InterStateCreateTripForm() {
+  const [state, setState] = useState<string>(NIGERIA_STATES_INTER[0]!);
+  const init = firstTerminals(NIGERIA_STATES_INTER[0]!);
   const [pickup, setPickup] = useState(init.pu);
   const [destination, setDestination] = useState(init.de);
   const terminals = terminalPairsByState[state] ?? { pickup: [], dest: [] };
@@ -103,7 +103,7 @@ export default function IntraStateCreateTripForm() {
           <Car className="size-5" strokeWidth={1.75} />
         </span>
         <div>
-          <h2 className="text-lg font-semibold text-white">Create intra-state trip</h2>
+          <h2 className="text-lg font-semibold text-white">Create intER-state trip</h2>
           <p className="text-xs text-white/45">
             Assign a PEPP vehicle and route (state, terminals, date, slot) — mirrors the mobile booking
             steps.
@@ -120,7 +120,7 @@ export default function IntraStateCreateTripForm() {
             <span className={labelCls}>State</span>
             <div className="mt-1.5">
               <AdminSelect
-                options={NIGERIA_STATES_INTRA.map((s) => ({ value: s, label: s }))}
+                options={NIGERIA_STATES_INTER.map((s) => ({ value: s, label: s }))}
                 value={state}
                 onValueChange={onStateChange}
                 placeholder="Select state"

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Bus, Filter, Search } from "lucide-react";
-import { peppFleetMock, type PeppFleetVehicle } from "@/lib/data/intra-state-mock";
+import { peppFleetMock, type PeppFleetVehicle } from "@/lib/data/inter-state-mock";
 import AdminSelect from "@/components/ui/AdminSelect";
 import { cn } from "@/lib/utils";
 import { TablePaginationBar } from "@/components/users/TablePaginationBar";
@@ -23,7 +23,7 @@ function FleetStatus({ s }: { s: PeppFleetVehicle["status"] }) {
   );
 }
 
-export default function IntraStateVehiclesTable() {
+export default function InterStateVehiclesTable() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -52,7 +52,7 @@ export default function IntraStateVehiclesTable() {
           <div>
             <h2 className="text-base font-semibold text-white">PEPP Cruise vehicles</h2>
             <p className="mt-0.5 text-xs text-white/45">
-              Fleet units assigned to drivers for intra-state and terminal runs.
+              Fleet units assigned to drivers for inter-state and terminal runs.
             </p>
           </div>
         </div>
