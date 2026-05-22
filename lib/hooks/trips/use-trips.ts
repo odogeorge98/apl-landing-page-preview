@@ -3,8 +3,12 @@ import {
   fetchTripsSummary,
   fetchTrips,
   fetchTripById,
+  shareTrip,
 } from "@/lib/api/trips";
 import type { FindTripsFilter } from "@/lib/interfaces/trip";
+import { useMutation } from "@tanstack/react-query";
+// import { fetchSharedTrip } from "@/lib/api/trips";
+import type { ShareTripResponse } from "@/lib/interfaces/trip";
 
 // ─── Query key factory ────────────────────────────────────────────────────────
 
@@ -45,3 +49,26 @@ export function useTripDetail(id: string) {
     staleTime: 30_000,
   });
 }
+
+/** Generates a shareable link for a trip. */
+export function useShareTrip(options?: {
+  onSuccess?: (shareUrl: string) => void;
+  onError?: (message: string) => void;
+}) {
+  return useMutation<ShareTripResponse, Error, string>({
+    mutationFn: (tripId: string) => shareTrip(tripId),
+    onSuccess:  (data) => options?.onSuccess?.(data.data.url),
+    onError:    (err)  => options?.onError?.(err.message),
+  });
+}
+
+/** Resolves a share token — used for preview or the landing page. */
+// export function useSharedTrip(token: string) {
+//   return useQuery({
+//     queryKey:  ["shared-trip", token],
+//     queryFn:   () => fetchSharedTrip(token),
+//     enabled:   Boolean(token),
+//     staleTime: 5 * 60 * 1000,
+//     retry:     false,
+//   });
+// }

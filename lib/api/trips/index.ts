@@ -9,6 +9,8 @@ import type {
   TripsSummaryResponse,
   TripAnalyticsPeriod,
   TripAnalyticsResponse,
+  ShareTripResponse,
+  ShareTripData,
 } from "@/lib/interfaces/trip";
 
 export async function fetchTripsSummary(): Promise<TripsSummaryResponse> {
@@ -76,3 +78,36 @@ export async function fetchTripAnalytics(
     throw handleApiError(error, "Failed to fetch trip analytics. Please try again.");
   }
 }
+
+/**
+ * POST ${baseUrl}/admin/trips/:id/share
+ * Generates a 7-day public share link for the trip.
+ */
+export async function shareTrip(tripId: string): Promise<ShareTripResponse> {
+  try {
+    const response = await http.post<any>(`/trips/${tripId}/share`);
+    return handleApiResponse<ShareTripData>(
+      response.data,
+      "Trip details retrieved successfully",
+    );
+  } catch (error) {
+    throw handleApiError(error, "Failed to generate share link. Please try again.");
+  }
+}
+
+/**
+ * GET ${baseUrl}/admin/trips/share/:token
+ * Public endpoint — resolves a share token to trip summary data.
+ * No auth header is required; the token in the URL acts as the credential.
+ */
+// export async function fetchSharedTrip(token: string): Promise<SharedTripResponse> {
+//   try {
+//     const response = await http.publicRequest<any>("GET", `/trips/share/${token}`);
+//     return handleApiResponse<SharedTripData>(
+//       response.data,
+//       "Trips summary retrieved successfully",
+//     );
+//   } catch (error) {
+//     throw handleApiError(error, "Trip not found or share link has expired.");
+//   }
+// }

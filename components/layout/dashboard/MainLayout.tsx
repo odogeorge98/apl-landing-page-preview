@@ -38,6 +38,7 @@ import {
   ListOrdered,
   MapPinned,
   Truck,
+  Activity,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -126,12 +127,17 @@ const mainNav: NavEntry[] = [
       },
     ],
   },
+  // {
+  //   name: "Support",
+  //   href: "#",
+  //   icon: Headphones,
+  //   expandable: true,
+  //   subItems: [{ name: "Inbox", href: "/dashboard/support", icon: Inbox }],
+  // },
   {
-    name: "Support",
-    href: "#",
-    icon: Headphones,
-    expandable: true,
-    subItems: [{ name: "Inbox", href: "/dashboard/support", icon: Inbox }],
+    name: "Activity",
+    href: "/dashboard/activity",
+    icon: Activity,
   },
   {
     name: "Stations",

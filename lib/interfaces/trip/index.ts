@@ -193,3 +193,46 @@ export interface TripAnalyticsResponse {
   message: string;
   data: TripAnalyticsData;
 }
+
+// ─── Share trip ───────────────────────────────────────────────────────────────
+
+export interface ShareTripData {
+  url: string;
+}
+
+export interface ShareTripResponse {
+  status: string;
+  statusCode: number;
+  message: string;
+  data: ShareTripData;
+}
+
+// ─── Shared trip — public view (returned by GET /trips/share/:token) ─────────
+
+export interface SharedTripDriver {
+  fullName: string;
+  imageUrl: string | null;
+}
+
+/**
+ * Note: field names differ from TripDetailData.
+ * `destinationAddress` ← admin detail uses `dropoffAddress`
+ * No passenger, no payment, no timeline data.
+ */
+export interface SharedTripData {
+  pickupAddress: string;
+  destinationAddress: string;
+  fare: string;
+  distanceCovered: string;
+  status: TripApiStatus;
+  tripType: string;
+  tripDate: string;
+  driver: SharedTripDriver | null;
+}
+
+export interface SharedTripResponse {
+  status: string;
+  statusCode: number;
+  message: string;
+  data: SharedTripData;
+}

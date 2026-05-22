@@ -17,6 +17,12 @@ import {
 import { useTripDetail } from "@/lib/hooks/trips/use-trips";
 import type { TripDetailData, TripDisplayStatus, TripPaymentStatus } from "@/lib/interfaces/trip";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Share2 } from "lucide-react";
+import { shareTrip } from "@/lib/api/trips";
+import { showError } from "@/lib/utils/error-handler";
+import { ShareTripModal } from "./ShareTripModal";
 
 dayjs.extend(duration);
 
@@ -231,6 +237,15 @@ export default function TripDetailView({ tripRowId }: { tripRowId: string }) {
     isError,
     refetch,
   } = useTripDetail(tripRowId);
+  
+  const [shareModal, setShareModal] = useState({ open: false, url: "" });
+
+  const shareMutation = useMutation({
+    mutationFn: (tripId: string) => shareTrip(tripId),
+    onSuccess:  (data)  => setShareModal({ open: true, url: data.data.url }),
+    onError:    (error: Error) =>
+      showError(error.message || "Failed to generate share link."),
+  });
 
   const trip = detailResponse?.data ?? null;
 
@@ -319,18 +334,41 @@ export default function TripDetailView({ tripRowId }: { tripRowId: string }) {
           </p>
         </div>
 
-        <div className="flex flex-col items-stretch gap-2 sm:items-end">
-          <p className="text-xs font-medium uppercase tracking-wider text-white/40">
-            {trip.finalFee ? "Final fare" : "Estimated fare"}
-          </p>
-          <p className="text-3xl font-semibold tabular-nums tracking-tight text-white">
-            {formatFare(trip.finalFee ?? trip.estimatedFee)}
-          </p>
-          <div className="flex items-center gap-2">
-            <PaymentPill label={paymentDisplay.label} pill={paymentDisplay.pill} />
-            <span className="text-xs text-white/45">
-              {formatPaymentType(trip.paymentType)}
-            </span>
+        <div className="flex flex-col items-stretch gap-3 sm:items-end">
+          {/* Share button */}
+          <button
+            type="button"
+            onClick={() => shareMutation.mutate(trip.id)}
+            disabled={shareMutation.isPending}
+            className="inline-flex items-center justify-center gap-2 self-end rounded-xl border border-[#8247E5]/40 bg-[#8247E5]/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:border-[#8247E5]/70 hover:bg-[#8247E5]/20 disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {shareMutation.isPending ? (
+              <>
+                <span className="size-4 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
+                Generating…
+              </>
+            ) : (
+              <>
+                <Share2 className="size-4" strokeWidth={1.75} />
+                Share trip
+              </>
+            )}
+          </button>
+
+          {/* Fare (existing content — unchanged) */}
+          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <p className="text-xs font-medium uppercase tracking-wider text-white/40">
+              {trip.finalFee ? "Final fare" : "Estimated fare"}
+            </p>
+            <p className="text-3xl font-semibold tabular-nums tracking-tight text-white">
+              {formatFare(trip.finalFee ?? trip.estimatedFee)}
+            </p>
+            <div className="flex items-center gap-2">
+              <PaymentPill label={paymentDisplay.label} pill={paymentDisplay.pill} />
+              <span className="text-xs text-white/45">
+                {formatPaymentType(trip.paymentType)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -530,6 +568,12 @@ export default function TripDetailView({ tripRowId }: { tripRowId: string }) {
           </section>
         </div>
       </div>
+      {shareModal.open && (
+        <ShareTripModal
+          url={shareModal.url}
+          onClose={() => setShareModal({ open: false, url: "" })}
+        />
+      )}
     </div>
   );
 }
