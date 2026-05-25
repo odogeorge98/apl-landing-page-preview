@@ -85,7 +85,13 @@ export async function fetchTripAnalytics(
  */
 export async function shareTrip(tripId: string): Promise<ShareTripResponse> {
   try {
-    const response = await http.post<any>(`/trips/${tripId}/share`);
+    const response = await http.post<any>(
+      `/trips/${tripId}/share`,
+      undefined,
+      {
+        namespace: "none",
+      },
+    );
     return handleApiResponse<ShareTripData>(
       response.data,
       "Trip details retrieved successfully",

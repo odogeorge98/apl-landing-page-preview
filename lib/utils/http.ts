@@ -9,8 +9,15 @@ import { getAuthToken } from "@/lib/utils/token";
 import useAuthStore from "@/lib/store/auth";
 // import { MOCK_PREVIEW_TOKEN } from "@/lib/dev/mock-admin-user";
 
+type ApiNamespace =
+  | "admin"
+  | "public"
+  | "mobile"
+  | "none";
+
 export interface HttpOptions extends AxiosRequestConfig {
   requiresAuth?: boolean;
+  namespace?: ApiNamespace;
 }
 
 export interface HttpResponse<T = any> {
@@ -147,10 +154,39 @@ class HttpClient {
     options: HttpOptions = {}
   ): Promise<HttpResponse<T>> {
     try {
-      const isInternalAPI = endpoint.startsWith("/api/");
+      const isInternalAPI =
+        endpoint.startsWith("/api/");
+
+      const namespace =
+        options.namespace ?? "admin";
+
+      let basePath = "";
+
+      switch (namespace) {
+        case "admin":
+          basePath = "/admin";
+          break;
+
+        case "public":
+          basePath = "/public";
+          break;
+
+        case "mobile":
+          basePath = "/mobile";
+          break;
+
+        case "none":
+          basePath = "";
+          break;
+      }
+
       const url = isInternalAPI
         ? endpoint
-        : `${config.api.baseUrl}/admin${endpoint}`;
+        : `${config.api.baseUrl}${basePath}${endpoint}`;
+      // const isInternalAPI = endpoint.startsWith("/api/");
+      // const url = isInternalAPI
+      //   ? endpoint
+      //   : `${config.api.baseUrl}/admin${endpoint}`;
 
       console.log('Url: ', url);
       const response: AxiosResponse<T> = await this.axiosInstance.request({
@@ -245,6 +281,7 @@ class HttpClient {
       ...options,
     });
   }
+
   /**
    * Makes a public (unauthenticated) request and attaches the
    * `x-client-device-token` header.
