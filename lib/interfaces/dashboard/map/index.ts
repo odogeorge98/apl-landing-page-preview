@@ -19,6 +19,7 @@ export interface DriverCoordinates {
 export interface DriverMapEntry {
   id: string;
   fullName: string;
+  driverPhoto: string | null;
   phoneNo: string;
   tripStatus: DriverTripStatus;
   coordinates: DriverCoordinates;
@@ -47,6 +48,7 @@ export interface DriversMapResponse {
 export interface MapSearchResult {
   id: string;
   fullName: string;
+  driverPhoto: string | null; // show driver avatar in the dropdown
   plateNumber: string | null;
   tripStatus: DriverTripStatus;
   coordinates: DriverCoordinates;

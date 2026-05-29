@@ -13,6 +13,7 @@ import {
   OverlayViewF,
   useLoadScript,
 } from "@react-google-maps/api";
+import Image from "next/image";
 import { Car, Minus, Phone, Plus, Search, X } from "lucide-react";
 
 import type { DriverMapEntry, DriverTripStatus } from "@/lib/interfaces/dashboard/map";
@@ -239,13 +240,25 @@ function DriverPopup({
 
           {/* Driver row */}
           <div className="mt-3 flex items-center gap-2.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#8247E5] to-blue-500 text-[11px] font-bold text-white">
-              {driver.fullName
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full overflow-hidden bg-gradient-to-br from-[#8247E5] to-blue-500">
+              {driver.driverPhoto ? (
+                <Image
+                  src={driver.driverPhoto}
+                  alt={driver.fullName}
+                  width={36}
+                  height={36}
+                  className="size-9 object-cover"
+                />
+              ) : (
+                <span className="text-[11px] font-bold text-white">
+                  {driver.fullName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </span>
+              )}
             </div>
             <div className="min-w-0 flex-1 text-xs">
               <p className="font-semibold text-white">{driver.fullName}</p>
