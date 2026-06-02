@@ -249,7 +249,7 @@ function PaymentsTrendChart() {
             strokeWidth="1"
           />
           <text x="-54" y="-24" fill="#fff" fontSize="11" fontWeight="700">
-            $125.2k
+            ₦125.2k
           </text>
           <rect x="2" y="-32" width="52" height="17" rx="6" fill="rgba(168,85,247,0.45)" />
           <text x="28" y="-19.5" textAnchor="middle" fill="#e9d5ff" fontSize="8.5" fontWeight="600">

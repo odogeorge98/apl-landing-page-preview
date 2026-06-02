@@ -231,7 +231,7 @@ function RevenueChart({ className }: { className?: string }) {
             fill="rgba(18,14,28,0.96)"
           />
           <text x="-54" y="-22" fill="#fff" fontSize="11" fontWeight="700">
-            $125.2k
+            ₦125.2k
           </text>
           <rect x="6" y="-30" width="48" height="17" rx="5" fill="rgba(34,197,94,0.22)" />
           <text x="30" y="-17.5" textAnchor="middle" fill="#4ade80" fontSize="8.5" fontWeight="700">
@@ -288,7 +288,7 @@ function ProfitChart() {
               fontSize="9"
               fontWeight="500"
             >
-              {tk === 0 ? "0" : tk === 1000 ? "$1,000" : tk === 2000 ? "$2,000" : "500"}
+              {tk === 0 ? "0" : tk === 1000 ? "₦1,000" : tk === 2000 ? "₦2,000" : "500"}
             </text>
           </g>
         );
@@ -528,7 +528,7 @@ export default function OverviewLanding() {
               <p className="text-xs font-medium tracking-wide text-white/45">Total revenue</p>
               <div className="flex flex-wrap items-center gap-2.5">
                 <span className="text-3xl font-bold tracking-tight text-white sm:text-[32px]">
-                  $240.8K
+                  ₦240.8K
                 </span>
                 <TrendPill>
                   <ArrowUp className="size-3" strokeWidth={2.75} />
@@ -573,7 +573,7 @@ export default function OverviewLanding() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
                   <p className="text-3xl font-bold tracking-tight text-white sm:text-[30px]">
-                    $144.6K
+                    ₦144.6K
                   </p>
                   <TrendPill>
                     <ArrowUp className="size-3" strokeWidth={2.75} />
