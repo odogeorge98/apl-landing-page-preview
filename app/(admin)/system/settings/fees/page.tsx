@@ -238,7 +238,7 @@ export default function RideClassFeesPage() {
     ? (updateMutation.variables as { id: string } | undefined)?.id
     : null;
 
-  const fees = feesData?.data.items ?? [];
+  const fees = feesData?.data.data ?? [];
 
   const handleSave = (
     id:              string,

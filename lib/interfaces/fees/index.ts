@@ -17,7 +17,7 @@ export interface FeeItem {
 // ─── Response wrappers ────────────────────────────────────────────────────────
 
 export interface FeesListData {
-  items: FeeItem[];
+  data: FeeItem[];
   nextCursor: string | null;
 }
 
