@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
         hostname: 'res.cloudinary.com',
         pathname: '/**', // Matches all paths under this domain
       },
+      {
+        protocol: "https",
+        hostname: "www.peppcruise.com",
+        pathname: "/images/**",
+      },
     ],
   },
 };

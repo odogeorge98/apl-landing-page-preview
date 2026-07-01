@@ -166,6 +166,7 @@ const mainNav: NavEntry[] = [
     subItems: [
       { name: "General", href: "/system/settings", icon: SlidersHorizontal },
       { name: "Trips", href: "/system/settings/trips", icon: Car },
+      { name: "Fees", href: "/system/settings/fees", icon: Banknote },
     ],
   },
 ];
