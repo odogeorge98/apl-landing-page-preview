@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { MainLayout } from "@/components/layout/dashboard";
-import { useFeesList, useUpdateFee } from "@/lib/hooks/fees/use-fees";
+import { useFeesList, useUpdateFee, useDeleteFee } from "@/lib/hooks/fees/use-fees";
 import type { FeeItem } from "@/lib/interfaces/fees";
 import { cn } from "@/lib/utils";
-import { Car, Coins, Plus, Wallet, Zap } from "lucide-react";
+import { Car, Coins, Plus, Trash2, Wallet, Zap } from "lucide-react";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers (unchanged) ──────────────────────────────────────────────────────
 
 const ngn = new Intl.NumberFormat("en-NG", {
   style:                "currency",
@@ -27,11 +27,9 @@ const inputCls =
   "w-full min-w-0 rounded-lg border border-white/[0.1] bg-white/[0.05] px-3 py-2 text-sm text-white tabular-nums outline-none transition focus:border-white/[0.18] focus:ring-1 focus:ring-white/20";
 
 const CAR_TYPE_CFG: Record<string, { label: string; cls: string }> = {
-  PUBLIC:  { label: "Public",  cls: "bg-sky-500/15 text-sky-300"          },
+  PUBLIC:  { label: "Public",  cls: "bg-sky-500/15 text-sky-300"      },
   PRIVATE: { label: "Private", cls: "bg-[#8247E5]/20 text-[#c084fc]" },
 };
-
-// ─── FeeCard ─────────────────────────────────────────────────────────────────
 
 interface LocalFee {
   baseFee:         string;
@@ -47,22 +45,28 @@ function isDirty(original: FeeItem, local: LocalFee): boolean {
   );
 }
 
+// ─── FeeCard ──────────────────────────────────────────────────────────────────
+
 function FeeCard({
   fee,
   saving,
+  deleting,
   onSave,
+  onDelete,
 }: {
-  fee:    FeeItem;
-  saving: boolean;
-  onSave: (id: string, baseFee: number, piBaseFee: number, peppCoinBaseFee: number) => void;
+  fee:      FeeItem;
+  saving:   boolean;
+  deleting: boolean;
+  onSave:   (id: string, baseFee: number, piBaseFee: number, peppCoinBaseFee: number) => void;
+  onDelete: (id: string) => void;
 }) {
   const [local, setLocal] = useState<LocalFee>({
     baseFee:         fee.baseFee,
     piBaseFee:       fee.piBaseFee,
     peppCoinBaseFee: fee.peppCoinBaseFee,
   });
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Keep local in sync when server data refreshes after a save
   useEffect(() => {
     setLocal({
       baseFee:         fee.baseFee,
@@ -71,28 +75,32 @@ function FeeCard({
     });
   }, [fee.baseFee, fee.piBaseFee, fee.peppCoinBaseFee]);
 
-  const dirty = isDirty(fee, local);
+  // Close confirm strip if a delete for another card starts
+  useEffect(() => {
+    if (!deleting) return;
+    setConfirmDelete(false);
+  }, [deleting]);
+
+  const dirty    = isDirty(fee, local);
+  const disabled = saving || deleting;
 
   const patch = (field: keyof LocalFee, raw: string) => {
-    const num = raw.replace(/[^0-9.]/g, "");
-    setLocal((prev) => ({ ...prev, [field]: num }));
-  };
-
-  const handleSave = () => {
-    onSave(
-      fee.id,
-      toNumber(local.baseFee),
-      toNumber(local.piBaseFee),
-      toNumber(local.peppCoinBaseFee),
-    );
+    setLocal((prev) => ({ ...prev, [field]: raw.replace(/[^0-9.]/g, "") }));
   };
 
   const typeCfg = CAR_TYPE_CFG[fee.carType] ?? CAR_TYPE_CFG.PUBLIC;
 
   return (
-    <div className={cn(cardBase, "overflow-hidden")}>
-      {/* Vehicle image + header */}
-      <div className="flex items-start gap-4 border-b border-white/[0.06] p-5">
+    <div
+      className={cn(
+        cardBase,
+        "overflow-hidden transition-opacity duration-200",
+        deleting && "opacity-50",
+      )}
+    >
+      {/* Header */}
+      {/* <div className="flex items-start gap-4 border-b border-white/[0.06] p-5"> */}
+      <div className="relative flex items-start gap-4 border-b border-white/[0.06] p-5">
         <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/[0.05]">
           {fee.vehicleImage ? (
             <Image
@@ -101,49 +109,93 @@ function FeeCard({
               width={64}
               height={64}
               className="object-contain"
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
             />
           ) : (
             <Car className="size-7 text-white/20" strokeWidth={1.5} />
           )}
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 pr-10">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold text-white">{fee.className}</h3>
-            <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-semibold", typeCfg.cls)}>
+            <span
+              className={cn(
+                "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                typeCfg.cls,
+              )}
+            >
               {typeCfg.label}
             </span>
           </div>
           <p className="mt-0.5 text-xs text-white/45">{fee.description}</p>
-          <p className="mt-1 text-[11px] text-white/30">
-            {fee.vehicleSeaters} seats
-          </p>
+          <p className="mt-1 text-[11px] text-white/30">{fee.vehicleSeaters} seats</p>
         </div>
+
+        {/* Delete trigger — top-right of header */}
+        <button
+          type="button"
+          onClick={() => setConfirmDelete(true)}
+          disabled={disabled || confirmDelete}
+          aria-label={`Delete ${fee.className}`}
+          className={cn(
+            "absolute right-5 top-5 rounded-lg p-1.5 transition",
+            confirmDelete || disabled
+              ? "cursor-not-allowed text-white/15"
+              : "text-white/30 hover:bg-red-500/10 hover:text-red-400",
+          )}
+        >
+          <Trash2 className="size-4" strokeWidth={1.75} />
+        </button>
       </div>
+
+      {/* Inline delete confirmation strip */}
+      {confirmDelete && (
+        <div className="border-b border-red-500/20 bg-red-500/[0.06] p-5">
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-red-300">
+              Delete "{fee.className}"?
+            </h4>
+
+            <p className="text-xs leading-relaxed text-red-200/80">
+              This action cannot be undone. The ride class and its pricing
+              configuration will be permanently removed.
+            </p>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="rounded-lg px-4 py-2 text-xs font-semibold text-white/60 transition hover:bg-white/[0.06] hover:text-white"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmDelete(false);
+                  onDelete(fee.id);
+                }}
+                disabled={deleting}
+                className="rounded-lg bg-red-500/20 px-4 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Yes, delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Fee inputs */}
       <div className="space-y-4 p-5">
         {(
           [
-            {
-              field:  "baseFee" as const,
-              label:  "Base fare",
-              icon:   Wallet,
-              hint:   "Standard ride rate",
-            },
-            {
-              field:  "piBaseFee" as const,
-              label:  "PI base fare",
-              icon:   Zap,
-              hint:   "PeppInsurance rate",
-            },
-            {
-              field:  "peppCoinBaseFee" as const,
-              label:  "PeppCoin base fare",
-              icon:   Coins,
-              hint:   "PeppCoin payment rate",
-            },
+            { field: "baseFee"         as const, label: "Base fare",         icon: Wallet, hint: "Standard ride rate"   },
+            { field: "piBaseFee"       as const, label: "PI base fare",      icon: Zap,    hint: "PI rate"              },
+            { field: "peppCoinBaseFee" as const, label: "PeppCoin base fare", icon: Coins, hint: "PeppCoin payment rate" },
           ] as const
         ).map(({ field, label, icon: Icon, hint }) => (
           <div key={field}>
@@ -163,7 +215,8 @@ function FeeCard({
                   step={50}
                   value={local[field]}
                   onChange={(e) => patch(field, e.target.value)}
-                  className={cn(inputCls, "pl-7")}
+                  disabled={disabled}
+                  className={cn(inputCls, "pl-7", disabled && "opacity-50")}
                   aria-label={`${label} for ${fee.className}`}
                 />
               </div>
@@ -174,14 +227,20 @@ function FeeCard({
           </div>
         ))}
 
-        {/* Save button — only active when values have changed */}
         <button
           type="button"
-          onClick={handleSave}
-          disabled={!dirty || saving}
+          onClick={() =>
+            onSave(
+              fee.id,
+              toNumber(local.baseFee),
+              toNumber(local.piBaseFee),
+              toNumber(local.peppCoinBaseFee),
+            )
+          }
+          disabled={!dirty || disabled}
           className={cn(
             "mt-2 w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition",
-            dirty && !saving
+            dirty && !disabled
               ? "bg-[#8247E5] text-white hover:bg-[#7c3aed]"
               : "cursor-not-allowed bg-white/[0.05] text-white/25",
           )}
@@ -202,7 +261,7 @@ function FeeCard({
   );
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
+// ─── Skeleton (unchanged) ─────────────────────────────────────────────────────
 
 function FeeSkeleton() {
   return (
@@ -232,10 +291,14 @@ function FeeSkeleton() {
 export default function RideClassFeesPage() {
   const { data: feesData, isLoading, isError } = useFeesList();
   const updateMutation = useUpdateFee();
+  const deleteMutation = useDeleteFee();
 
-  // Track which fee ID is currently being saved
-  const savingId = updateMutation.isPending
+  const savingId  = updateMutation.isPending
     ? (updateMutation.variables as { id: string } | undefined)?.id
+    : null;
+
+  const deletingId = deleteMutation.isPending
+    ? (deleteMutation.variables as string | undefined)
     : null;
 
   const fees = feesData?.data.data ?? [];
@@ -249,11 +312,13 @@ export default function RideClassFeesPage() {
     updateMutation.mutate({ id, payload: { baseFee, piBaseFee, peppCoinBaseFee } });
   };
 
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id);
+  };
+
   return (
     <MainLayout>
       <div className="mx-auto max-w-[1600px] space-y-8 pb-10">
-
-        {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs text-white/40">Settings</p>
@@ -264,12 +329,11 @@ export default function RideClassFeesPage() {
               Ride class fees
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-white/45">
-              Configure base fares per ride class. Each class saves independently — click
-              <strong className="text-white/60"> Save changes</strong> on the card you've edited.
+              Configure base fares per ride class. Each class saves independently — click{" "}
+              <strong className="text-white/60">Save changes</strong> on the card you&apos;ve edited.
             </p>
           </div>
 
-          {/* Create fee — inactive placeholder */}
           <button
             type="button"
             disabled
@@ -281,14 +345,12 @@ export default function RideClassFeesPage() {
           </button>
         </div>
 
-        {/* Error state */}
         {isError && (
           <div className={cn(cardBase, "flex flex-col items-center gap-3 p-10 text-center")}>
             <p className="text-sm text-red-400">Failed to load ride class fees.</p>
           </div>
         )}
 
-        {/* Grid */}
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {isLoading
             ? Array.from({ length: 4 }).map((_, i) => <FeeSkeleton key={i} />)
@@ -296,13 +358,14 @@ export default function RideClassFeesPage() {
                 <FeeCard
                   key={fee.id}
                   fee={fee}
-                  saving={savingId === fee.id}
+                  saving={savingId  === fee.id}
+                  deleting={deletingId === fee.id}
                   onSave={handleSave}
+                  onDelete={handleDelete}
                 />
               ))}
         </div>
 
-        {/* Empty state */}
         {!isLoading && !isError && fees.length === 0 && (
           <div className={cn(cardBase, "flex flex-col items-center gap-3 p-10 text-center")}>
             <Car className="size-8 text-white/20" strokeWidth={1.5} />
@@ -310,9 +373,11 @@ export default function RideClassFeesPage() {
           </div>
         )}
 
-        <p className="text-xs text-white/25">
-          {!isLoading && fees.length > 0 && `${fees.length} ride class${fees.length !== 1 ? "es" : ""} · Changes are saved per class`}
-        </p>
+        {!isLoading && fees.length > 0 && (
+          <p className="text-xs text-white/25">
+            {fees.length} ride class{fees.length !== 1 ? "es" : ""} · Changes are saved per class
+          </p>
+        )}
       </div>
     </MainLayout>
   );

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchFees, updateFee }  from "@/lib/api/fees";
+import { fetchFees, updateFee, deleteFee }  from "@/lib/api/fees";
 import { showSuccess, showError } from "@/lib/utils/error-handler";
 import type { UpdateFeePayload }  from "@/lib/interfaces/fees";
 
@@ -29,6 +29,21 @@ export function useUpdateFee() {
     },
     onError: (err: Error) => {
       showError(err.message || "Failed to update fee.");
+    },
+  });
+}
+
+export function useDeleteFee() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteFee(id),
+    onSuccess: () => {
+      showSuccess("Ride class deleted.");
+      queryClient.invalidateQueries({ queryKey: feeKeys.list() });
+    },
+    onError: (err: Error) => {
+      showError(err.message || "Failed to delete ride class.");
     },
   });
 }

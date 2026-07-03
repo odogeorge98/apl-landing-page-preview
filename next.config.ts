@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
         hostname: "www.peppcruise.com",
         pathname: "/images/**",
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.peppcruise.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };

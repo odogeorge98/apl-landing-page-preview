@@ -42,3 +42,17 @@ export interface UpdateFeeResponse {
   message:    string;
   data:       number;    // rows affected
 }
+
+// ───────  Delete ───────────────────────────────────────────────────────────────────────
+
+export interface DeleteFeeData {
+  id:      string;
+  deleted: boolean;
+}
+
+export interface DeleteFeeResponse {
+  status:     string;
+  statusCode: number;
+  message:    string;
+  data:       DeleteFeeData;
+}

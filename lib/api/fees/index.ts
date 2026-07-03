@@ -6,7 +6,11 @@ import type {
   FeeListResponse,
   UpdateFeePayload,
   UpdateFeeResponse,
+  DeleteFeeData,
+  DeleteFeeResponse,
 } from "@/lib/interfaces/fees";
+
+
 
 export async function fetchFees(): Promise<FeeListResponse> {
   try {
@@ -32,5 +36,17 @@ export async function updateFee(
     );
   } catch (error) {
     throw handleApiError(error, "Failed to update fee.");
+  }
+}
+
+export async function deleteFee(id: string): Promise<DeleteFeeResponse> {
+  try {
+    const response = await http.delete<DeleteFeeResponse>(`/fees/${id}`);
+    return handleApiResponse<DeleteFeeResponse["data"]>(
+      response.data,
+      "Fee deleted successfully",
+    );
+  } catch (error) {
+    throw handleApiError(error, "Failed to delete fee.");
   }
 }
