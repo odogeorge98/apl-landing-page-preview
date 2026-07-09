@@ -61,15 +61,21 @@ const DEFAULT_ZOOM   = 12;
 
 // ─── Dark map styles (same palette as driver map) ─────────────────────────────
 
+
 const DARK_MAP_STYLES: google.maps.MapTypeStyle[] = [
   { elementType: "geometry",           stylers: [{ color: "#0c0a12" }] },
-  { elementType: "labels.icon",        stylers: [{ visibility: "off" }] },
+  { elementType: "labels.icon",        stylers: [{ visibility: "on" }] },
   { elementType: "labels.text.fill",   stylers: [{ color: "#4a5568" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#0c0a12" }] },
   { featureType: "administrative",           elementType: "geometry",         stylers: [{ color: "#1c182b" }] },
   { featureType: "administrative.country",   elementType: "labels.text.fill", stylers: [{ color: "#9ca3af" }] },
   { featureType: "administrative.locality",  elementType: "labels.text.fill", stylers: [{ color: "#d1d5db" }] },
-  { featureType: "poi",                                                        stylers: [{ visibility: "off" }] },
+  // { featureType: "poi",                                                        stylers: [{ visibility:
+  //  "off" }] },
+  { featureType: "poi.gas_station", stylers: [{ visibility: "on" }] },
+  { featureType: "poi.medical", stylers: [{ visibility: "on" }] },
+  { featureType: "transit.station.airport", stylers: [{ visibility: "on" }] },
+  { featureType: "transit.station.bus", stylers: [{ visibility: "on" }] },
   { featureType: "road",               elementType: "geometry",               stylers: [{ color: "#1a1628" }] },
   { featureType: "road",               elementType: "geometry.stroke",        stylers: [{ color: "#261f38" }] },
   { featureType: "road",               elementType: "labels.text.fill",       stylers: [{ color: "#6b7280" }] },
@@ -906,7 +912,7 @@ export default function GeofencePricingPage() {
   const mapOptions = useMemo<google.maps.MapOptions>(
     () => ({
       disableDefaultUI:  true,
-      clickableIcons:    false,
+      clickableIcons:    true, // change made
       gestureHandling:   "greedy",
       styles:            DARK_MAP_STYLES,
       minZoom:           4,
@@ -1343,10 +1349,19 @@ export default function GeofencePricingPage() {
                     <Polyline
                       path={[draftVertices[draftVertices.length - 1], draftVertices[0]]}
                       options={{
-                        strokeColor:   "#8247E5",
-                        strokeOpacity: 0.35,
-                        strokeWeight:  1.5,
-                        strokePattern: [4, 4],
+                        strokeOpacity: 0, // Hide the solid line
+                        icons: [
+                          {
+                            icon: {
+                              path: "M 0,-1 0,1",
+                              strokeOpacity: 0.7,
+                              strokeColor: "#8247E5",
+                              scale: 3,
+                            },
+                            offset: "0",
+                            repeat: "10px",
+                          },
+                        ],
                       }}
                     />
                   )}
