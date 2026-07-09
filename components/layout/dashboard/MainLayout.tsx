@@ -525,15 +525,15 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
 
             <div className="flex w-full flex-1 flex-wrap items-center justify-end gap-2 sm:gap-3 lg:max-w-xl">
-              <div className="relative min-w-0 flex-1 basis-[160px]">
+              {/* <div className="relative min-w-0 flex-1 basis-[160px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
                 <input
                   type="search"
                   placeholder="Search anything..."
                   className="w-full rounded-xl border border-white/[0.1] bg-white/[0.06] py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-white/35 outline-none ring-[#8247E5]/30 transition focus:ring-2"
                 />
-              </div>
-              <div className="relative shrink-0" ref={notifRef}>
+              </div> */}
+              {/* <div className="relative shrink-0" ref={notifRef}>
                 <button
                   type="button"
                   className={cn(
@@ -600,7 +600,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                     </div>
                   </div>
                 ) : null}
-              </div>
+              </div> */}
               <div className="relative shrink-0" ref={accountRef}>
                 <button
                   type="button"

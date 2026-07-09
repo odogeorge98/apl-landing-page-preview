@@ -11,11 +11,11 @@ import {
   GoogleMap,
   OverlayView,
   OverlayViewF,
-  useLoadScript,
 } from "@react-google-maps/api";
 import Image from "next/image";
 import { Car, Minus, Phone, Plus, Search, X } from "lucide-react";
 
+import { useGoogleMaps } from "@/components/providers/GoogleMapsProvider";
 import type { DriverMapEntry, DriverTripStatus } from "@/lib/interfaces/dashboard/map";
 import { useDriverLocations } from "@/lib/hooks/dashboard/map/use-driver-location";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 // Defined outside component — prevents useLoadScript from reloading on render
-const GOOGLE_MAPS_LIBRARIES: ("places")[] = ["places"];
+// const GOOGLE_MAPS_LIBRARIES: ("places")[] = ["places"];
 
 const DEFAULT_CENTER = { lat: 9.0579, lng: 7.4951 }; // Abuja, Nigeria
 const DEFAULT_ZOOM   = 13;
@@ -292,10 +292,11 @@ export default function DriverMapSection() {
   const searchWrapRef = useRef<HTMLDivElement>(null);
 
   // ── Load Google Maps ────────────────────────────────────────────────────────
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
-    libraries:        GOOGLE_MAPS_LIBRARIES,
-  });
+  // const { isLoaded, loadError } = useLoadScript({
+  //   googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
+  //   libraries:        GOOGLE_MAPS_LIBRARIES,
+  // });
+  const { isLoaded, loadError } = useGoogleMaps();
 
   // ── Fetch driver data ───────────────────────────────────────────────────────
   const { data: driversResponse, isLoading: driversLoading } = useDriverLocations();

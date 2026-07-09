@@ -662,7 +662,7 @@ export default function OverviewLanding() {
       <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
         <DriverMapSection />
 
-        <section
+        {/* <section
           className={cn(
             "flex flex-col rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95",
             "shadow-[0_8px_40px_rgba(0,0,0,0.3)] lg:col-span-5",
@@ -695,7 +695,7 @@ export default function OverviewLanding() {
               See All
             </a>
           </div>
-        </section>
+        </section> */}
       </div>
     </div>
   );
