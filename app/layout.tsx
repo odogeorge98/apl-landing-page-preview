@@ -4,7 +4,6 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/Toaster";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
 import { AuthProvider } from "@/lib/providers/AuthProvider";
-import { GoogleMapsProvider } from "@/components/providers/GoogleMapsProvider";
 import { ErrorBoundaryWrapper } from "@/components/wrappers/ErrorBoundaryWrapper";
 
 const euclidCircularA = localFont({
@@ -83,9 +82,7 @@ export default function RootLayout({
         <ErrorBoundaryWrapper>
           <QueryProvider>
             <AuthProvider>
-              <GoogleMapsProvider>
               {children}
-              </GoogleMapsProvider>
               <Toaster />
             </AuthProvider>
           </QueryProvider>
