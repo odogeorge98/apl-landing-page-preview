@@ -1,100 +1,210 @@
+
 "use client";
 
-import { useEffect, useState, ReactNode, Suspense } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import {
+  Suspense,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+
 import useAuthStore from "@/lib/store/auth";
+import {
+  AUTH_ROUTES,
+  PUBLIC_ROUTES,
+  getRoutePermission,
+  matchesRoute,
+} from "@/lib/config/route-permissions";
+import {
+  getDashboardPath,
+  getSafeRedirectPath,
+} from "@/lib/utils/auth-redirect";
 
-// ─── Route lists ──────────────────────────────────────────────────────────────
-//
-// Use trailing * to match entire route subtrees.
-// matchesPattern strips the * and checks pathname.startsWith().
 
-const PROTECTED_ROUTES = [
-  "/dashboard*",      // covers /dashboard/overview, /dashboard/users, etc.
-  "/organization*",
-  "/settings*",
-  "/profile*",
-  "/notifications*",
-  "/invites*",
-  "/calendar*",
-  "/conversations*",
-  "/system*"
-];
 
-const AUTH_ROUTES = [
-  "/",
-  "/register",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-otp",
-  "/onboarding*",
-  "/plans",
-];
+function useAuthHydration() {
+  useEffect(() => {
+    const markHydrated = () => {
+      const state = useAuthStore.getState();
 
-// Routes that do NOT require auth and do NOT redirect authenticated users
-const PUBLIC_ROUTES = [
-  "/about",
-  "/pricing",
-  "/privacy",
-  "/terms",
-];
+      useAuthStore.setState({
+        isInitialized: true,
+        isAuthenticated: Boolean(state.authUser && state.token),
+      });
+    };
 
-function matchesPattern(pathname: string, patterns: string[]): boolean {
-  return patterns.some((pattern) => {
-    if (pattern.endsWith("*")) {
-      return pathname.startsWith(pattern.slice(0, -1));
+    // If Zustand has already hydrated, synchronize immediately.
+    if (useAuthStore.persist.hasHydrated()) {
+      markHydrated();
+      return;
     }
-    return pathname === pattern || pathname.startsWith(pattern + "/");
-  });
+
+    // Otherwise, wait for the actual hydration event.
+    const unsubscribe =
+      useAuthStore.persist.onFinishHydration(markHydrated);
+
+    // Handle hydration completing between the initial check
+    // and registering the listener.
+    if (useAuthStore.persist.hasHydrated()) {
+      markHydrated();
+    }
+
+    return unsubscribe;
+  }, []);
 }
 
-// ─── Inner guard (needs useSearchParams → must be under a Suspense boundary) ─
 
 function AuthGuard({ children }: { children: ReactNode }) {
-  const router       = useRouter();
-  const pathname     = usePathname();
+  useAuthHydration();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { isInitialized, isAuthenticated } = useAuthStore();
 
-  // ── Safety net: if rehydration hasn't fired within 500ms, unblock the UI ──
-  const [forceReady, setForceReady] = useState(false);
+  const { isInitialized, isAuthenticated, authUser } = useAuthStore();
+  // Debugging logs to trace the state of authentication and routing
   useEffect(() => {
-    const t = setTimeout(() => setForceReady(true), 500);
-    return () => clearTimeout(t);
+    console.log("[AuthGuard] Initialized:", isInitialized);
+    console.log("[AuthGuard] Authenticated:", isAuthenticated);
+    console.log("[AuthGuard] User:", authUser);
+    console.log("[AuthGuard] Role:", authUser?.role);
+    console.log("[AuthGuard] Role type:", typeof authUser?.role);
+    console.log("[AuthGuard] Current path:", pathname);
+  }, [isInitialized, isAuthenticated, authUser, pathname]);
+
+  const [forceReady, setForceReady] = useState(false);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setForceReady(true);
+    }, 500);
+
+    return () => window.clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
-    if (!isInitialized && !forceReady) return; // still waiting
+    if (!isInitialized && !forceReady) return;
 
-    const isProtectedRoute = matchesPattern(pathname, PROTECTED_ROUTES);
-    const isAuthRoute      = matchesPattern(pathname, AUTH_ROUTES);
-    const isPublicRoute    = matchesPattern(pathname, PUBLIC_ROUTES);
+    const role = authUser?.role;
+    const dashboardPath = getDashboardPath(role);
 
-    if (isProtectedRoute && !isAuthenticated) {
-      router.replace(`/?redirect=${encodeURIComponent(pathname)}`);
+    const isAuthRoute = AUTH_ROUTES.some((route) =>
+      matchesRoute(pathname, route),
+    );
+
+    const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+      matchesRoute(pathname, route),
+    );
+
+    const permission = getRoutePermission(pathname);
+
+    // A configured protected route requires authentication.
+    if (permission && !isAuthenticated) {
+      const query = searchParams.toString();
+      const requestedPath = `${pathname}${query ? `?${query}` : ""}`;
+
+      router.replace(
+        `/?redirect=${encodeURIComponent(requestedPath)}`,
+      );
       return;
     }
 
+    // Authenticated users cannot enter routes reserved for another role.
+    if (permission && isAuthenticated) {
+      if (!role || !permission.roles.includes(role)) {
+        router.replace(dashboardPath);
+        return;
+      }
+    }
+
+    // Redirect authenticated users away from login/register pages.
     if (isAuthRoute && isAuthenticated) {
-      const redirectTo = searchParams.get("redirect") || "/dashboard/overview";
-      router.replace(redirectTo);
+      const requestedRedirect = getSafeRedirectPath(
+        searchParams.get("redirect"),
+      );
+
+      // Honor a requested destination only when that destination
+      // is permitted for the current user's role.
+      if (requestedRedirect) {
+        const destinationPermission =
+          getRoutePermission(requestedRedirect.split("?")[0]);
+
+        const canAccessDestination =
+          !destinationPermission ||
+          (!!role && destinationPermission.roles.includes(role));
+
+        router.replace(
+          canAccessDestination ? requestedRedirect : dashboardPath,
+        );
+      } else {
+        router.replace(dashboardPath);
+      }
+
       return;
     }
 
-    if (!isPublicRoute && !isProtectedRoute && !isAuthRoute && !isAuthenticated) {
-      router.replace(`/?redirect=${encodeURIComponent(pathname)}`);
-    }
-  }, [pathname, isInitialized, forceReady, isAuthenticated, router, searchParams]);
+    // Unauthenticated users visiting unknown non-public routes
+    // must sign in first.
+    if (
+      !isAuthenticated &&
+      !isPublicRoute &&
+      !isAuthRoute &&
+      pathname !== "/"
+    ) {
+      const query = searchParams.toString();
+      const requestedPath = `${pathname}${query ? `?${query}` : ""}`;
 
-  // Block render only until either Zustand rehydrates OR the 500ms fallback fires
-  if (!isInitialized && !forceReady) return null;
+      router.replace(
+        `/?redirect=${encodeURIComponent(requestedPath)}`,
+      );
+    }
+  }, [
+    pathname,
+    searchParams,
+    isInitialized,
+    forceReady,
+    isAuthenticated,
+    authUser?.role,
+    router,
+  ]);
+
+  if (!isInitialized && !forceReady) {
+    return null;
+  }
+
+  const permission = getRoutePermission(pathname);
+
+  const isAuthRoute = AUTH_ROUTES.some((route) =>
+    matchesRoute(pathname, route),
+  );
+
+  const hasRouteAccess =
+    !permission ||
+    (!!authUser?.role && permission.roles.includes(authUser.role));
+
+  if (!isInitialized && !forceReady) {
+    return null;
+  }
+
+  if (
+    (permission && (!isAuthenticated || !hasRouteAccess)) ||
+    (isAuthRoute && isAuthenticated)
+  ) {
+    return null;
+  }
 
   return <>{children}</>;
 }
 
-// ─── Public export — wraps in Suspense (required for useSearchParams) ────────
-
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
     <Suspense fallback={null}>
       <AuthGuard>{children}</AuthGuard>

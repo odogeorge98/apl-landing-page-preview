@@ -188,7 +188,7 @@ class HttpClient {
         endpoint.startsWith("/api/");
 
       const namespace =
-        options.namespace ?? "admin";
+        options.namespace ?? "none";
 
       let baseUrl =
         config.api.baseUrl;
@@ -218,7 +218,8 @@ class HttpClient {
           break;
 
         case "none":
-          baseUrl = "";
+          // FIX: Fallback directly to your remote base URL instead of blank strings
+          baseUrl = config.api.baseUrl; 
           basePath = "";
           break;
       }

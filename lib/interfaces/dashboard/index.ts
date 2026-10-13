@@ -61,3 +61,45 @@ export interface DashboardAnalyticsResponse {
   message: string;
   data: DashboardAnalytics;
 }
+
+
+export interface DashboardOverview {
+  totalAdmins: number;
+  activeAdmins: number;
+  totalStudents: number;
+  activeStudents: number;
+  totalTutors: number;
+  activeTutors: number;
+  totalProgrammes: number;
+}
+
+export type DashboardUserRole = "ADMIN" | "TUTOR" | "STUDENT";
+
+export interface RecentDashboardUser {
+  id: string;
+  name: string;
+  email: string;
+  role: DashboardUserRole;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface ProgrammeOverview {
+  id: string;
+  name: string;
+  studentCount: number;
+}
+
+export interface AdminDashboardData {
+  overview: DashboardOverview;
+  recentStudents: RecentDashboardUser[];
+  recentTutors: RecentDashboardUser[];
+  programmeOverview: ProgrammeOverview[];
+}
+
+export interface AdminDashboardApiResponse {
+  status: "success" | "error";
+  statusCode: number;
+  message: string;
+  data: AdminDashboardData;
+}

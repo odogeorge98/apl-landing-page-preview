@@ -64,11 +64,11 @@ const euclidCircularA = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "PEPP Cruise — Admin",
+  title: "Nugi Innovations Portal",
   description:
-    "Sign in to manage rides, drivers, payments, and platform operations for PEPP Cruise.",
+    "Sign in to manage rides, drivers, payments, and platform operations for Nugi Innovations.",
   icons: {
-    icon: "/peppcruise-mark.svg",
+    icon: "/ni-logo.svg",
   },
 };
 

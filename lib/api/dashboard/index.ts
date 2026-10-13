@@ -1,126 +1,43 @@
-import { http } from "@/lib/utils/http";
-import {
-  DashboardStatisticsResponse,
-  DashboardAnalyticsResponse,
-  DashboardKpiResponse,
+
+import { http, HttpError } from "@/lib/utils/http";
+import type {
+  AdminDashboardApiResponse,
+  AdminDashboardData,
 } from "@/lib/interfaces/dashboard";
-import { handleApiError } from "@/lib/utils/error-handler";
-import { DashboardFilter } from "@/lib/enums/dashboard-filter";
-import { buildQueryParams } from "@/lib/utils/query-params";
 
-export async function fetchDashboardKpi(): Promise<DashboardKpiResponse> {
+/**
+ * GET /admin/dashboard
+ *
+ * Retrieves dashboard metrics and recent education-platform activity
+ * for the authenticated administrator.
+ *
+ * The existing HTTP client applies the /admin base path automatically.
+ */
+export async function fetchAdminDashboard(): Promise<AdminDashboardData> {
   try {
-    const url = "/dashboard";
-    const response = await http.get<any>(url);
+    const response =
+      await http.get<AdminDashboardApiResponse>("/admin/dashboard");
 
     const result = response.data;
 
-    if (result.status === "error") {
-      const errorMessage = result.message || "An error occurred";
-      throw new Error(errorMessage);
+    if (result.status !== "success") {
+      throw new Error(
+        result.message || "Unable to retrieve dashboard data.",
+      );
     }
 
-    if (result.status === "success") {
-      return {
-        status: result.status,
-        statusCode: result.statusCode,
-        message: result.message || "Dashboard metrics retrieved successfully!",
-        data: result.data,
-      };
+    return result.data;
+  } catch (error: unknown) {
+    if (error instanceof HttpError) {
+      throw error;
     }
 
-    return {
-      status: result.status,
-      statusCode: result.statusCode,
-      message: result.message || "Dashboard metrics retrieved successfully!",
-      data: result.data,
-    };
-  } catch (error) {
-    return handleApiError(
-      error,
-      "Failed to fetch dashboard metrics. Please try again."
-    );
-  }
-}
-
-export async function fetchDashboardStatistics(
-  filter?: DashboardFilter
-): Promise<DashboardStatisticsResponse> {
-  try {
-    const params = filter ? { filter } : {};
-    const queryParams = buildQueryParams(params);
-    const url = `/dashboard/statistics${
-      queryParams.toString() ? `?${queryParams.toString()}` : ""
-    }`;
-    const response = await http.get<any>(url);
-
-    const result = response.data;
-
-    if (result.status === "error") {
-      const errorMessage = result.message || "An error occurred";
-      throw new Error(errorMessage);
+    if (error instanceof Error) {
+      throw error;
     }
 
-    if (result.status === "success") {
-      return {
-        status: result.status,
-        statusCode: result.statusCode,
-        message: result.message || "Dashboard statistics retrieved successfully!",
-        data: result.data,
-      };
-    }
-
-    return {
-      status: result.status,
-      statusCode: result.statusCode,
-      message: result.message || "Dashboard statistics retrieved successfully!",
-      data: result.data,
-    };
-  } catch (error) {
-    return handleApiError(
-      error,
-      "Failed to fetch dashboard statistics. Please try again."
-    );
-  }
-}
-
-export async function fetchDashboardAnalytics(
-  filter?: DashboardFilter
-): Promise<DashboardAnalyticsResponse> {
-  try {
-    const params = filter ? { filter } : {};
-    const queryParams = buildQueryParams(params);
-    const url = `/dashboard/analytics${
-      queryParams.toString() ? `?${queryParams.toString()}` : ""
-    }`;
-    const response = await http.get<any>(url);
-
-    const result = response.data;
-
-    if (result.status === "error") {
-      const errorMessage = result.message || "An error occurred";
-      throw new Error(errorMessage);
-    }
-
-    if (result.status === "success") {
-      return {
-        status: result.status,
-        statusCode: result.statusCode,
-        message: result.message || "Dashboard analytics retrieved successfully!",
-        data: result.data,
-      };
-    }
-
-    return {
-      status: result.status,
-      statusCode: result.statusCode,
-      message: result.message || "Dashboard analytics retrieved successfully!",
-      data: result.data,
-    };
-  } catch (error) {
-    return handleApiError(
-      error,
-      "Failed to fetch dashboard analytics. Please try again."
+    throw new Error(
+      "An unexpected error occurred while loading the dashboard.",
     );
   }
 }

@@ -3,11 +3,11 @@ export const config = {
     baseUrl:
       process.env.NEXT_PUBLIC_PEPPCRUISE_API_BASE_URL ||
       process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "https://api.peppcruise.com/api/v1",
+      "https://nugi-innovation-backend.onrender.com",
     websiteBaseUrl:
       process.env.NEXT_PUBLIC_PEPPCRUISE_WEBSITE_BASE_URL ||
       process.env.NEXT_PUBLIC_WEBSITE_BASE_URL ||
-      "https://api.peppcruise.com/websites",
+      "https://nugi-innovation-backend.onrender.com/websites",
   },
 } as const;
 

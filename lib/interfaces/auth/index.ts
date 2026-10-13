@@ -1,3 +1,4 @@
+import type { UserType } from "@/lib/types/users";
 
 /**
  * Authentication and account interfaces for the Nugi Innovations portal.
@@ -15,7 +16,7 @@ export interface LoginData {
  */
 export interface AuthUser {
   id: string;
-  role: string;
+  role: UserType;
   email: string;
 }
 
@@ -52,7 +53,7 @@ export interface LoginResponse {
 export interface User {
   id: string;
   email: string;
-  role: string;
+  role: UserType;
   orgRole: string;
   isVerified: boolean;
   isActive: boolean;

@@ -1,7 +1,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { AuthUser } from "@/lib/interfaces/auth";
+import type { AuthUser } from "@/lib/interfaces/auth";
 
 interface AuthState {
   authUser: AuthUser | null;
@@ -18,6 +18,7 @@ interface AuthActions {
   setNewToken: (token: string | null) => void;
   removeAuthUser: () => void;
   setRequestLoading: (loading: boolean) => void;
+  setInitialized: (initialized: boolean) => void;
   login: (user: AuthUser, token: string) => void;
   logout: () => void;
 }
@@ -32,10 +33,12 @@ const useAuthStore = create<AuthState & AuthActions>()(
       isInitialized: false,
       isAuthenticated: false,
 
-      setAuthUser: (user) =>
+      setInitialized: (isInitialized) => set({ isInitialized }),
+
+      setAuthUser: (authUser) =>
         set({
-          authUser: user,
-          isAuthenticated: Boolean(user && get().token),
+          authUser,
+          isAuthenticated: Boolean(authUser && get().token),
         }),
 
       setToken: (token) =>
@@ -80,7 +83,7 @@ const useAuthStore = create<AuthState & AuthActions>()(
           try {
             window.sessionStorage.removeItem("auth_redirecting");
           } catch {
-            // Storage can be unavailable in restricted browser contexts.
+            // Storage may be unavailable.
           }
         }
       },
@@ -88,7 +91,7 @@ const useAuthStore = create<AuthState & AuthActions>()(
     {
       name: "auth-storage",
 
-      // Do not persist transient request or initialization state.
+      // Persist only durable authentication data.
       partialize: (state) => ({
         authUser: state.authUser,
         token: state.token,
@@ -106,10 +109,12 @@ const useAuthStore = create<AuthState & AuthActions>()(
           return;
         }
 
+        // Hydration has finished. Derive authentication from
+        // the actual restored user and token.
         useAuthStore.setState({
           isInitialized: true,
           isAuthenticated: Boolean(
-            state?.token && state?.authUser,
+            state?.authUser && state?.token,
           ),
         });
       },

@@ -1,10 +1,11 @@
 import type { User } from '@/lib/interfaces/auth';
+import { UserType } from '../types/users';
 
 /** Local preview user for dashboard layout when auth bypass is active. */
 export const MOCK_ADMIN_USER: User = {
   id: 'pepp-preview-admin',
   email: 'admin@peppcruise.com',
-  role: 'SUPER_ADMIN',
+  role: UserType.ADMIN,
   orgRole: 'OWNER',
   isVerified: true,
   isActive: true,

@@ -5,31 +5,25 @@ import React, { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useLogin } from "@/lib/hooks/auth/use-login";
 
-function BrandMark({ className = "" }: { className?: string }) {
+interface BrandMarkProps {
+  className?: string;
+}
+
+export function BrandMark({ className = "" }: BrandMarkProps) {
   return (
     <div
-      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F5C542] text-[#101D49] shadow-lg shadow-black/10 ${className}`}
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F5C542] shadow-lg shadow-black/10 ${className}`}
       aria-hidden="true"
     >
-      <svg
-        viewBox="0 0 40 40"
-        fill="none"
-        className="h-7 w-7"
-      >
-        <path
-          d="M6 29V11h5l9 11 9-11h5v18h-5V18l-9 10-9-10v11H6Z"
-          fill="currentColor"
-        />
-        <path
-          d="M29 29h5"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-      </svg>
+      <img 
+        src="/ni-logo.svg" 
+        alt="" 
+        className="h-7 w-7 object-contain"
+      />
     </div>
   );
 }
+
 
 function MailIcon() {
   return (
