@@ -37,9 +37,26 @@ type MainLayoutProps = {
   children: ReactNode;
 };
 
-function isActiveRoute(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+export function isActiveRoute(
+  pathname: string,
+  href: string,
+): boolean {
+  const normalizedPath = pathname.replace(/\/+$/, "") || "/";
+  const normalizedHref = href.replace(/\/+$/, "") || "/";
+
+  // Overview/dashboard should only be active on its exact route.
+  if (
+    normalizedHref === "/dashboard" ||
+    normalizedHref === "/"
+  ) {
+    return normalizedPath === normalizedHref;
+  }
+
+  // Other navigation routes can match nested pages.
+  return (
+    normalizedPath === normalizedHref ||
+    normalizedPath.startsWith(`${normalizedHref}/`)
+  );
 }
 
 function Brand({ collapsed = false }: { collapsed?: boolean }) {
