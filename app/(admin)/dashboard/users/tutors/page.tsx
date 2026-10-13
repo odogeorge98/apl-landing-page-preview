@@ -1,12 +1,12 @@
 "use client";
 
 import { MainLayout } from "@/components/layout/dashboard";
-import RidersList from "@/components/users/RidersList";
+import TutorsPage from "@/components/users/TutorsPage";
 
 export default function RidersPage() {
   return (
     <MainLayout>
-      <RidersList />
+      <TutorsPage />
     </MainLayout>
   );
 }

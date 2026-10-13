@@ -5,3 +5,11 @@ export enum UserType {
   TUTOR = "TUTOR",
   STUDENT = "STUDENT"
 }
+
+export interface User {
+  id: string,
+  email: string,
+  phoneNo: string,
+  role: UserType,
+  isActive: boolean;
+}

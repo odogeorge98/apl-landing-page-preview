@@ -2,26 +2,19 @@
 "use client";
 
 import useAuthStore from "@/lib/store/auth";
+import { useAuthHydrated } from "./use-auth-hydrated";
 import type { UserType } from "@/lib/types/users";
 
 export function useCurrentUser() {
-  const authUser = useAuthStore((state) => state.authUser);
-  const token = useAuthStore((state) => state.token);
-  const isInitialized = useAuthStore(
-    (state) => state.isInitialized,
-  );
-  const isAuthenticated = useAuthStore(
-    (state) => state.isAuthenticated,
-  );
-
-  const role = authUser?.role as UserType | undefined;
+  const authUser = useAuthStore((s) => s.authUser);
+  const token = useAuthStore((s) => s.token);
+  const isInitialized = useAuthHydrated();
 
   return {
     user: authUser,
-    role,
+    role: authUser?.role as UserType | undefined,
     token,
     isInitialized,
-    isAuthenticated:
-      isAuthenticated && Boolean(authUser) && Boolean(token),
+    isAuthenticated: Boolean(authUser && token),
   };
 }

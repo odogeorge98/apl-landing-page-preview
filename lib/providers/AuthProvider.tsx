@@ -14,6 +14,7 @@ import {
 } from "next/navigation";
 
 import useAuthStore from "@/lib/store/auth";
+import { useCurrentUser } from "../hooks/auth/use-current-user"; 
 import {
   AUTH_ROUTES,
   PUBLIC_ROUTES,
@@ -27,45 +28,47 @@ import {
 
 
 
-function useAuthHydration() {
-  useEffect(() => {
-    const markHydrated = () => {
-      const state = useAuthStore.getState();
+// function useAuthHydration() {
+//   useEffect(() => {
+//     const markHydrated = () => {
+//       const state = useAuthStore.getState();
 
-      useAuthStore.setState({
-        isInitialized: true,
-        isAuthenticated: Boolean(state.authUser && state.token),
-      });
-    };
+//       useAuthStore.setState({
+//         isInitialized: true,
+//         isAuthenticated: Boolean(state.authUser && state.token),
+//       });
+//     };
 
-    // If Zustand has already hydrated, synchronize immediately.
-    if (useAuthStore.persist.hasHydrated()) {
-      markHydrated();
-      return;
-    }
+//     // If Zustand has already hydrated, synchronize immediately.
+//     if (useAuthStore.persist.hasHydrated()) {
+//       markHydrated();
+//       return;
+//     }
 
-    // Otherwise, wait for the actual hydration event.
-    const unsubscribe =
-      useAuthStore.persist.onFinishHydration(markHydrated);
+//     // Otherwise, wait for the actual hydration event.
+//     const unsubscribe =
+//       useAuthStore.persist.onFinishHydration(markHydrated);
 
-    // Handle hydration completing between the initial check
-    // and registering the listener.
-    if (useAuthStore.persist.hasHydrated()) {
-      markHydrated();
-    }
+//     // Handle hydration completing between the initial check
+//     // and registering the listener.
+//     if (useAuthStore.persist.hasHydrated()) {
+//       markHydrated();
+//     }
 
-    return unsubscribe;
-  }, []);
-}
+//     return unsubscribe;
+//   }, []);
+// }
 
 
 function AuthGuard({ children }: { children: ReactNode }) {
-  useAuthHydration();
+  // useAuthHydration();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const { isInitialized, isAuthenticated, authUser } = useAuthStore();
+  // const { isInitialized, isAuthenticated, authUser } = useAuthStore();
+  const { isInitialized, isAuthenticated, user: authUser } = useCurrentUser();
+  const role = authUser?.role;
   // Debugging logs to trace the state of authentication and routing
   useEffect(() => {
     console.log("[AuthGuard] Initialized:", isInitialized);
@@ -87,7 +90,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isInitialized && !forceReady) return;
+    if (!isInitialized) return;
 
     const role = authUser?.role;
     const dashboardPath = getDashboardPath(role);
@@ -172,7 +175,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
     router,
   ]);
 
-  if (!isInitialized && !forceReady) {
+  if (!isInitialized) {
     return null;
   }
 
@@ -186,7 +189,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
     !permission ||
     (!!authUser?.role && permission.roles.includes(authUser.role));
 
-  if (!isInitialized && !forceReady) {
+  if (!isInitialized) {
     return null;
   }
 

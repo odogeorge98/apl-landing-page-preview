@@ -8,9 +8,8 @@ interface AuthState {
   token: string | null;
   requestLoading: boolean;
   newToken: string | null;
-  isInitialized: boolean;
-  isAuthenticated: boolean;
 }
+
 
 interface AuthActions {
   setAuthUser: (user: AuthUser | null) => void;
@@ -18,106 +17,36 @@ interface AuthActions {
   setNewToken: (token: string | null) => void;
   removeAuthUser: () => void;
   setRequestLoading: (loading: boolean) => void;
-  setInitialized: (initialized: boolean) => void;
   login: (user: AuthUser, token: string) => void;
   logout: () => void;
 }
 
 const useAuthStore = create<AuthState & AuthActions>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       authUser: null,
       token: null,
       requestLoading: false,
       newToken: null,
-      isInitialized: false,
-      isAuthenticated: false,
 
-      setInitialized: (isInitialized) => set({ isInitialized }),
-
-      setAuthUser: (authUser) =>
-        set({
-          authUser,
-          isAuthenticated: Boolean(authUser && get().token),
-        }),
-
-      setToken: (token) =>
-        set({
-          token,
-          isAuthenticated: Boolean(token && get().authUser),
-        }),
-
+      setAuthUser: (authUser) => set({ authUser }),
+      setToken: (token) => set({ token }),
       setNewToken: (newToken) => set({ newToken }),
-
       removeAuthUser: () =>
-        set({
-          authUser: null,
-          token: null,
-          newToken: null,
-          isAuthenticated: false,
-        }),
-
-      setRequestLoading: (requestLoading) =>
-        set({ requestLoading }),
-
+        set({ authUser: null, token: null, newToken: null }),
+      setRequestLoading: (requestLoading) => set({ requestLoading }),
       login: (authUser, token) =>
-        set({
-          authUser,
-          token,
-          isAuthenticated: true,
-          isInitialized: true,
-          newToken: null,
-        }),
-
+        set({ authUser, token, newToken: null }),
       logout: () => {
-        set({
-          authUser: null,
-          token: null,
-          newToken: null,
-          isAuthenticated: false,
-          isInitialized: true,
-          requestLoading: false,
-        });
-
-        if (typeof window !== "undefined") {
-          try {
-            window.sessionStorage.removeItem("auth_redirecting");
-          } catch {
-            // Storage may be unavailable.
-          }
-        }
+        set({ authUser: null, token: null, newToken: null, requestLoading: false });
+        try {
+          window.sessionStorage.removeItem("auth_redirecting");
+        } catch {}
       },
     }),
     {
       name: "auth-storage",
-
-      // Persist only durable authentication data.
-      partialize: (state) => ({
-        authUser: state.authUser,
-        token: state.token,
-        isAuthenticated: state.isAuthenticated,
-      }),
-
-      onRehydrateStorage: () => (state, error) => {
-        if (error) {
-          useAuthStore.setState({
-            authUser: null,
-            token: null,
-            isAuthenticated: false,
-            isInitialized: true,
-          });
-          return;
-        }
-
-        // Hydration has finished. Derive authentication from
-        // the actual restored user and token.
-        useAuthStore.setState({
-          isInitialized: true,
-          isAuthenticated: Boolean(
-            state?.authUser && state?.token,
-          ),
-        });
-      },
+      partialize: (s) => ({ authUser: s.authUser, token: s.token }),
     },
   ),
 );
