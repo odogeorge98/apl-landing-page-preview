@@ -1,14 +1,54 @@
+
+/**
+ * Authentication and account interfaces for the Nugi Innovations portal.
+ */
+
 export interface LoginData {
   email: string;
   password: string;
   rememberMe?: boolean;
 }
 
+/**
+ * Minimal authenticated identity returned by POST /auth.
+ * This is the user object persisted by the authentication store.
+ */
 export interface AuthUser {
   id: string;
-  email: string;
   role: string;
+  email: string;
 }
+
+/**
+ * Backend envelope returned by the login endpoint.
+ */
+export interface LoginApiResponse {
+  status: "success" | "error";
+  statusCode: number;
+  message: string;
+  data?: {
+    token: string;
+    user: AuthUser;
+  };
+}
+
+/**
+ * Normalized response consumed by React Query and Zustand.
+ */
+export interface LoginResponse {
+  success: boolean;
+  message: string;
+  user?: AuthUser;
+  token?: string;
+}
+
+/**
+ * Keep this interface if other existing application screens
+ * require the extended user/organization information.
+ *
+ * It is intentionally separate from AuthUser because the login
+ * endpoint does not return these additional properties.
+ */
 export interface User {
   id: string;
   email: string;
@@ -29,49 +69,6 @@ export interface User {
   };
 }
 
-// export interface LoginResponse {
-//   success: boolean;
-//   message?: string;
-//   token: string;
-//   user: User;
-// }
-
-export interface LoginResponse {
-  success: boolean;
-  message?: string;
-  /** Present when login succeeded and a token was issued. */
-  user?: AuthUser;
-  token?: string;
-  /**
-   * True when the backend recognised the credentials but doesn't know this
-   * device yet — an OTP has been sent and the user must verify via /verify-otp.
-   */
-  requiresOtp?: boolean;
-}
-
-// ─── Verify OTP ───────────────────────────────────────────────────────────────
-
-export interface DeviceInfo {
-  /** FCM push token — send empty string if not applicable. */
-  deviceFCMToken: string;
-  /** Human-readable device name, max 50 chars (backend DTO constraint). */
-  name: string;
-}
-
-export interface VerifyOtpData {
-  email: string;
-  password: string;
-  otp: string;
-  rememberMe: boolean;
-  deviceInfo: DeviceInfo;
-}
-
-export interface VerifyOtpResponse {
-  success: boolean;
-  message?: string;
-  user?: any;
-  token: string;
-}
 export interface LoginError {
   message: string;
   field?: string;

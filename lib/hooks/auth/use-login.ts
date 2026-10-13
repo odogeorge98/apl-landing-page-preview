@@ -1,10 +1,14 @@
+
 import { useMutation } from "@tanstack/react-query";
-import { useRouter, useSearchParams } from "next/navigation";
 import { loginUser } from "@/lib/api/auth";
-import { LoginData, LoginResponse } from "@/lib/interfaces/auth";
-import { showError, showSuccess } from "@/lib/utils/error-handler";
-import { saveOtpSession } from "@/lib/utils/auth/otp-session";
-import { getOrCreateDeviceToken } from "@/lib/utils/auth/device-token";
+import {
+  LoginData,
+  LoginResponse,
+} from "@/lib/interfaces/auth";
+import {
+  showError,
+  showSuccess,
+} from "@/lib/utils/error-handler";
 import useAuthStore from "@/lib/store/auth";
 
 interface UseLoginOptions {
@@ -13,73 +17,36 @@ interface UseLoginOptions {
 }
 
 export const useLogin = (options?: UseLoginOptions) => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const { login, setRequestLoading } = useAuthStore();
 
   return useMutation<LoginResponse, Error, LoginData>({
-    mutationFn: async (data: LoginData) => {
-      // Resolve the FCM token here so loginUser stays a pure API function.
-      // getOrCreateDeviceToken returns "" gracefully if FCM isn't available
-      // (permission denied, unsupported browser) — the backend will still
-      // process the login, just without device recognition.
-      let deviceToken = "";
-
-      if (typeof window !== "undefined") {
-        if (Notification.permission !== "granted") {
-          const permission =
-            await Notification.requestPermission();
-
-          if (permission === "granted") {
-            deviceToken =
-              await getOrCreateDeviceToken();
-          }
-        } else {
-          deviceToken =
-            await getOrCreateDeviceToken();
-        }
-      }
-
-      // console.log('Device token in hook script: ', deviceToken);
-      return loginUser(data, deviceToken);
-    },
+    mutationFn: loginUser,
 
     onMutate: () => {
       setRequestLoading(true);
     },
 
-    onSuccess: (data, variables) => {
-      // OTP flow still routes itself (user isn't authenticated yet)
-      if (data.requiresOtp) {
-        saveOtpSession(
-          variables.email.trim(),
-          variables.password,
-          variables.rememberMe ?? false,
+    onSuccess: (data) => {
+      if (!data.success || !data.user || !data.token) {
+        showError(
+          data.message || "The server returned an invalid login response.",
         );
-        router.push("/verify-otp");
         return;
       }
 
-      if (data.user && data.token) {
-        login(data.user, data.token);
-        // ↑ Sets isAuthenticated = true.
-        // AuthProvider's useEffect fires, reads ?redirect= from searchParams,
-        // and calls router.replace(redirectTo). No navigation needed here.
-      }
-
-      if (variables.rememberMe && typeof window !== "undefined") {
-        try { window.localStorage.setItem("peppcruise_admin_remember", "7d"); } catch {}
-      }
+      // Persist the authenticated identity and token.
+      login(data.user, data.token);
 
       showSuccess(data.message || "Login successful!");
+
       options?.onSuccess?.(data);
 
-      // ── Navigation intentionally removed ──────────────────────────────────
-      // AuthProvider handles redirect to ?redirect param or /dashboard/overview.
+      // Navigation intentionally remains in AuthProvider.
+      // It can process ?redirect= and fall back to the portal dashboard.
     },
 
     onError: (error) => {
-      showError(error.message);
+      showError(error.message || "Login failed. Please try again.");
       options?.onError?.(error);
     },
 
