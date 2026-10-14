@@ -103,3 +103,34 @@ export interface AdminDashboardApiResponse {
   message: string;
   data: AdminDashboardData;
 }
+
+export interface StudentDashboardAssignments {
+  total: number;
+  submitted: number;
+  pending: number;
+}
+
+export interface StudentDashboardOverview {
+  totalProgrammes: number;
+  totalProgrammeHours: number;
+  assignments: StudentDashboardAssignments;
+}
+
+export interface StudentDashboardProgramme {
+  id: string;
+  name: string;
+  description: string;
+  hours: number;
+}
+
+export interface StudentDashboardData {
+  overview: StudentDashboardOverview;
+  programmes: StudentDashboardProgramme[];
+}
+
+export interface StudentDashboardApiResponse {
+  status: "success" | "error";
+  statusCode: number;
+  message: string;
+  data: StudentDashboardData;
+}

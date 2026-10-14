@@ -1,12 +1,10 @@
-"use client";
-
 import { MainLayout } from "@/components/layout/dashboard";
-import AdminUsersList from "@/components/users/AdminUsersList";
+import AdminsPage from "@/components/users/AdminsPage";
 
-export default function AdminUsersPage() {
+export default function AdminsRoutePage() {
   return (
     <MainLayout>
-      <AdminUsersList />
+      <AdminsPage />
     </MainLayout>
   );
 }

@@ -24,6 +24,8 @@ import type {
   StudentGender,
 } from "@/lib/interfaces/users/students";
 
+const PAGE_SIZE = 10;
+
 const primaryButtonClass =
   "inline-flex items-center justify-center gap-2 rounded-xl bg-[#101d49] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#192c65] focus:outline-none focus:ring-4 focus:ring-[#101d49]/15 disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -83,6 +85,8 @@ export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [gender, setGender] = useState<StudentGender | "">("");
+  const [rowsPerPage, setRowsPerPage] = useState(PAGE_SIZE);
+  const [hasSelectedPageSize, setHasSelectedPageSize] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
   const [cursorStack, setCursorStack] = useState<(string | null)[]>([null]);
 
@@ -98,11 +102,12 @@ export default function StudentsPage() {
 
   const params = useMemo<GetStudentsParams>(
     () => ({
+      ...(hasSelectedPageSize ? { limit: rowsPerPage } : {}),
       ...(cursor ? { cursor } : {}),
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(gender ? { gender } : {}),
     }),
-    [cursor, debouncedSearch, gender],
+    [hasSelectedPageSize, rowsPerPage, cursor, debouncedSearch, gender],
   );
 
   const {
@@ -130,6 +135,17 @@ export default function StudentsPage() {
   const handleGenderChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
     setGender(value === "male" || value === "female" ? value : "");
+    resetPagination();
+  };
+
+  const handleRowsPerPageChange = (
+    event: ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const value = Number(event.target.value);
+    if (!Number.isInteger(value) || value < 1 || value > 50) return;
+
+    setRowsPerPage(value);
+    setHasSelectedPageSize(true);
     resetPagination();
   };
 
@@ -236,7 +252,23 @@ export default function StudentsPage() {
             <div className="flex flex-col gap-4 border-t border-[#edf0f6] bg-[#fafbfd] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
               <div className="text-xs text-[#8995aa]">Showing <span className="font-semibold text-[#34415e]">{isLoading ? "…" : rows.length}</span> {rows.length === 1 ? "student" : "students"} on page <span className="font-semibold text-[#34415e]">{currentPage}</span>{debouncedSearch && <> matching <span className="font-semibold text-[#34415e]">“{debouncedSearch}”</span></>}{gender && <> · <span className="capitalize">{gender}</span></>}</div>
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2"><button type="button" onClick={handlePrevPage} disabled={currentPage <= 1 || isFetching} className={cn(secondaryButtonClass, "px-3")} aria-label="Previous page"><ArrowLeft size={15} /><span className="hidden sm:inline">Previous</span></button><button type="button" onClick={handleNextPage} disabled={!nextCursor || isFetching} className={cn(primaryButtonClass, "px-3")} aria-label="Next page"><span className="hidden sm:inline">Next</span><ArrowRight size={15} /></button></div>
+                <label className="flex items-center gap-2 text-xs text-[#718099]">
+                  Rows
+                  <select
+                    aria-label="Rows per page"
+                    value={rowsPerPage}
+                    onChange={handleRowsPerPageChange}
+                    className="rounded-lg border border-[#e4e9f2] bg-white px-2.5 py-2 text-xs font-semibold text-[#34415e] outline-none focus:border-[#101d49]/40"
+                  >
+                    {[5, 10, 20, 30, 50].map((size) => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={handlePrevPage} disabled={currentPage <= 1 || isFetching} className={cn(secondaryButtonClass, "px-3")} aria-label="Previous page"><ArrowLeft size={15} /><span className="hidden sm:inline">Previous</span></button>
+                  <button type="button" onClick={handleNextPage} disabled={!nextCursor || isFetching} className={cn(primaryButtonClass, "px-3")} aria-label="Next page"><span className="hidden sm:inline">Next</span><ArrowRight size={15} /></button>
+                </div>
               </div>
             </div>
           </>

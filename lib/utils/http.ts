@@ -101,30 +101,31 @@ class HttpClient {
           const { data, status } = error.response;
 
           if (status === 401) {
+            const responseMessage = (data as any)?.message;
             const message =
-              (data as any)?.message || "";
+              typeof responseMessage === "string"
+                ? responseMessage
+                : "";
 
-            const url =
-              error.config?.url || "";
+            const requestPath = (error.config?.url || "")
+              .split("?")[0]
+              .replace(/\/+$/, "");
 
+            // The login endpoint is POST /auth (not /auth/login). Preserve
+            // backend authentication errors instead of rewriting them as an
+            // expired session or clearing an existing session on a bad login.
             const isAuthEndpoint =
-              url.includes("/auth/login-otp") ||
-              url.includes("/auth/verify-otp") ||
-              url.includes("/auth/login");
+              requestPath.endsWith("/auth") ||
+              requestPath.includes("/auth/");
 
-            const isOtpFlow =
-              message
-                .toLowerCase()
-                .includes("otp") ||
-              message
-                .toLowerCase()
-                .includes("otp_required");
+            const isOtpFlow = /otp/i.test(message);
 
             if (isAuthEndpoint || isOtpFlow) {
               throw new HttpError(
-                message || "OTP required",
+                message ||
+                  (isOtpFlow ? "OTP required" : "Authentication failed."),
                 status,
-                data
+                data,
               );
             }
 

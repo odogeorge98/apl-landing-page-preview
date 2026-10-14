@@ -20,25 +20,25 @@ export const studentsApi = {
       throw new RangeError("Student page size must be an integer between 1 and 50.");
     }
 
-    const queryParams = new URLSearchParams();
+    // Keep limit numeric in the Axios config. Axios serializes query values
+    // when building the URL; backend DTO validation must coerce it back to a
+    // number before applying @IsInt/@Min.
+    const queryParams: Record<string, string | number> = {};
     const search = params.search?.trim();
     const cursor = params.cursor?.trim();
 
-    if (search) queryParams.set("search", search);
-    if (params.gender) queryParams.set("gender", params.gender);
+    if (search) queryParams.search = search;
+    if (params.gender) queryParams.gender = params.gender;
 
-    // Leave limit out unless the caller explicitly requests one. Some backend
-    // ValidationPipe setups validate query strings as numbers without coercion;
-    // the endpoint's own default handles the ordinary list request.
     if (params.limit !== undefined) {
-      queryParams.set("limit", String(params.limit));
+      queryParams.limit = params.limit;
     }
 
-    if (cursor) queryParams.set("cursor", cursor);
+    if (cursor) queryParams.cursor = cursor;
 
-    const queryString = queryParams.toString();
-    const url = queryString ? `/students?${queryString}` : "/students";
-    const response = await http.get<StudentsListApiResponse>(url);
+    const response = await http.get<StudentsListApiResponse>("/students", {
+      params: queryParams,
+    });
     const result = response.data;
 
     if (result.status !== "success") {
