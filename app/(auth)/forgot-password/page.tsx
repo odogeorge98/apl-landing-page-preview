@@ -57,7 +57,7 @@ const ForgotPassword = () => {
         <Headers
           authDark
           leadingText="Forgot your password?"
-          subText="Enter your email and we'll send you reset instructions."
+          subText="Enter the email address linked to your Nugi Innovations account and we’ll send you secure reset instructions."
         />
         <form
           className="mt-10 space-y-4"
@@ -78,7 +78,7 @@ const ForgotPassword = () => {
           <Button
             type="submit"
             disabled={loading || forgetPasswordLoading}
-            className="w-full h-auto py-3.5 mt-5 cursor-pointer rounded-xl border border-white/10 bg-[#e4e4e8] font-semibold text-[#141216] shadow-sm hover:bg-[#f0f0f3]"
+            className="mt-5 h-auto w-full cursor-pointer rounded-xl border border-[#f5c542] bg-[#f5c542] py-3.5 font-semibold text-[#101d49] shadow-sm transition-colors hover:border-[#edb92e] hover:bg-[#edb92e]"
             size="lg"
           >
             {loading || forgetPasswordLoading

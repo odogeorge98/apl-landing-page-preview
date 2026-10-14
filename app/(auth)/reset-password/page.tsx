@@ -108,7 +108,7 @@ const ResetPassword = () => {
         <Headers
           authDark
           leadingText="Reset your password"
-          subText="Enter a new password below to regain access to your account."
+          subText="Choose a new password for your Nugi Innovations account to securely restore access to your learning portal."
           subTextClass="max-w-xs md:max-w-sm mx-auto"
         />
         <form
@@ -144,7 +144,7 @@ const ResetPassword = () => {
           <Button
             type="submit"
             disabled={loading || resetPasswordLoading}
-            className="w-full h-auto py-3.5 mt-5 cursor-pointer rounded-xl border border-white/10 bg-[#e4e4e8] font-semibold text-[#141216] shadow-sm hover:bg-[#f0f0f3]"
+            className="mt-5 h-auto w-full cursor-pointer rounded-xl border border-[#f5c542] bg-[#f5c542] py-3.5 font-semibold text-[#101d49] shadow-sm transition-colors hover:border-[#edb92e] hover:bg-[#edb92e]"
             size="lg"
           >
             {loading || resetPasswordLoading ? "Loading..." : "Reset password"}
