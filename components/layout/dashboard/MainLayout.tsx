@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/hooks/auth/use-auth";
 import { useLogout } from "@/lib/hooks/auth/use-logout";
 import { useDashboardUIConfig } from "@/lib/hooks/ui-config/use-dashboard-ui-config";
+import useSidebarStore from "@/lib/store/sidebar";
 import {
   getDisplayNameFromEmail,
   getUserInitials,
@@ -408,11 +409,40 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { logout } = useLogout();
   const { uiConfig, role, isInitialized } = useDashboardUIConfig();
 
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useSidebarStore((state) => state.collapsed);
+  const sidebarHasHydrated = useSidebarStore((state) => state.hasHydrated);
+  const setCollapsed = useSidebarStore((state) => state.setCollapsed);
+  const setSidebarHasHydrated = useSidebarStore(
+    (state) => state.setHasHydrated,
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
 
   const accountRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const hydrateSidebarPreference = async () => {
+      try {
+        if (!useSidebarStore.persist.hasHydrated()) {
+          await useSidebarStore.persist.rehydrate();
+        }
+      } catch {
+        // Keep the expanded default if browser storage is unavailable.
+      } finally {
+        if (active) {
+          setSidebarHasHydrated(true);
+        }
+      }
+    };
+
+    void hydrateSidebarPreference();
+
+    return () => {
+      active = false;
+    };
+  }, [setSidebarHasHydrated]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -482,7 +512,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
     logout();
   };
 
-  if (!isInitialized) {
+  const handleToggleSidebar = () => {
+    setCollapsed(!collapsed);
+  };
+
+  if (!isInitialized || !sidebarHasHydrated) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-[#f6f8fc]">
         <div className="flex items-center gap-3 text-sm font-medium text-[#64718a]">
@@ -504,7 +538,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       >
         <Sidebar
           collapsed={collapsed}
-          onToggleCollapse={() => setCollapsed((value) => !value)}
+          onToggleCollapse={handleToggleSidebar}
         />
       </aside>
 

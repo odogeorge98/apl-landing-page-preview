@@ -10,6 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import dayjs from "dayjs";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
@@ -163,6 +164,7 @@ function CreateTutorModal({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (!open) {
@@ -188,8 +190,6 @@ function CreateTutorModal({
     };
   }, [open, isSubmitting, onClose]);
 
-  if (!open) return null;
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -200,21 +200,36 @@ function CreateTutorModal({
     });
   };
 
+  const animationTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.35, ease: [0.35, 1, 0.52, 1] as const };
+
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#071027]/55 p-4 backdrop-blur-sm"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !isSubmitting) {
-          onClose();
-        }
-      }}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="create-tutor-title"
-        className="my-auto w-full max-w-lg overflow-hidden rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_24px_80px_rgba(7,16,39,0.25)]"
-      >
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          key="create-tutor-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={animationTransition}
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#071027]/55 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isSubmitting) {
+              onClose();
+            }
+          }}
+        >
+          <motion.section
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 18, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0, y: 10, scale: 0.985 }}
+            transition={animationTransition}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-tutor-title"
+            className="my-auto w-full max-w-lg overflow-hidden rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_24px_80px_rgba(7,16,39,0.25)]"
+          >
         <div className="flex items-start justify-between border-b border-[#edf0f6] px-6 py-5">
           <div className="flex items-start gap-3">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#fff5d1] text-[#101d49]">
@@ -374,8 +389,10 @@ function CreateTutorModal({
             </button>
           </div>
         </form>
-      </section>
-    </div>
+          </motion.section>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

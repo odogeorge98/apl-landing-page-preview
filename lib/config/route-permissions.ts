@@ -50,6 +50,10 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     pattern: "/invites",
     roles: [UserType.ADMIN, UserType.TUTOR],
   },
+  {
+    pattern: "/support",
+    roles: [UserType.STUDENT],
+  },
 ];
 
 export const AUTH_ROUTES = [

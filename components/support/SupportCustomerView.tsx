@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { showSuccess } from "@/lib/utils/error-handler";
 
 const cardBase =
-  "rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#1c182b]/95 to-[#12101c]/95 shadow-[0_8px_40px_rgba(0,0,0,0.35)]";
+  "rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_8px_32px_rgba(16,29,73,0.06)]";
 
 function deepCloneCustomer(c: SupportCustomer): SupportCustomer {
   return {
@@ -33,9 +33,9 @@ function deepCloneCustomer(c: SupportCustomer): SupportCustomer {
 
 function StatusPill({ status }: { status: SupportTicket["status"] }) {
   const map = {
-    open: "bg-amber-500/18 text-amber-200",
-    pending: "bg-sky-500/18 text-sky-200",
-    resolved: "bg-emerald-500/16 text-emerald-300",
+    open: "bg-[#fff6d8] text-[#765800]",
+    pending: "bg-[#eaf0ff] text-[#2857a4]",
+    resolved: "bg-[#e7f5ee] text-[#16845b]",
   };
   return (
     <span
@@ -86,12 +86,12 @@ export default function SupportCustomerView() {
       <div className="mx-auto max-w-[1600px] space-y-6">
         <Link
           href="/dashboard/support"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-[#00d7c4] hover:text-[#5eead4]"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[#101d49] hover:text-[#2857a4]"
         >
           <ArrowLeft className="size-4" />
           Back to inbox
         </Link>
-        <p className="text-white/55">Customer not found.</p>
+        <p className="text-[#64718a]">Student or tutor not found.</p>
       </div>
     );
   }
@@ -101,12 +101,12 @@ export default function SupportCustomerView() {
       <div className="mx-auto max-w-[1600px] space-y-6">
         <Link
           href="/dashboard/support"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-[#00d7c4] hover:text-[#5eead4]"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[#101d49] hover:text-[#2857a4]"
         >
           <ArrowLeft className="size-4" />
           Back to inbox
         </Link>
-        <p className="text-sm text-white/45">Loading conversation…</p>
+        <p className="text-sm text-[#64718a]">Loading conversation…</p>
       </div>
     );
   }
@@ -132,7 +132,7 @@ export default function SupportCustomerView() {
     const newMsg: SupportMessage = {
       id: `m-${Date.now()}`,
       from: "admin",
-      senderName: "PEPP Support",
+      senderName: "Nugi Support",
       body: text,
       sentAt,
     };
@@ -205,7 +205,7 @@ export default function SupportCustomerView() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link
           href="/dashboard/support"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-[#00d7c4] hover:text-[#5eead4]"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[#101d49] hover:text-[#2857a4]"
         >
           <ArrowLeft className="size-4" />
           Back to inbox
@@ -215,7 +215,7 @@ export default function SupportCustomerView() {
       <div className="grid gap-5 lg:grid-cols-[minmax(260px,300px)_1fr] lg:items-start">
         <aside className={cn(cardBase, "space-y-5 p-5")}>
           <div className="flex items-start gap-3">
-            <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#8247E5] to-[#5b21b6] text-lg font-semibold text-white">
+            <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#101d49] text-lg font-semibold text-[#f5c542]">
               {customer.name
                 .split(" ")
                 .map((p) => p[0])
@@ -223,39 +223,39 @@ export default function SupportCustomerView() {
                 .slice(0, 2)}
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-semibold text-white">{customer.name}</h1>
-              <p className="mt-0.5 text-xs font-medium text-[#00d7c4]">{customer.role}</p>
+              <h1 className="text-lg font-semibold text-[#101d49]">{customer.name}</h1>
+              <p className="mt-0.5 text-xs font-semibold text-[#765800]">{customer.role}</p>
             </div>
           </div>
 
-          <div className="space-y-3 border-t border-white/[0.06] pt-4 text-sm">
-            <div className="flex items-center gap-2 text-white/70">
-              <Mail className="size-4 shrink-0 text-white/40" strokeWidth={1.75} />
+          <div className="space-y-3 border-t border-[#edf0f6] pt-4 text-sm">
+            <div className="flex items-center gap-2 text-[#52627f]">
+              <Mail className="size-4 shrink-0 text-[#8490a6]" strokeWidth={1.75} />
               <span className="truncate">{customer.email}</span>
             </div>
-            <div className="flex items-center gap-2 text-white/70">
-              <Phone className="size-4 shrink-0 text-white/40" strokeWidth={1.75} />
+            <div className="flex items-center gap-2 text-[#52627f]">
+              <Phone className="size-4 shrink-0 text-[#8490a6]" strokeWidth={1.75} />
               <span>{customer.phone}</span>
             </div>
-            <div className="flex items-center gap-2 text-white/70">
-              <User className="size-4 shrink-0 text-white/40" strokeWidth={1.75} />
+            <div className="flex items-center gap-2 text-[#52627f]">
+              <User className="size-4 shrink-0 text-[#8490a6]" strokeWidth={1.75} />
               <span>Member since {customer.memberSince}</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 border-t border-white/[0.06] pt-4">
-            <div className="rounded-xl bg-white/[0.04] px-3 py-2.5">
-              <p className="text-[11px] font-medium text-white/45">Total tickets</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-white">{total}</p>
+          <div className="grid grid-cols-2 gap-3 border-t border-[#edf0f6] pt-4">
+            <div className="rounded-xl bg-[#f9fafd] px-3 py-2.5">
+              <p className="text-[11px] font-medium text-[#64718a]">Total requests</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-[#101d49]">{total}</p>
             </div>
-            <div className="rounded-xl bg-white/[0.04] px-3 py-2.5">
-              <p className="text-[11px] font-medium text-white/45">Open / pending</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-amber-200">{openCount}</p>
+            <div className="rounded-xl bg-[#f9fafd] px-3 py-2.5">
+              <p className="text-[11px] font-medium text-[#64718a]">Open / pending</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-[#8a6500]">{openCount}</p>
             </div>
           </div>
 
-          <div className="border-t border-white/[0.06] pt-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/40">
+          <div className="border-t border-[#edf0f6] pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#64718a]">
               Conversations
             </p>
             <ul className="mt-3 space-y-1">
@@ -269,14 +269,14 @@ export default function SupportCustomerView() {
                       className={cn(
                         "block rounded-xl border px-3 py-2.5 text-left transition",
                         active
-                          ? "border-[#8247E5]/45 bg-[#8247E5]/15 text-white"
-                          : "border-transparent bg-white/[0.03] text-white/70 hover:bg-white/[0.06]",
+                          ? "border-[#d9e1f0] bg-[#eaf0ff] text-[#101d49]"
+                          : "border-transparent bg-[#f9fafd] text-[#52627f] hover:bg-[#f1f4fa]",
                       )}
                     >
                       <p className="line-clamp-2 text-sm font-medium">{t.subject}</p>
                       <div className="mt-1.5 flex items-center justify-between gap-2">
                         <StatusPill status={t.status} />
-                        <span className="text-[11px] text-white/35">{t.messages.length} msgs</span>
+                        <span className="text-[11px] text-[#8490a6]">{t.messages.length} msgs</span>
                       </div>
                     </Link>
                   </li>
@@ -289,11 +289,11 @@ export default function SupportCustomerView() {
         <section className={cn(cardBase, "flex min-h-[480px] flex-col overflow-hidden")}>
           {activeTicket ? (
             <>
-              <div className="border-b border-white/[0.06] p-4 sm:p-5">
+              <div className="border-b border-[#edf0f6] p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-base font-semibold text-white">{activeTicket.subject}</h2>
-                    <p className="mt-1 text-xs text-white/45">
+                    <h2 className="text-base font-semibold text-[#101d49]">{activeTicket.subject}</h2>
+                    <p className="mt-1 text-xs text-[#64718a]">
                       {activeTicket.id.toUpperCase()} · {activeTicket.category} · Created{" "}
                       {activeTicket.createdAt}
                     </p>
@@ -302,7 +302,7 @@ export default function SupportCustomerView() {
                 </div>
               </div>
 
-              <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+              <div className="flex-1 space-y-4 overflow-y-auto bg-[#f9fafd] p-4 sm:p-5">
                 {activeTicket.messages.map((m) => {
                   const isAdmin = m.from === "admin";
                   return (
@@ -314,11 +314,11 @@ export default function SupportCustomerView() {
                         className={cn(
                           "max-w-[min(100%,520px)] rounded-2xl px-4 py-3 text-sm leading-relaxed",
                           isAdmin
-                            ? "rounded-br-md bg-[#8247E5]/25 text-white/95 ring-1 ring-[#8247E5]/25"
-                            : "rounded-bl-md bg-white/[0.06] text-white/85 ring-1 ring-white/[0.06]",
+                            ? "rounded-br-md bg-[#eaf0ff] text-[#17233f] ring-1 ring-[#d9e1f0]"
+                            : "rounded-bl-md bg-white text-[#17233f] ring-1 ring-[#e4e9f2]",
                         )}
                       >
-                        <p className="text-[11px] font-semibold text-white/50">
+                        <p className="text-[11px] font-semibold text-[#64718a]">
                           {m.senderName} · {m.sentAt}
                         </p>
                         <p className="mt-2 whitespace-pre-wrap">{m.body}</p>
@@ -328,15 +328,15 @@ export default function SupportCustomerView() {
                 })}
               </div>
 
-              <div className="border-t border-white/[0.06] bg-white/[0.02] p-4 sm:p-5">
+              <div className="border-t border-[#edf0f6] bg-white p-4 sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 items-start gap-3">
                     <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
                       <CheckCircle2 className="size-5" strokeWidth={1.75} />
                     </span>
                     <div>
-                      <h3 className="text-sm font-semibold text-white">Resolve ticket</h3>
-                      <p className="mt-0.5 text-xs leading-relaxed text-white/45">
+                      <h3 className="text-sm font-semibold text-[#101d49]">Resolve request</h3>
+                      <p className="mt-0.5 text-xs leading-relaxed text-[#64718a]">
                         Close this thread when the issue is fixed or no further action is needed. The
                         customer can still open a new ticket later.
                       </p>
@@ -346,7 +346,7 @@ export default function SupportCustomerView() {
                     <button
                       type="button"
                       onClick={reopenTicket}
-                      className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.1] sm:self-center"
+                      className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl border border-[#e4e9f2] bg-white px-4 py-2.5 text-sm font-semibold text-[#17233f] transition hover:bg-[#f9fafd] sm:self-center"
                     >
                       <RotateCcw className="size-4" strokeWidth={1.75} />
                       Reopen ticket
@@ -364,7 +364,7 @@ export default function SupportCustomerView() {
                 </div>
               </div>
 
-              <div className="border-t border-white/[0.06] p-4 sm:p-5">
+              <div className="border-t border-[#edf0f6] p-4 sm:p-5">
                 <label htmlFor="support-reply" className="sr-only">
                   Reply to customer
                 </label>
@@ -375,19 +375,19 @@ export default function SupportCustomerView() {
                   rows={3}
                   placeholder="Write a reply to the customer…"
                   disabled={activeTicket.status === "resolved"}
-                  className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder:text-white/35 outline-none focus:ring-2 focus:ring-[#8247E5]/35 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full resize-none rounded-xl border border-[#e4e9f2] bg-white px-4 py-3 text-sm text-[#17233f] placeholder:text-[#8490a6] outline-none focus:border-[#101d49]/35 focus:ring-2 focus:ring-[#101d49]/10 disabled:cursor-not-allowed disabled:bg-[#f4f6fa] disabled:opacity-70"
                 />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-xs text-white/35">
+                  <p className="text-xs text-[#64718a]">
                     {activeTicket.status === "resolved"
                       ? "This ticket is resolved. Reopen it above to send another reply."
-                      : "Replies are saved for this demo. Use Resolve ticket when the case is closed."}
+                      : "Replies are saved for this demo. Resolve the request when the case is closed."}
                   </p>
                   <button
                     type="button"
                     disabled={!draft.trim() || sending || activeTicket.status === "resolved"}
                     onClick={sendReply}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#8B5CF6] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#7c3aed] disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#101d49] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#172a60] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     <Send className="size-4" strokeWidth={1.75} />
                     Send reply
@@ -397,8 +397,8 @@ export default function SupportCustomerView() {
             </>
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
-              <MessageSquare className="size-10 text-white/25" strokeWidth={1.25} />
-              <p className="mt-3 text-sm text-white/50">Select a conversation</p>
+              <MessageSquare className="size-10 text-[#aab4c5]" strokeWidth={1.25} />
+              <p className="mt-3 text-sm text-[#64718a]">Select a conversation</p>
             </div>
           )}
         </section>

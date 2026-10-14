@@ -47,7 +47,7 @@ export const BRAND_CONFIG = {
 
   support: {
     label: "Help & Support",
-    href: "/support",
+    href: "/dashbaord/support",
   },
 
   auth: {
@@ -258,7 +258,7 @@ const adminConfig: DashboardUIConfig = {
     },
     {
       label: "Settings",
-      href: "/dashboard/settings",
+      href: "/system/settings",
       description: "Platform configuration",
       icon: Settings,
       section: "System",

@@ -26,7 +26,7 @@ export type SupportCustomer = {
   name: string;
   email: string;
   phone: string;
-  role: "Rider" | "Driver";
+  role: "Student" | "Tutor";
   memberSince: string;
   tickets: SupportTicket[];
 };
@@ -43,65 +43,65 @@ export const supportCustomers: SupportCustomer[] = [
   {
     id: "c-1",
     name: "Uche Kanu",
-    email: "uche@google.com",
+    email: "uche.kanu@example.com",
     phone: "+234 801 234 5678",
-    role: "Rider",
-    memberSince: "Aug 2024",
+    role: "Student",
+    memberSince: "Aug 2025",
     tickets: [
       {
         id: "t-1",
-        subject: "Refund for cancelled trip",
-        category: "Billing",
+        subject: "Unable to access my programme",
+        category: "Programme access",
         status: "open",
         priority: "high",
-        createdAt: "Mar 22, 2026 · 9:12 AM",
-        updatedAt: "Mar 24, 2026 · 2:14 PM",
+        createdAt: "Oct 12, 2026 · 9:12 AM",
+        updatedAt: "Oct 14, 2026 · 2:14 PM",
         messages: [
           mkMsg(
             "m-1",
             "customer",
             "Uche Kanu",
-            "My driver cancelled after I was charged. Trip ID PEP-88214. Please refund to my wallet.",
-            "Mar 22, 2026 · 9:12 AM",
+            "My Cybersecurity programme is not appearing on my dashboard. Could you help me check my enrolment?",
+            "Oct 12, 2026 · 9:12 AM",
           ),
           mkMsg(
             "m-2",
             "admin",
-            "PEPP Support",
-            "Thanks for reporting this. We’ve located the trip and escalated to billing. You’ll get an update within 24 hours.",
-            "Mar 22, 2026 · 11:40 AM",
+            "Nugi Support",
+            "Thanks for letting us know. We’re checking your programme enrolment and will follow up with you shortly.",
+            "Oct 12, 2026 · 11:40 AM",
           ),
           mkMsg(
             "m-3",
             "customer",
             "Uche Kanu",
-            "Any update? It’s been two days.",
-            "Mar 24, 2026 · 2:14 PM",
+            "Thank you. I can now see the programme on my dashboard.",
+            "Oct 14, 2026 · 2:14 PM",
           ),
         ],
       },
       {
         id: "t-2",
-        subject: "Wrong fare estimate",
-        category: "Trips",
+        subject: "Where can I find lesson materials?",
+        category: "Learning resources",
         status: "resolved",
         priority: "normal",
-        createdAt: "Feb 3, 2026 · 4:02 PM",
-        updatedAt: "Feb 5, 2026 · 10:00 AM",
+        createdAt: "Sep 3, 2026 · 4:02 PM",
+        updatedAt: "Sep 5, 2026 · 10:00 AM",
         messages: [
           mkMsg(
             "m-4",
             "customer",
             "Uche Kanu",
-            "The app showed ₦3,200 but I was charged ₦4,100.",
-            "Feb 3, 2026 · 4:02 PM",
+            "I am not sure where lesson notes and resources are available for my course.",
+            "Sep 3, 2026 · 4:02 PM",
           ),
           mkMsg(
             "m-5",
             "admin",
-            "PEPP Support",
-            "We’ve added a fare adjustment of ₦900 to your Pepp Coin balance. Thanks for your patience.",
-            "Feb 5, 2026 · 10:00 AM",
+            "Nugi Support",
+            "Open your student dashboard and select your programme to find its learning resources. We have also added this to the course guide.",
+            "Sep 5, 2026 · 10:00 AM",
           ),
         ],
       },
@@ -110,33 +110,33 @@ export const supportCustomers: SupportCustomer[] = [
   {
     id: "c-2",
     name: "Ada Nwosu",
-    email: "ada.n@mail.com",
+    email: "ada.nwosu@example.com",
     phone: "+234 802 555 0199",
-    role: "Driver",
+    role: "Tutor",
     memberSince: "Jan 2025",
     tickets: [
       {
         id: "t-3",
-        subject: "Payout delayed",
-        category: "Payouts",
+        subject: "Assignment submissions need review",
+        category: "Assignments",
         status: "pending",
         priority: "high",
-        createdAt: "Mar 23, 2026 · 8:45 AM",
-        updatedAt: "Mar 24, 2026 · 7:30 AM",
+        createdAt: "Oct 13, 2026 · 8:45 AM",
+        updatedAt: "Oct 13, 2026 · 3:10 PM",
         messages: [
           mkMsg(
             "m-6",
             "customer",
             "Ada Nwosu",
-            "Weekly payout still shows pending since Monday. Bank is GTBank.",
-            "Mar 23, 2026 · 8:45 AM",
+            "Several learner submissions are not appearing in my review queue. I submitted the grades yesterday.",
+            "Oct 13, 2026 · 8:45 AM",
           ),
           mkMsg(
             "m-7",
             "admin",
-            "PEPP Support",
-            "We’re reconciling with the payment partner. I’ll confirm the settlement time today.",
-            "Mar 23, 2026 · 3:10 PM",
+            "Nugi Support",
+            "We’re checking the review queue and will confirm once the submissions are visible.",
+            "Oct 13, 2026 · 3:10 PM",
           ),
         ],
       },
@@ -145,33 +145,33 @@ export const supportCustomers: SupportCustomer[] = [
   {
     id: "c-3",
     name: "Chidi Okafor",
-    email: "chidi.o@mail.com",
+    email: "chidi.okafor@example.com",
     phone: "+234 703 111 4422",
-    role: "Rider",
-    memberSince: "Nov 2024",
+    role: "Student",
+    memberSince: "Nov 2025",
     tickets: [
       {
         id: "t-4",
-        subject: "Lost item in vehicle",
-        category: "Safety",
+        subject: "Help updating my profile details",
+        category: "Account and profile",
         status: "open",
         priority: "normal",
-        createdAt: "Mar 20, 2026 · 6:20 PM",
-        updatedAt: "Mar 21, 2026 · 9:05 AM",
+        createdAt: "Oct 10, 2026 · 6:20 PM",
+        updatedAt: "Oct 11, 2026 · 9:05 AM",
         messages: [
           mkMsg(
             "m-8",
             "customer",
             "Chidi Okafor",
-            "Left a backpack in the trunk — black, trip PEP-88002 last night.",
-            "Mar 20, 2026 · 6:20 PM",
+            "I need to update the phone number on my learner profile. Where can I make this change?",
+            "Oct 10, 2026 · 6:20 PM",
           ),
           mkMsg(
             "m-9",
             "admin",
-            "PEPP Support",
-            "We’ve messaged the driver. Please confirm if you’d like us to arrange a return drop-off.",
-            "Mar 21, 2026 · 9:05 AM",
+            "Nugi Support",
+            "Please review your profile and contact your programme administrator if the phone number field is locked.",
+            "Oct 11, 2026 · 9:05 AM",
           ),
         ],
       },
@@ -212,7 +212,11 @@ export function getSupportInboxRows(): SupportInboxRow[] {
       });
     }
   }
-  return rows.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  return rows.sort((a, b) => {
+    const updatedAtA = Date.parse(a.updatedAt.replace(" · ", " "));
+    const updatedAtB = Date.parse(b.updatedAt.replace(" · ", " "));
+    return updatedAtB - updatedAtA;
+  });
 }
 
 export function getSupportCustomer(id: string): SupportCustomer | null {
