@@ -113,6 +113,7 @@ export interface StudentDashboardAssignments {
 export interface StudentDashboardOverview {
   totalProgrammes: number;
   totalProgrammeHours: number;
+  lessonsCompleted: number | null;
   assignments: StudentDashboardAssignments;
 }
 
@@ -133,4 +134,91 @@ export interface StudentDashboardApiResponse {
   statusCode: number;
   message: string;
   data: StudentDashboardData;
+}
+
+export interface StudentProgrammeLearningProgress {
+  id: string;
+  name: string;
+  lessonsCompleted: number | null;
+  totalLessons: number | null;
+  progressPercentage: number | null;
+}
+
+export interface StudentLearningProgressData {
+  overallProgress: number | null;
+  lessonsCompleted: number | null;
+  totalLessons: number | null;
+  programmes: StudentProgrammeLearningProgress[];
+}
+
+export interface StudentLearningProgressApiResponse {
+  status: "success" | "error";
+  statusCode: number;
+  message: string;
+  data: StudentLearningProgressData;
+}
+
+export interface TutorDashboardOverview {
+  totalCourses: number;
+  totalStudents: number;
+  pendingReviews: number;
+  upcomingSessions: number;
+}
+
+/** Display fields are optional because the dashboard response example only
+ * specifies the collection names, not each resource's full shape. */
+export interface TutorDashboardCourse {
+  id: string;
+  name?: string;
+  title?: string;
+  description?: string | null;
+  programmeName?: string | null;
+  studentCount?: number;
+  totalStudents?: number;
+}
+
+export interface TutorDashboardStudent {
+  id: string;
+  name?: string;
+  fullName?: string;
+  email?: string;
+  photoUrl?: string | null;
+  courseName?: string | null;
+  programmeName?: string | null;
+}
+
+export interface TutorDashboardPendingSubmission {
+  id: string;
+  title?: string;
+  assignmentTitle?: string;
+  studentName?: string;
+  learnerName?: string;
+  courseName?: string | null;
+  submittedAt?: string | null;
+}
+
+export interface TutorDashboardUpcomingSession {
+  id: string;
+  title?: string;
+  topic?: string;
+  courseName?: string | null;
+  startsAt?: string | null;
+  scheduledAt?: string | null;
+  startTime?: string | null;
+  date?: string | null;
+}
+
+export interface TutorDashboardData {
+  overview: TutorDashboardOverview;
+  courses: TutorDashboardCourse[];
+  students: TutorDashboardStudent[];
+  pendingSubmissions: TutorDashboardPendingSubmission[];
+  upcomingSessions: TutorDashboardUpcomingSession[];
+}
+
+export interface TutorDashboardApiResponse {
+  status: "success" | "error";
+  statusCode: number;
+  message: string;
+  data: TutorDashboardData;
 }

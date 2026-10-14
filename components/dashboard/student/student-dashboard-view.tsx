@@ -14,7 +14,10 @@ import {
 
 import { useCurrentUser } from "@/lib/hooks/auth/use-current-user";
 import { useDashboardUIConfig } from "@/lib/hooks/ui-config/use-dashboard-ui-config";
-import type { StudentDashboardData } from "@/lib/interfaces/dashboard";
+import type {
+  StudentDashboardData,
+  StudentLearningProgressData,
+} from "@/lib/interfaces/dashboard";
 import { UserType } from "@/lib/types/users";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +28,12 @@ type StudentDashboardViewProps = {
   error?: Error | null;
   isFetching: boolean;
   onRetry: () => void;
+  progress?: StudentLearningProgressData;
+  progressIsLoading: boolean;
+  progressIsError: boolean;
+  progressError?: Error | null;
+  progressIsFetching: boolean;
+  onProgressRetry: () => void;
 };
 
 const cardClass =
@@ -42,6 +51,24 @@ function getFirstName(email?: string): string {
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat("en-NG").format(value);
+}
+
+function formatNullableNumber(value: number | null): string {
+  return typeof value === "number" && Number.isFinite(value)
+    ? formatNumber(value)
+    : "—";
+}
+
+function getValidPercentage(value: number | null): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return Math.min(100, Math.max(0, value));
+}
+
+function formatPercentage(value: number | null): string {
+  const percentage = getValidPercentage(value);
+  return percentage === null
+    ? "—"
+    : `${new Intl.NumberFormat("en-NG", { maximumFractionDigits: 1 }).format(percentage)}%`;
 }
 
 function DashboardLoading() {
@@ -175,6 +202,126 @@ function ProgrammeList({
   );
 }
 
+function LearningProgressPanel({
+  progress,
+  isLoading,
+  isError,
+  error,
+  isFetching,
+  onRetry,
+}: {
+  progress?: StudentLearningProgressData;
+  isLoading: boolean;
+  isError: boolean;
+  error?: Error | null;
+  isFetching: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <section className={cn(cardClass, "overflow-hidden")} aria-labelledby="learning-progress-title">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#edf0f6] px-5 py-5 sm:px-6">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-[#eaf0ff] text-[#101d49]">
+            <GraduationCap size={20} aria-hidden="true" />
+          </div>
+          <div>
+            <h2 id="learning-progress-title" className="font-semibold text-[#101d49]">Learning progress</h2>
+            <p className="mt-0.5 text-xs text-[#64718a]">Lesson completion across your programmes</p>
+          </div>
+        </div>
+        {isFetching && (
+          <span className="inline-flex items-center gap-1.5 text-xs text-[#64718a]">
+            <RefreshCw size={13} className="animate-spin" aria-hidden="true" />Updating
+          </span>
+        )}
+      </div>
+
+      {isError && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-900 sm:px-6">
+          <p>{progress ? "Could not refresh progress data." : (error?.message || "Could not load learning progress.")}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={isFetching}
+            className="inline-flex items-center gap-1.5 font-semibold underline-offset-2 hover:underline disabled:opacity-60"
+          >
+            <RefreshCw size={13} className={isFetching ? "animate-spin" : ""} aria-hidden="true" />
+            Try again
+          </button>
+        </div>
+      )}
+
+      {isLoading && !progress ? (
+        <div className="space-y-4 p-5 sm:p-6" role="status" aria-label="Loading learning progress">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div key={index} className="h-20 animate-pulse rounded-xl bg-[#f1f3f8]" />
+            ))}
+          </div>
+          <div className="h-16 animate-pulse rounded-xl bg-[#f1f3f8]" />
+          <span className="sr-only">Loading your learning progress…</span>
+        </div>
+      ) : progress ? (
+        <div className="space-y-5 p-5 sm:p-6">
+          <dl className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-[#f9fafd] p-4">
+              <dt className="text-xs font-medium text-[#64718a]">Overall progress</dt>
+              <dd className="mt-2 text-2xl font-bold text-[#101d49]">{formatPercentage(progress.overallProgress)}</dd>
+            </div>
+            <div className="rounded-xl bg-[#f9fafd] p-4">
+              <dt className="text-xs font-medium text-[#64718a]">Lessons completed</dt>
+              <dd className="mt-2 text-2xl font-bold text-[#101d49]">{formatNullableNumber(progress.lessonsCompleted)}</dd>
+            </div>
+            <div className="rounded-xl bg-[#f9fafd] p-4">
+              <dt className="text-xs font-medium text-[#64718a]">Total lessons</dt>
+              <dd className="mt-2 text-2xl font-bold text-[#101d49]">{formatNullableNumber(progress.totalLessons)}</dd>
+            </div>
+          </dl>
+
+          {progress.programmes.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-[#d9dfeb] px-4 py-5 text-center text-sm text-[#64718a]">
+              Programme progress will appear here when lesson data is available.
+            </p>
+          ) : (
+            <ul className="space-y-4">
+              {progress.programmes.map((programme) => {
+                const percentage = getValidPercentage(programme.progressPercentage);
+                return (
+                  <li key={programme.id} className="rounded-xl border border-[#edf0f6] p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="break-words text-sm font-semibold text-[#17233f]">{programme.name}</h3>
+                        <p className="mt-1 text-xs text-[#64718a]">
+                          {formatNullableNumber(programme.lessonsCompleted)} of {formatNullableNumber(programme.totalLessons)} lessons completed
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm font-bold tabular-nums text-[#101d49]">{formatPercentage(programme.progressPercentage)}</span>
+                    </div>
+                    <div
+                      className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#edf0f6]"
+                      role={percentage === null ? undefined : "progressbar"}
+                      aria-label={percentage === null ? undefined : `${programme.name} progress`}
+                      aria-valuemin={percentage === null ? undefined : 0}
+                      aria-valuemax={percentage === null ? undefined : 100}
+                      aria-valuenow={percentage === null ? undefined : Math.round(percentage)}
+                    >
+                      {percentage !== null && (
+                        <div className="h-full rounded-full bg-[#f5c542] transition-[width] duration-500" style={{ width: `${percentage}%` }} />
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ) : (
+        <p className="px-5 py-8 text-center text-sm text-[#64718a]">Learning progress is not available yet.</p>
+      )}
+    </section>
+  );
+}
+
 export default function StudentDashboardView({
   data,
   isLoading,
@@ -182,6 +329,12 @@ export default function StudentDashboardView({
   error,
   isFetching,
   onRetry,
+  progress,
+  progressIsLoading,
+  progressIsError,
+  progressError,
+  progressIsFetching,
+  onProgressRetry,
 }: StudentDashboardViewProps) {
   const { user } = useCurrentUser();
   const { uiConfig, role, isReady } = useDashboardUIConfig();
@@ -262,15 +415,19 @@ export default function StudentDashboardView({
           {uiConfig.stats.map(({ key, label, description, icon: Icon }) => {
             let value: number | null = null;
             if (key === "enrolledCourses") value = overview.totalProgrammes;
+            if (key === "completedLessons") {
+              value = progress?.lessonsCompleted ?? overview.lessonsCompleted;
+            }
             if (key === "pendingAssignments") value = overview.assignments.pending;
+            if (key === "learningProgress") value = progress?.overallProgress ?? null;
 
             return (
               <article key={key} className={cn(cardClass, "p-5 sm:p-6")}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="text-sm font-medium text-[#64718a]">{label}</h3>
-                    <p className="mt-3 text-3xl font-bold tracking-tight text-[#101d49]" aria-label={`${label}: ${value === null ? "not yet available" : formatNumber(value)}`}>
-                      {value === null ? "—" : formatNumber(value)}
+                    <p className="mt-3 text-3xl font-bold tracking-tight text-[#101d49]" aria-label={`${label}: ${value === null ? "not yet available" : key === "learningProgress" ? formatPercentage(value) : formatNumber(value)}`}>
+                      {value === null ? "—" : key === "learningProgress" ? formatPercentage(value) : formatNumber(value)}
                     </p>
                   </div>
                   <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#eaf0ff] text-[#101d49]"><Icon size={21} aria-hidden="true" /></span>
@@ -281,6 +438,15 @@ export default function StudentDashboardView({
           })}
         </div>
       </section>
+
+      <LearningProgressPanel
+        progress={progress}
+        isLoading={progressIsLoading}
+        isError={progressIsError}
+        error={progressError}
+        isFetching={progressIsFetching}
+        onRetry={onProgressRetry}
+      />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
         <ProgrammeList programmes={programmes} />
@@ -317,7 +483,7 @@ export default function StudentDashboardView({
 
       <footer className="flex items-start gap-2 border-t border-[#e4e9f2] pt-4 text-xs leading-5 text-[#64718a]">
         <Clock3 size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
-        <p>Programme and assignment figures reflect the latest data returned by the student dashboard API. Lessons completed and learning progress will appear here when that data is available.</p>
+        <p>Programme and assignment totals come from the student dashboard API. Lesson completion and progress come from the learning progress API; values the backend has not calculated yet are shown as unavailable.</p>
       </footer>
     </div>
   );

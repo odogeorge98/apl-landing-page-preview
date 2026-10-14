@@ -166,15 +166,7 @@ function ProfileError({
   );
 }
 
-function ProfileContent({
-  profile,
-  isFetching,
-  onRefresh,
-}: {
-  profile: AdminProfile;
-  isFetching: boolean;
-  onRefresh: () => void;
-}) {
+function ProfileContent({ profile }: { profile: AdminProfile }) {
   const initials = useMemo(
     () => getInitials(profile.email),
     [profile.email],
@@ -398,30 +390,6 @@ function ProfileContent({
         </div>
       </section>
 
-      {isFetching && (
-        <p
-          className="text-right text-xs text-[#8490a6]"
-          role="status"
-          aria-live="polite"
-        >
-          Refreshing profile…
-        </p>
-      )}
-
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={isFetching}
-          className="inline-flex items-center gap-2 rounded-xl border border-[#dfe5f0] bg-white px-4 py-2.5 text-sm font-semibold text-[#101d49] transition hover:border-[#101d49]/30 hover:bg-[#f8f9fc] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-[#f5c542] focus:ring-offset-2"
-        >
-          <RefreshCw
-            size={16}
-            className={isFetching ? "animate-spin" : ""}
-          />
-          Refresh profile
-        </button>
-      </div>
     </div>
   );
 }
@@ -479,9 +447,26 @@ export default function AdminProfilePage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 self-start rounded-xl border border-[#e8edf5] bg-white px-3.5 py-2.5 text-xs font-semibold text-[#101d49] sm:self-center">
-              <ShieldCheck size={16} className="text-emerald-600" />
-              Secure account
+            <div className="flex flex-col gap-2 self-start sm:flex-row sm:items-center sm:self-center">
+              <div className="flex items-center gap-2 rounded-xl border border-[#e8edf5] bg-white px-3.5 py-2.5 text-xs font-semibold text-[#101d49]">
+                <ShieldCheck size={16} className="text-emerald-600" />
+                Secure account
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void refetch();
+                }}
+                disabled={isFetching}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe5f0] bg-white px-4 py-2.5 text-sm font-semibold text-[#101d49] transition hover:border-[#101d49]/30 hover:bg-[#f8f9fc] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-[#f5c542] focus:ring-offset-2"
+              >
+                <RefreshCw
+                  size={16}
+                  className={isFetching ? "animate-spin" : ""}
+                  aria-hidden="true"
+                />
+                {isFetching ? "Refreshing…" : "Refresh profile"}
+              </button>
             </div>
           </div>
 
@@ -495,13 +480,7 @@ export default function AdminProfilePage() {
               }}
             />
           ) : profile ? (
-            <ProfileContent
-              profile={profile}
-              isFetching={isFetching}
-              onRefresh={() => {
-                void refetch();
-              }}
-            />
+            <ProfileContent profile={profile} />
           ) : (
             <ProfileError
               message="No profile information was returned by the server."

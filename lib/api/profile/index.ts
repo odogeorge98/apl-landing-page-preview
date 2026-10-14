@@ -3,6 +3,10 @@ import { http } from "@/lib/utils/http";
 import type {
   AdminProfile,
   AdminProfileApiResponse,
+  StudentProfile,
+  StudentProfileApiResponse,
+  TutorProfile,
+  TutorProfileApiResponse,
 } from "@/lib/interfaces/profile";
 
 export const profileApi = {
@@ -17,6 +21,46 @@ export const profileApi = {
       throw new Error(
         result.message || "Failed to retrieve admin profile.",
       );
+    }
+
+    return result.data;
+  },
+
+  getStudentProfile: async (): Promise<StudentProfile> => {
+    const response = await http.get<StudentProfileApiResponse>(
+      "/students/profile",
+    );
+
+    const result = response.data;
+
+    if (result.status !== "success") {
+      throw new Error(
+        result.message || "Failed to retrieve student profile.",
+      );
+    }
+
+    if (!result.data || !Array.isArray(result.data.programmes)) {
+      throw new Error("The student profile response was incomplete.");
+    }
+
+    return result.data;
+  },
+
+  getTutorProfile: async (): Promise<TutorProfile> => {
+    const response = await http.get<TutorProfileApiResponse>(
+      "/tutors/profile",
+    );
+
+    const result = response.data;
+
+    if (result.status !== "success") {
+      throw new Error(
+        result.message || "Failed to retrieve tutor profile.",
+      );
+    }
+
+    if (!result.data) {
+      throw new Error("The tutor profile response was incomplete.");
     }
 
     return result.data;

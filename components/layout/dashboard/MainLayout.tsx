@@ -66,7 +66,7 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
       aria-label="Nugi Innovations home"
       className={cn(
         "flex min-w-0 items-center gap-2.5",
-        collapsed && "justify-center",
+        collapsed && "shrink-0 justify-center",
       )}
     >
       <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#f5c542] text-lg font-black text-[#101d49] shadow-sm">
@@ -155,8 +155,10 @@ function Sidebar({
     <div className="flex min-h-0 flex-1 flex-col">
       <div
         className={cn(
-          "flex h-[72px] shrink-0 items-center border-b border-white/[0.08] px-4",
-          displayCollapsed ? "justify-center" : "justify-between gap-2",
+          "flex h-[72px] shrink-0 items-center border-b border-white/[0.08]",
+          displayCollapsed
+            ? "justify-between gap-1 px-1"
+            : "justify-between gap-2 px-4",
         )}
       >
         <Brand collapsed={displayCollapsed} />
