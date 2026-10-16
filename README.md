@@ -1,35 +1,51 @@
-# Sona AI Web Application
+# Nugi Innovations Learning Portal
 
-A modern web application built with Next.js 15, React 19, and TypeScript, featuring component development with Storybook.
+The Nugi Innovations Learning Portal supports technology education, practical training, and career development. It provides role-based workspaces for administrators, tutors, and students.
 
-## 🚀 Getting Started
+## Product areas
 
-### Prerequisites
+- **Administration** — platform overview, user management, programme operations, and support inbox.
+- **Tutor workspace** — tutor dashboard and profile.
+- **Student workspace** — learning dashboard, profile, and help resources.
+- **Authentication** — account onboarding, password reset, and shared Nugi Innovations branding.
 
-- Node.js 18+ 
-- npm or yarn
+Navigation items and role-specific dashboard details are configured in `lib/config/dashboard/ui-config.ts`.
 
-### Installation
+## Technology
 
-1. Clone the repository
-2. Install dependencies:
+- Next.js 15 App Router with Turbopack
+- React 19 and TypeScript
+- Tailwind CSS 4
+- TanStack Query and Axios for server data
+- Zustand for client-side state
+- Yup for form validation
+- Lucide React icons
+- Vitest and Testing Library for tests
+- Firebase Cloud Messaging integration for supported notifications
+
+## Requirements
+
+- Node.js 18.18 or newer
+- npm
+
+## Local development
+
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Configure environment variables (optional):
+Create a `.env.local` file in the project root if you need to override the API defaults:
 
-Create a `.env.local` file in the root directory:
-
-```bash
-# API Configuration
-NEXT_PUBLIC_API_BASE_URL=https://sona-website-worker.shy-resonance-c01b.workers.dev/api
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=https://nugi-innovation-backend.onrender.com
+NEXT_PUBLIC_WEBSITE_BASE_URL=https://nugi-innovation-backend.onrender.com/websites
 ```
 
-If no environment variable is set, the application will use the default API URL.
+The API base URL defaults to `https://nugi-innovation-backend.onrender.com`. The website API defaults to the same host under `/websites`.
 
-### Development
+The runtime also accepts the older `NEXT_PUBLIC_PEPPCRUISE_API_BASE_URL` and `NEXT_PUBLIC_PEPPCRUISE_WEBSITE_BASE_URL` variable names for compatibility. If those legacy variables are set, they take precedence over the current names.
 
 Start the development server:
 
@@ -37,185 +53,74 @@ Start the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the application.
+Open [http://localhost:3001](http://localhost:3001).
 
-### Storybook
+In development, dashboard authentication bypass is enabled by default to support local UI work. Production deployments should leave `NEXT_PUBLIC_BYPASS_AUTH` unset or set it to `false` so authentication uses the backend.
 
-Run Storybook for component development and testing:
+Firebase messaging requires the Firebase project values used by `lib/services/firebase/config/config.ts` and the web push VAPID key used by `lib/services/firebase/messaging.ts`:
 
-```bash
-npm run storybook
+```dotenv
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=
 ```
 
-Open [http://localhost:6006](http://localhost:6006) to view the component library.
+## Role workspaces
 
-Build Storybook for production:
+| Role | Main routes |
+| --- | --- |
+| Administrator | `/dashboard`, `/dashboard/users/admins`, `/dashboard/users/students`, `/dashboard/users/tutors`, `/dashboard/support` |
+| Tutor | `/tutor/dashboard`, `/tutor/profile` |
+| Student | `/student/dashboard`, `/student/profile`, `/support` |
 
-```bash
-npm run build-storybook
+The student navigation, including Help & Support at `/support`, is defined in the shared dashboard UI configuration.
+
+## Available commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start Next.js in development mode on port 3001 |
+| `npm run build` | Create an optimized production build |
+| `npm run start` | Serve the production build |
+| `npm test` | Run Vitest in watch mode |
+| `npm run test:file` | Run Vitest once |
+| `npm run test:watch` | Run Vitest in watch mode |
+| `npm run test:ui` | Open the Vitest UI |
+| `npm run test:coverage` | Run Vitest with coverage |
+
+## Project layout
+
+```text
+app/
+  (admin)/       Administrator routes
+  (auth)/        Authentication and account recovery routes
+  (student)/     Student dashboard, profile, and support routes
+  (tutor)/       Tutor dashboard and profile routes
+components/      Shared UI and product components
+lib/
+  api/           API integrations
+  config/        Dashboard and application configuration
+  hooks/         React Query and application hooks
+  interfaces/    Shared TypeScript data contracts
+  store/         Zustand stores
+  utils/         Shared helpers and HTTP utilities
+public/          Logos, fonts, and static assets
+__tests__/       Vitest tests
 ```
 
-## 🛠️ Tech Stack
+## API and authentication
 
-- **Framework**: Next.js 15 with Turbopack
-- **Frontend**: React 19, TypeScript
-- **Styling**: Tailwind CSS 4, Framer Motion
-- **UI Components**: Radix UI, Lucide React
-- **State Management**: Zustand, TanStack Query
-- **Development**: Storybook 9.1.3 with Vite
-- **Testing**: Vitest, Testing Library
-- **Code Quality**: TypeScript strict mode
+API integrations are organized under `lib/api/`; related query and mutation hooks live under `lib/hooks/`. The shared HTTP client is in `lib/utils/http.ts`. Authenticated requests use the current bearer token, while TanStack Query manages server state and caching.
 
-## 📁 Project Structure
+## Import aliases
 
-```
-webapp/
-├── app/                 # Next.js app directory
-├── lib/                 # Utility functions
-├── stories/             # Storybook stories
-├── __tests__/           # Test files (mirrors src structure)
-├── .storybook/          # Storybook configuration
-└── public/              # Static assets
-```
-
-## 🧩 Available Scripts
-
-- `npm run dev` - Start development server with Turbopack
-- `npm run build` - Build for production
-- `npm run start` - Start production server  
-- `npm test` - Run tests in watch mode
-- `npm run test:watch` - Run tests in watch mode (explicit)
-- `npm run test:file` - Run specific test file or pattern
-- `npm run test:ui` - Run tests with Vitest UI interface
-- `npm run test:coverage` - Run tests with coverage report
-- `npm run storybook` - Start Storybook development server
-- `npm run build-storybook` - Build Storybook for production
-
-## 🧪 Testing
-
-This project uses Vitest for unit and integration testing with React Testing Library for component testing.
-
-### Test Structure
-
-Tests are organized in the `__tests__/` directory, mirroring the source code structure:
-
-```
-__tests__/
-├── lib/
-│   └── utils.test.ts     # Tests for lib/utils.ts
-├── app/
-│   └── page.test.tsx     # Tests for app/page.tsx
-└── components/
-    └── button.test.tsx   # Tests for components/button.tsx
-```
-
-### Running Tests
-
-```bash
-# Run all tests in watch mode
-npm test
-
-# Run tests once (for CI)
-npm run test:file
-
-# Run specific test file or pattern
-npm run test:file utils
-npm run test:file __tests__/lib/utils.test.ts
-
-# Run tests with UI interface
-npm run test:ui
-
-# Run tests with coverage report
-npm run test:coverage
-```
-
-### Writing Tests
-
-Create test files with `.test.ts` or `.test.tsx` extensions:
+Use the `@/` alias for imports from the project root:
 
 ```typescript
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MyComponent } from '@/components/MyComponent'
-
-describe('MyComponent', () => {
-  it('should render correctly', () => {
-    render(<MyComponent />)
-    expect(screen.getByText('Hello')).toBeInTheDocument()
-  })
-})
+import { cn } from "@/lib/utils";
+import MainLayout from "@/components/layout/dashboard/MainLayout";
 ```
-
-## 🎨 Component Development
-
-This project uses Storybook for isolated component development. Components are documented with stories that demonstrate different states and use cases.
-
-### Writing Stories
-
-Create `.stories.ts` files alongside your components:
-
-```typescript
-import type { Meta, StoryObj } from '@storybook/react';
-import { MyComponent } from './MyComponent';
-
-const meta: Meta<typeof MyComponent> = {
-  title: 'Components/MyComponent',
-  component: MyComponent,
-};
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Default: Story = {
-  args: {
-    // component props
-  },
-};
-```
-
-## 📂 Import Aliases
-
-This project uses TypeScript path mapping to avoid relative imports:
-
-```typescript
-// ❌ Avoid relative imports
-import { cn } from '../../lib/utils'
-import { Button } from '../../../components/Button'
-
-// ✅ Use @ alias instead
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/Button'
-```
-
-**Available aliases:**
-- `@/` - Points to project root
-- `@/lib/` - Utility functions
-- `@/app/` - Next.js app directory
-- `@/components/` - Reusable components
-
-## ⚙️ Configuration
-
-The application uses a centralized configuration system located in `lib/config.ts`. This allows for easy management of API endpoints and other application settings.
-
-### Environment Variables
-
-- `NEXT_PUBLIC_API_BASE_URL`: The base URL for the API endpoints (defaults to the production API)
-
-### Configuration Structure
-
-```typescript
-export const config = {
-  api: {
-    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'default-url',
-  },
-} as const;
-```
-
-## 📝 Notes
-
-- Uses Next.js App Router
-- Configured with Turbopack for faster builds
-- PostCSS configured for Next.js and Vite compatibility
-- Storybook uses Vite for improved performance
-- TypeScript path mapping configured for clean imports
-- Centralized configuration system for easy environment management
