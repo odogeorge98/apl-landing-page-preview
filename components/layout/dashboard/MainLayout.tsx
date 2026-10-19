@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Menu,
   X,
@@ -417,6 +418,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   );
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   const accountRef = useRef<HTMLDivElement>(null);
 
@@ -622,6 +624,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   aria-label="Open account menu"
                   aria-expanded={accountOpen}
                   aria-haspopup="menu"
+                  aria-controls="dashboard-account-menu"
                   onClick={() => setAccountOpen((value) => !value)}
                   className={cn(
                     "flex h-10 items-center gap-2 rounded-xl border border-[#e4e9f2] bg-white p-1.5 pr-2.5 transition hover:bg-[#f9fafd]",
@@ -643,11 +646,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   />
                 </button>
 
-                {accountOpen && (
-                  <div
-                    role="menu"
-                    className="absolute right-0 top-[calc(100%+10px)] z-50 w-64 overflow-hidden rounded-2xl border border-[#e4e9f2] bg-white py-1 shadow-[0_16px_48px_rgba(16,29,73,0.16)]"
-                  >
+                <AnimatePresence>
+                  {accountOpen && (
+                    <motion.div
+                      id="dashboard-account-menu"
+                      role="menu"
+                      initial={prefersReducedMotion ? false : { opacity: 0, y: -8, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={prefersReducedMotion ? undefined : { opacity: 0, y: -5, scale: 0.985 }}
+                      transition={prefersReducedMotion
+                        ? { duration: 0 }
+                        : {
+                            opacity: { duration: 0.16, ease: "easeOut" },
+                            default: { type: "spring", stiffness: 420, damping: 32, mass: 0.8 },
+                          }}
+                      className="absolute right-0 top-[calc(100%+10px)] z-50 w-64 origin-top-right overflow-hidden rounded-2xl border border-[#e4e9f2] bg-white py-1 shadow-[0_16px_48px_rgba(16,29,73,0.16)]"
+                    >
                     <div className="border-b border-[#edf0f6] px-4 py-3">
                       <p className="truncate text-sm font-semibold text-[#101d49]">
                         {displayName}
@@ -697,8 +711,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
                       <LogOut size={17} />
                       Sign out
                     </button>
-                  </div>
-                )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
