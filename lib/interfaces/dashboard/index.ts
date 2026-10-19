@@ -165,10 +165,24 @@ export interface TutorDashboardOverview {
   upcomingSessions: number;
 }
 
-/** Display fields are optional because the dashboard response example only
- * specifies the collection names, not each resource's full shape. */
+/** Programme attached to a tutor's course assignment. */
+export interface TutorDashboardProgramme {
+  id: string;
+  name: string;
+  description?: string | null;
+  hours?: number;
+}
+
+/** Supports the current course-assignment response as well as legacy flat fields. */
 export interface TutorDashboardCourse {
   id: string;
+  tutorId?: string;
+  programmeId?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  programme?: TutorDashboardProgramme | null;
+  /** Flat fields are kept for compatibility with older dashboard responses. */
   name?: string;
   title?: string;
   description?: string | null;

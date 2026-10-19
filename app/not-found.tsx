@@ -53,7 +53,7 @@ export default function NotFound() {
                 <Home size={17} aria-hidden="true" />Return to home
               </Link>
               <Link
-                href="/login"
+                href="/"
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#dce3ef] bg-white px-5 py-3 text-sm font-semibold text-[#101d49] transition hover:border-[#c5cfdf] hover:bg-[#fbfcfe] focus:outline-none focus:ring-4 focus:ring-[#101d49]/10"
               >
                 <ArrowLeft size={16} aria-hidden="true" />Go to sign in
