@@ -166,16 +166,37 @@ function CourseList({ courses }: { courses: TutorDashboardCourse[] }) {
       ) : (
         <ul className="divide-y divide-[#edf0f6]">
           {courses.map((course, index) => {
-            const title = course.name?.trim() || course.title?.trim() || `Course ${index + 1}`;
+            const title =
+              course.programme?.name?.trim() ||
+              course.name?.trim() ||
+              course.title?.trim() ||
+              `Course ${index + 1}`;
             const studentCount = course.studentCount ?? course.totalStudents;
+            const description =
+              course.programme?.description?.trim() ||
+              course.description?.trim() ||
+              course.programmeName?.trim();
+            const courseDetails = [
+              typeof course.programme?.hours === "number"
+                ? `${formatNumber(course.programme.hours)} ${course.programme.hours === 1 ? "hour" : "hours"}`
+                : null,
+              course.status?.trim()
+                ? course.status.trim().toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
+                : null,
+            ].filter(Boolean);
             return (
               <li key={course.id} className="px-5 py-4 sm:px-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h3 className="break-words text-sm font-semibold text-[#17233f]">{title}</h3>
-                    {(course.description || course.programmeName) && (
+                    {description && (
                       <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#64718a]">
-                        {course.description || course.programmeName}
+                        {description}
+                      </p>
+                    )}
+                    {courseDetails.length > 0 && (
+                      <p className="mt-2 text-xs font-medium text-[#8490a6]">
+                        {courseDetails.join(" · ")}
                       </p>
                     )}
                   </div>
