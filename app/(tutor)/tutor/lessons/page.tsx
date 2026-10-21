@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import dayjs from "dayjs";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -32,6 +33,8 @@ import type { GetTutorLessonsParams, LessonStatus, TutorLesson } from "@/lib/int
 
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 50] as const;
+const UUID_V4_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const cardClass =
   "rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_2px_10px_rgba(16,29,73,0.025)]";
@@ -367,10 +370,12 @@ function PublishLessonDialog({
 }
 
 export default function TutorLessonsPage() {
+  const router = useRouter();
   const [searchValue, setSearchValue] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<LessonStatus | "">("");
   const [programmeId, setProgrammeId] = useState("");
+  const [programmeFilterReady, setProgrammeFilterReady] = useState(false);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [cursor, setCursor] = useState<string | null>(null);
   const [cursorStack, setCursorStack] = useState<(string | null)[]>([null]);
@@ -381,6 +386,17 @@ export default function TutorLessonsPage() {
   const resetPagination = useCallback(() => {
     setCursor(null);
     setCursorStack([null]);
+  }, []);
+
+  // A course-card link can open the lesson library already scoped to that
+  // programme. Wait to fetch until the URL filter has been applied so we do
+  // not briefly request an unfiltered result set first.
+  useEffect(() => {
+    const requestedProgrammeId = new URLSearchParams(window.location.search).get("programmeId");
+    if (requestedProgrammeId && UUID_V4_PATTERN.test(requestedProgrammeId)) {
+      setProgrammeId(requestedProgrammeId);
+    }
+    setProgrammeFilterReady(true);
   }, []);
 
   useEffect(() => {
@@ -402,7 +418,7 @@ export default function TutorLessonsPage() {
     ...(cursor ? { cursor } : {}),
   }), [debouncedSearch, status, programmeId, pageSize, cursor]);
 
-  const lessonsQuery = useTutorLessons(params);
+  const lessonsQuery = useTutorLessons(params, { enabled: programmeFilterReady });
   const programmesQuery = useMyTutorProgrammes();
   const publishMutation = usePublishLesson();
 
@@ -446,7 +462,14 @@ export default function TutorLessonsPage() {
   };
 
   const handleProgrammeChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    setProgrammeId(event.target.value);
+    const nextProgrammeId = event.target.value;
+    setProgrammeId(nextProgrammeId);
+    router.replace(
+      nextProgrammeId
+        ? `/tutor/lessons?programmeId=${encodeURIComponent(nextProgrammeId)}`
+        : "/tutor/lessons",
+      { scroll: false },
+    );
     resetPagination();
   };
 
@@ -501,6 +524,7 @@ export default function TutorLessonsPage() {
     setStatus("");
     setProgrammeId("");
     resetPagination();
+    router.replace("/tutor/lessons", { scroll: false });
   };
 
   const hasFilters = Boolean(searchValue.trim() || status || programmeId);

@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Search,
   CalendarDays,
@@ -14,124 +15,91 @@ import {
   ArrowRight,
   RotateCcw,
   ClipboardList,
+  RefreshCw,
 } from "lucide-react";
 import MainLayout from "@/components/layout/dashboard/MainLayout";
+import { useStudentAssignments } from "@/lib/hooks/assignments/use-student-assignments";
+import type { StudentAssignment } from "@/lib/interfaces/assignments";
+import { cn } from "@/lib/utils";
 
-type Assignment = {
+type StudentAssignmentStatus = "Pending" | "Submitted" | "Graded" | "Overdue" | "Upcoming";
+type AssignmentFilter = "All" | StudentAssignmentStatus;
+
+type AssignmentView = {
   id: string;
   title: string;
   course: string;
   description: string;
   dueDate: string;
+  availableAt: string;
   points: number;
-  status: "Pending" | "Submitted" | "Graded" | "Overdue";
+  status: StudentAssignmentStatus;
   score?: number;
   instructions: string[];
 };
 
-const assignments: Assignment[] = [
-  {
-    id: "AS001",
-    title: "Build a Responsive Landing Page",
-    course: "Frontend Development",
-    description: "Create a responsive landing page using HTML, CSS, and modern layout techniques.",
-    dueDate: "2026-10-24",
-    points: 100,
-    status: "Pending",
-    instructions: [
-      "Create a page that works on mobile and desktop.",
-      "Use semantic HTML and reusable CSS classes.",
-      "Submit your source code and screenshots.",
-    ],
-  },
-  {
-    id: "AS002",
-    title: "JavaScript To-Do Application",
-    course: "JavaScript Fundamentals",
-    description: "Build a simple task management app that allows users to add, complete, and remove tasks.",
-    dueDate: "2026-10-22",
-    points: 100,
-    status: "Pending",
-    instructions: [
-      "Allow users to add new tasks.",
-      "Allow users to mark tasks as completed.",
-      "Provide a way to remove tasks.",
-      "Submit your project files or repository link.",
-    ],
-  },
-  {
-    id: "AS003",
-    title: "UI/UX Wireframe Project",
-    course: "Product Design",
-    description: "Design a wireframe for a student learning dashboard and explain your layout decisions.",
-    dueDate: "2026-10-14",
-    points: 100,
-    status: "Submitted",
-    instructions: [
-      "Create a dashboard wireframe.",
-      "Include navigation and a main content area.",
-      "Explain the user journey in a short note.",
-    ],
-  },
-  {
-    id: "AS004",
-    title: "SQL Database Exercises",
-    course: "Backend Development",
-    description: "Write SQL queries to retrieve, filter, and organise data from a sample database.",
-    dueDate: "2026-10-16",
-    points: 100,
-    status: "Graded",
-    score: 92,
-    instructions: [
-      "Write SELECT queries using WHERE and ORDER BY.",
-      "Demonstrate basic JOIN operations.",
-      "Submit your SQL file.",
-    ],
-  },
-  {
-    id: "AS005",
-    title: "React Components Mini Project",
-    course: "React Development",
-    description: "Create a small React application using reusable components, props, and state.",
-    dueDate: "2026-10-17",
-    points: 100,
-    status: "Overdue",
-    instructions: [
-      "Create at least three reusable components.",
-      "Pass data using props.",
-      "Use state for an interactive feature.",
-      "Submit your project source code.",
-    ],
-  },
-];
+const filters: AssignmentFilter[] = ["All", "Upcoming", "Pending", "Submitted", "Graded", "Overdue"];
+const DEFAULT_PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [10, 20, 30, 50] as const;
+const cardClass = "rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_2px_10px_rgba(16,29,73,0.025)]";
+const primaryButtonClass = "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#101d49] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#192c65] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542]";
+const secondaryButtonClass = "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#e4e9f2] bg-white px-4 py-2 text-sm font-semibold text-[#34415e] transition hover:border-[#cbd4e3] hover:bg-[#f6f8fc] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542]";
 
-const filters = ["All", "Pending", "Submitted", "Graded", "Overdue"];
-
-const statusStyles: Record<Assignment["status"], string> = {
+const statusStyles: Record<StudentAssignmentStatus, string> = {
   Pending: "bg-[#fff7dc] text-[#765800] border-[#f5e6a9]",
+  Upcoming: "bg-blue-50 text-blue-700 border-blue-100",
   Submitted: "bg-blue-50 text-blue-700 border-blue-100",
   Graded: "bg-emerald-50 text-emerald-700 border-emerald-100",
   Overdue: "bg-red-50 text-red-700 border-red-100",
 };
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-NG", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Africa/Lagos",
-  }).format(new Date(value + "T12:00:00"));
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "Date unavailable";
+  return new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Lagos" }).format(date);
 }
 
-function getDeadline(date: string, status: Assignment["status"]) {
-  if (status === "Graded") return "Assignment graded";
-  if (status === "Submitted") return "Submission received";
-  if (status === "Overdue") return "Deadline passed";
+function getAssignmentStatus(assignment: StudentAssignment, now = Date.now()): StudentAssignmentStatus {
+  if (assignment.submission?.status === "GRADED") return "Graded";
+  if (assignment.submission?.status === "SUBMITTED") return "Submitted";
+  const dueAt = Date.parse(assignment.dueAt);
+  if (Number.isFinite(dueAt) && dueAt < now) return "Overdue";
+  const availableAt = Date.parse(assignment.availableAt);
+  if (Number.isFinite(availableAt) && availableAt > now) return "Upcoming";
+  return "Pending";
+}
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(date + "T00:00:00");
-  const days = Math.round((due.getTime() - today.getTime()) / 86400000);
+function toAssignmentView(assignment: StudentAssignment): AssignmentView {
+  const numericScore = assignment.submission?.score == null ? undefined : Number(assignment.submission.score);
+  const instructions = assignment.instructions
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim())
+    .filter(Boolean);
+
+  return {
+    id: assignment.id,
+    title: assignment.title,
+    course: assignment.programme?.name || "Programme details unavailable",
+    description: assignment.instructions,
+    dueDate: assignment.dueAt,
+    availableAt: assignment.availableAt,
+    points: Number(assignment.maxScore),
+    status: getAssignmentStatus(assignment),
+    ...(numericScore !== undefined && Number.isFinite(numericScore) ? { score: numericScore } : {}),
+    instructions,
+  };
+}
+
+function getDeadline(assignment: AssignmentView) {
+  if (assignment.status === "Graded") return "Assignment graded";
+  if (assignment.status === "Submitted") return "Submission received";
+  if (assignment.status === "Overdue") return "Deadline passed";
+  if (assignment.status === "Upcoming") return `Available ${formatDateTime(assignment.availableAt)}`;
+
+  const dateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos", year: "numeric", month: "2-digit", day: "2-digit" });
+  const todayKey = dateFormatter.format(new Date());
+  const dueKey = dateFormatter.format(new Date(assignment.dueDate));
+  const days = Math.round((Date.parse(`${dueKey}T00:00:00Z`) - Date.parse(`${todayKey}T00:00:00Z`)) / 86400000);
 
   if (days < 0) return "Deadline passed";
   if (days === 0) return "Due today";
@@ -141,31 +109,76 @@ function getDeadline(date: string, status: Assignment["status"]) {
 
 export default function AssignmentsPage() {
   const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState("All");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState<AssignmentFilter>("All");
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const [cursorStack, setCursorStack] = useState<(string | null)[]>([null]);
   const [selectedAssignment, setSelectedAssignment] =
-    useState<Assignment | null>(null);
+    useState<AssignmentView | null>(null);
+  const prefersReducedMotion = useReducedMotion();
 
-  const filteredAssignments = useMemo(() => {
-    return assignments.filter((assignment) => {
-      const query = search.toLowerCase().trim();
-      const matchesSearch =
-        `${assignment.title} ${assignment.course} ${assignment.description}`
-          .toLowerCase()
-          .includes(query);
+  const currentCursor = cursorStack[cursorStack.length - 1] ?? null;
 
-      const matchesFilter =
-        activeFilter === "All" || assignment.status === activeFilter;
+  useEffect(() => {
+    const normalizedSearch = search.trim();
+    if (normalizedSearch === debouncedSearch) return;
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(normalizedSearch);
+      setCursorStack([null]);
+    }, 350);
+    return () => window.clearTimeout(timeoutId);
+  }, [search, debouncedSearch]);
 
-      return matchesSearch && matchesFilter;
-    });
-  }, [search, activeFilter]);
+  const assignmentsQuery = useStudentAssignments({
+    search: debouncedSearch || undefined,
+    limit: pageSize,
+    cursor: currentCursor,
+  });
 
-  const counts = {
+  const assignments = useMemo(
+    () => assignmentsQuery.data?.items.map(toAssignmentView) ?? [],
+    [assignmentsQuery.data],
+  );
+  const nextCursor = assignmentsQuery.data?.nextCursor ?? null;
+  const currentPage = cursorStack.length;
+  const filteredAssignments = useMemo(
+    () => activeFilter === "All"
+      ? assignments
+      : assignments.filter((assignment) => assignment.status === activeFilter),
+    [assignments, activeFilter],
+  );
+  const resetPagination = useCallback(() => setCursorStack([null]), []);
+
+  const handleNextPage = () => {
+    if (!nextCursor || assignmentsQuery.isFetching) return;
+    setCursorStack((previous) => [...previous, nextCursor]);
+  };
+
+  const handlePreviousPage = () => {
+    if (cursorStack.length <= 1 || assignmentsQuery.isFetching) return;
+    setCursorStack((previous) => previous.slice(0, -1));
+  };
+
+  const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = Number(event.target.value);
+    if (!Number.isInteger(value) || value < 1 || value > 50) return;
+    setPageSize(value);
+    resetPagination();
+  };
+
+  const counts: Record<"total" | "pending" | "submitted" | "graded" | "overdue", number> = {
     total: assignments.length,
-    pending: assignments.filter((item) => item.status === "Pending").length,
+    pending: assignments.filter((item) => item.status === "Pending" || item.status === "Upcoming").length,
     submitted: assignments.filter((item) => item.status === "Submitted").length,
     graded: assignments.filter((item) => item.status === "Graded").length,
     overdue: assignments.filter((item) => item.status === "Overdue").length,
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setDebouncedSearch("");
+    setActiveFilter("All");
+    resetPagination();
   };
 
   return (
@@ -216,7 +229,7 @@ export default function AssignmentsPage() {
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Total assignments", value: counts.total, icon: ClipboardList, color: "bg-[#eaf0ff] text-[#101d49]" },
+            { label: "Assignments on this page", value: counts.total, icon: ClipboardList, color: "bg-[#eaf0ff] text-[#101d49]" },
             { label: "Pending work", value: counts.pending, icon: Clock3, color: "bg-[#fff7dc] text-[#765800]" },
             { label: "Submitted", value: counts.submitted, icon: Upload, color: "bg-blue-50 text-blue-700" },
             { label: "Graded", value: counts.graded, icon: CheckCircle2, color: "bg-emerald-50 text-emerald-700" },
@@ -268,12 +281,20 @@ export default function AssignmentsPage() {
               <input
                 type="search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => setSearch(event.target.value.slice(0, 100))}
+                maxLength={100}
                 placeholder="Search assignments or courses..."
                 className="h-12 w-full rounded-xl border border-[#dce3ef] bg-white pl-10 pr-4 text-sm text-[#17233f] outline-none transition placeholder:text-[#9aa5b8] focus:border-[#a9b7d0] focus:ring-4 focus:ring-[#101d49]/5"
               />
             </label>
           </div>
+
+          {(search.trim() !== debouncedSearch || assignmentsQuery.isFetching) && (
+            <p className="mb-4 flex items-center gap-2 text-xs text-[#718099]" aria-live="polite">
+              <RefreshCw size={13} className="animate-spin" aria-hidden="true" />
+              {search.trim() !== debouncedSearch ? "Updating search…" : "Loading assignments…"}
+            </p>
+          )}
 
           <div className="mb-6 flex flex-wrap gap-2">
             {filters.map((filter) => (
@@ -293,7 +314,28 @@ export default function AssignmentsPage() {
             ))}
           </div>
 
-          {filteredAssignments.length === 0 ? (
+          {assignmentsQuery.isLoading ? (
+            <div className="grid gap-4" role="status" aria-label="Loading assignments">
+              {Array.from({ length: 3 }, (_, index) => (
+                <div key={index} className={cn(cardClass, "animate-pulse p-5 sm:p-6")}>
+                  <div className="h-4 w-28 rounded bg-[#edf0f6]" />
+                  <div className="mt-4 h-6 w-2/3 rounded bg-[#edf0f6]" />
+                  <div className="mt-3 h-4 w-full rounded bg-[#f2f4f8]" />
+                  <div className="mt-6 h-20 rounded-xl bg-[#f2f4f8]" />
+                </div>
+              ))}
+              <span className="sr-only">Loading your published assignments…</span>
+            </div>
+          ) : assignmentsQuery.isError && !assignmentsQuery.data ? (
+            <div role="alert" className="flex min-h-[250px] flex-col items-center justify-center rounded-2xl border border-red-100 bg-white px-6 py-12 text-center">
+              <AlertCircle size={28} className="text-red-600" aria-hidden="true" />
+              <h3 className="mt-4 text-lg font-semibold text-[#101d49]">Could not load assignments</h3>
+              <p className="mt-2 max-w-md text-sm text-[#64718a]">{assignmentsQuery.error instanceof Error ? assignmentsQuery.error.message : "Please try again in a moment."}</p>
+              <button type="button" onClick={() => void assignmentsQuery.refetch()} disabled={assignmentsQuery.isFetching} className={cn(primaryButtonClass, "mt-5")}>
+                <RefreshCw size={15} className={assignmentsQuery.isFetching ? "animate-spin" : ""} aria-hidden="true" /> Try again
+              </button>
+            </div>
+          ) : filteredAssignments.length === 0 ? (
             <div className="flex min-h-[250px] flex-col items-center justify-center rounded-2xl border border-[#e4e9f2] bg-white px-6 py-12 text-center">
               <Search size={28} className="text-[#8490a6]" />
               <h3 className="mt-4 text-lg font-semibold text-[#101d49]">
@@ -304,10 +346,7 @@ export default function AssignmentsPage() {
               </p>
               <button
                 type="button"
-                onClick={() => {
-                  setSearch("");
-                  setActiveFilter("All");
-                }}
+                onClick={clearFilters}
                 className="mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-[#101d49] hover:bg-[#f4f6fa]"
               >
                 <RotateCcw size={15} />
@@ -341,23 +380,27 @@ export default function AssignmentsPage() {
                         {assignment.description}
                       </p>
 
-                      <div className="mt-5 flex flex-col gap-3 rounded-xl bg-[#f8f9fc] p-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-start gap-2">
+                      <div className="mt-5 flex flex-col gap-4 rounded-xl bg-[#f8f9fc] p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 items-start gap-2">
                           <CalendarDays size={17} className="mt-0.5 shrink-0 text-[#8490a6]" />
-                          <div>
-                            <p className="text-xs text-[#8490a6]">Due date</p>
-                            <p className="mt-1 text-sm font-semibold text-[#101d49]">
-                              {formatDate(assignment.dueDate)}
-                            </p>
-                            <p className={`mt-1 text-xs font-semibold ${
-                              assignment.status === "Overdue"
-                                ? "text-red-600"
-                                : assignment.status === "Graded"
-                                  ? "text-emerald-700"
-                                  : "text-[#64718a]"
-                            }`}>
-                              {getDeadline(assignment.dueDate, assignment.status)}
-                            </p>
+                          <div className="grid min-w-0 gap-3 sm:grid-cols-2 sm:gap-6">
+                            <div>
+                              <p className="text-xs text-[#8490a6]">Available from</p>
+                              <p className="mt-1 text-sm font-semibold text-[#101d49]">{formatDateTime(assignment.availableAt)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-[#8490a6]">Due date</p>
+                              <p className="mt-1 text-sm font-semibold text-[#101d49]">{formatDateTime(assignment.dueDate)}</p>
+                              <p className={`mt-1 text-xs font-semibold ${
+                                assignment.status === "Overdue"
+                                  ? "text-red-600"
+                                  : assignment.status === "Graded"
+                                    ? "text-emerald-700"
+                                    : "text-[#64718a]"
+                              }`}>
+                                {getDeadline(assignment)}
+                              </p>
+                            </div>
                           </div>
                         </div>
 
@@ -399,16 +442,47 @@ export default function AssignmentsPage() {
               ))}
             </div>
           )}
+
+          {!assignmentsQuery.isLoading && !(assignmentsQuery.isError && !assignmentsQuery.data) && (
+            <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-[#e4e9f2] bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <p className="text-xs text-[#8995aa]" aria-live="polite">
+                Showing <span className="font-semibold text-[#34415e]">{filteredAssignments.length}</span> {filteredAssignments.length === 1 ? "assignment" : "assignments"} on page <span className="font-semibold text-[#34415e]">{currentPage}</span>
+                {debouncedSearch && <> matching <span className="font-semibold text-[#34415e]">“{debouncedSearch}”</span></>}
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-xs text-[#718099]">
+                  Rows
+                  <select aria-label="Assignments per page" value={pageSize} onChange={handlePageSizeChange} className="rounded-lg border border-[#e4e9f2] bg-white px-2.5 py-2 text-xs font-semibold text-[#34415e] outline-none focus:border-[#101d49]/40">
+                    {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
+                  </select>
+                </label>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={handlePreviousPage} disabled={currentPage <= 1 || assignmentsQuery.isFetching} className={secondaryButtonClass} aria-label="Previous page"><span aria-hidden="true">←</span><span className="hidden sm:inline">Previous</span></button>
+                  <button type="button" onClick={handleNextPage} disabled={!nextCursor || assignmentsQuery.isFetching} className={primaryButtonClass} aria-label="Next page"><span className="hidden sm:inline">Next</span><span aria-hidden="true">→</span></button>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
-        {selectedAssignment && (
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#071027]/60 p-4 backdrop-blur-sm"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setSelectedAssignment(null);
-            }}
-          >
-            <section
+        <AnimatePresence>
+          {selectedAssignment && (
+            <motion.div
+              key="student-assignment-details-overlay"
+              initial={prefersReducedMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+              transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.22, ease: "easeOut" }}
+              className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#071027]/60 p-4 backdrop-blur-sm"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) setSelectedAssignment(null);
+              }}
+            >
+              <motion.section
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 18, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: 10, scale: 0.985 }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
               role="dialog"
               aria-modal="true"
               aria-labelledby="assignment-dialog-title"
@@ -462,10 +536,10 @@ export default function AssignmentsPage() {
               <div className="mt-4 rounded-xl bg-[#f8f9fc] p-4">
                 <p className="text-xs text-[#8490a6]">Submission deadline</p>
                 <p className="mt-1 text-sm font-semibold text-[#101d49]">
-                  {formatDate(selectedAssignment.dueDate)}
+                  {formatDateTime(selectedAssignment.dueDate)}
                 </p>
                 <p className="mt-1 text-xs text-[#64718a]">
-                  {getDeadline(selectedAssignment.dueDate, selectedAssignment.status)}
+                  {getDeadline(selectedAssignment)}
                 </p>
               </div>
 
@@ -482,8 +556,7 @@ export default function AssignmentsPage() {
               )}
 
               <p className="mt-4 text-xs leading-5 text-[#8490a6]">
-                This is sample data. Actual file uploads and submissions will
-                require integration with your backend.
+              Assignment availability and deadlines are shown in West Africa Time. Submission and grading details appear here when available.
               </p>
 
               <button
@@ -493,9 +566,10 @@ export default function AssignmentsPage() {
               >
                 Close details
               </button>
-            </section>
-          </div>
-        )}
+              </motion.section>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </MainLayout>
   );
