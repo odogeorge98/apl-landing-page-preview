@@ -2,22 +2,35 @@ import { http } from "@/lib/utils/http";
 import type {
   CreateStudentProgrammeEnrolmentApiResponse,
   CreateStudentProgrammeEnrolmentDto,
+  EnrolmentRelatedEntity,
   GetAllStudentProgrammeEnrolmentsParams,
   GetStudentProgrammeEnrolmentsParams,
   StudentProgrammeEnrolmentsApiResponse,
   StudentProgrammeEnrolmentsData,
 } from "@/lib/interfaces/student-programmes";
 
+function isValidRelatedEntity(value: unknown): value is EnrolmentRelatedEntity {
+  if (!value || typeof value !== "object") return false;
+
+  const entity = value as Record<string, unknown>;
+  return typeof entity.id === "string" && typeof entity.name === "string";
+}
+
 function isValidEnrolment(value: unknown): value is StudentProgrammeEnrolmentsData["items"][number] {
   if (!value || typeof value !== "object") return false;
 
   const enrolment = value as Record<string, unknown>;
+  const isOptionalEntityValid = (entity: unknown) =>
+    entity === undefined || entity === null || isValidRelatedEntity(entity);
+
   return (
     typeof enrolment.id === "string" &&
     typeof enrolment.studentId === "string" &&
     typeof enrolment.programmeId === "string" &&
     typeof enrolment.createdAt === "string" &&
-    typeof enrolment.updatedAt === "string"
+    typeof enrolment.updatedAt === "string" &&
+    isOptionalEntityValid(enrolment.student) &&
+    isOptionalEntityValid(enrolment.programme)
   );
 }
 
