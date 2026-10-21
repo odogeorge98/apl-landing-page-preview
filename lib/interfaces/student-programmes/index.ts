@@ -1,9 +1,18 @@
+export interface EnrolmentRelatedEntity {
+  id: string;
+  name: string;
+}
+
 export interface StudentProgrammeEnrolment {
   id: string;
   studentId: string;
   programmeId: string;
   createdAt: string;
   updatedAt: string;
+  /** Included by the admin enrolment endpoint. Optional for older responses. */
+  student?: EnrolmentRelatedEntity | null;
+  /** Included by the admin enrolment endpoint. Optional for older responses. */
+  programme?: EnrolmentRelatedEntity | null;
 }
 
 export interface StudentProgrammeEnrolmentsData {

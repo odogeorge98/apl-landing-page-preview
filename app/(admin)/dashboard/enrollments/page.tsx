@@ -39,7 +39,34 @@ function getErrorMessage(error: unknown): string {
     : "Something went wrong. Please try again.";
 }
 
-function EnrolmentRow({ enrolment }: { enrolment: StudentProgrammeEnrolment }) {
+function getEnrolmentMatches(
+  enrolment: StudentProgrammeEnrolment,
+  searchTerm: string,
+): { student: boolean; programme: boolean } {
+  const query = searchTerm.trim().toLowerCase();
+  if (!query) return { student: false, programme: false };
+
+  const studentName = enrolment.student?.name ?? "";
+  const programmeName = enrolment.programme?.name ?? "";
+  return {
+    student:
+      studentName.toLowerCase().includes(query) ||
+      enrolment.studentId.toLowerCase().includes(query),
+    programme:
+      programmeName.toLowerCase().includes(query) ||
+      enrolment.programmeId.toLowerCase().includes(query),
+  };
+}
+
+function EnrolmentRow({
+  enrolment,
+  searchTerm,
+}: {
+  enrolment: StudentProgrammeEnrolment;
+  searchTerm: string;
+}) {
+  const matches = getEnrolmentMatches(enrolment, searchTerm);
+
   return (
     <tr className="align-top transition-colors hover:bg-[#fafbfd]">
       <td className="px-5 py-4">
@@ -49,14 +76,20 @@ function EnrolmentRow({ enrolment }: { enrolment: StudentProgrammeEnrolment }) {
         </p>
       </td>
       <td className="px-5 py-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8995aa]">Student ID</p>
-        <p className="mt-1 max-w-64 break-all font-mono text-xs leading-5 text-[#101d49]" title={enrolment.studentId}>
+        <p className={`text-sm leading-5 ${matches.student ? "font-extrabold text-[#101d49]" : "font-semibold text-[#34415e]"}`}>
+          {enrolment.student?.name || "Student name unavailable"}
+        </p>
+        <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#8995aa]">Student ID</p>
+        <p className={`mt-1 max-w-64 break-all font-mono text-xs leading-5 ${matches.student ? "font-bold text-[#101d49]" : "text-[#64718a]"}`} title={enrolment.studentId}>
           {enrolment.studentId}
         </p>
       </td>
       <td className="px-5 py-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8995aa]">Programme ID</p>
-        <p className="mt-1 max-w-64 break-all font-mono text-xs leading-5 text-[#101d49]" title={enrolment.programmeId}>
+        <p className={`text-sm leading-5 ${matches.programme ? "font-extrabold text-[#101d49]" : "font-semibold text-[#34415e]"}`}>
+          {enrolment.programme?.name || "Programme name unavailable"}
+        </p>
+        <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#8995aa]">Programme ID</p>
+        <p className={`mt-1 max-w-64 break-all font-mono text-xs leading-5 ${matches.programme ? "font-bold text-[#101d49]" : "text-[#64718a]"}`} title={enrolment.programmeId}>
           {enrolment.programmeId}
         </p>
       </td>
@@ -284,14 +317,20 @@ export default function AdminEnrolmentsPage() {
                   <thead className="bg-[#fafbfd] text-[10px] font-bold uppercase tracking-[0.1em] text-[#8995aa]">
                     <tr>
                       <th scope="col" className="px-5 py-3.5">Record</th>
-                      <th scope="col" className="px-5 py-3.5">Student reference</th>
-                      <th scope="col" className="px-5 py-3.5">Programme reference</th>
+                      <th scope="col" className="px-5 py-3.5">Student</th>
+                      <th scope="col" className="px-5 py-3.5">Programme</th>
                       <th scope="col" className="px-5 py-3.5">Enrolled</th>
                       <th scope="col" className="px-5 py-3.5">Last updated</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#edf0f6]">
-                    {enrolments.map((enrolment) => <EnrolmentRow key={enrolment.id} enrolment={enrolment} />)}
+                    {enrolments.map((enrolment) => (
+                      <EnrolmentRow
+                        key={enrolment.id}
+                        enrolment={enrolment}
+                        searchTerm={debouncedSearch}
+                      />
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -315,7 +354,7 @@ export default function AdminEnrolmentsPage() {
         <div className="flex items-start gap-3 rounded-2xl border border-[#e4e9f2] bg-white/70 px-4 py-4 text-sm text-[#64718a]">
           <CalendarDays size={17} className="mt-0.5 shrink-0 text-[#8490a6]" aria-hidden="true" />
           <p className="leading-6">
-            The enrolment endpoint currently returns record IDs and timestamps. Student and programme names can be displayed when those fields are included in the API response.
+            Search matches student and programme names or IDs. When a result matches a student or programme, its name and reference are emphasized in the register.
           </p>
         </div>
       </main>
