@@ -23,6 +23,15 @@ export interface GetStudentProgrammeEnrolmentsParams {
   cursor?: string | null;
 }
 
+/** Filters accepted by the admin GET /student-programmes endpoint. */
+export interface GetAllStudentProgrammeEnrolmentsParams {
+  search?: string;
+  /** Number of records to request (API page size is 1–50). */
+  limit?: number;
+  /** Opaque cursor returned by the previous response. */
+  cursor?: string | null;
+}
+
 export interface CreateStudentProgrammeEnrolmentDto {
   programmeId: string;
 }
