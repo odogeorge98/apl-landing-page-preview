@@ -815,7 +815,7 @@ export default function TutorsPage() {
 
                             <div className="min-w-0">
                               <Link
-                                href={`/dashboard/tutors/${tutor.id}`}
+                                href={`/dashboard/users/tutors/${tutor.id}`}
                                 className="block truncate font-semibold text-[#101d49] transition hover:text-[#8a6500]"
                               >
                                 {tutor.name}
@@ -874,7 +874,7 @@ export default function TutorsPage() {
 
                         <td className="px-5 py-4 text-right">
                           <Link
-                            href={`/dashboard/tutors/${tutor.id}`}
+                            href={`/dashboard/users/tutors/${tutor.id}`}
                             aria-label={`View ${tutor.name}`}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-[#e4e9f2] px-3 py-2 text-xs font-semibold text-[#34415e] transition hover:border-[#101d49]/20 hover:bg-[#f6f8fc] hover:text-[#101d49]"
                           >
