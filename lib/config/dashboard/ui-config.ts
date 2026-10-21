@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CheckSquare,
   ClipboardCheck,
+  ClipboardList,
   FileText,
   FolderOpen,
   GraduationCap,
@@ -23,6 +24,7 @@ import {
   Users,
   User,
   Video,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 import { DashboardNavItem, DashboardQuickAction, DashboardStat, DashboardUIConfig } from "@/lib/interfaces/ui-config";
@@ -350,6 +352,14 @@ const tutorConfig: DashboardUIConfig = {
       href: "/tutor/schedule",
       icon: CalendarDays,
     },
+    {
+      key: "attendance",
+      title: "Manage Attendance",
+      description: "Record and track student attendance.",
+      href: "/tutor/attendance",
+      icon: ClipboardList,
+    },
+    
   ],
 
   navItems: [
@@ -409,6 +419,14 @@ const tutorConfig: DashboardUIConfig = {
       icon: CalendarDays,
       section: "Learning",
     },
+    {
+      label: "Attendance",
+      href: "/tutor/attendance",
+      description: "Track student attendance",
+      icon: ClipboardList,
+      section: "Learning",
+    },
+    
     {
       label: "Announcements",
       href: "/tutor/announcements",
