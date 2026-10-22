@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 
 import { MainLayout } from "@/components/layout/dashboard";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimeInput } from "@/components/ui/TimeInput";
 import { toast } from "@/components/ui/Toaster";
 import { useCreateLesson } from "@/lib/hooks/lessons/use-create-lesson";
 import { useProgrammeLessonOptions } from "@/lib/hooks/lessons/use-programme-lesson-options";
@@ -692,20 +695,21 @@ function CreateAssignmentDialog({
               <label htmlFor={`${dialogId}-lesson`} className="block text-sm font-semibold text-[#34415e]">
                 Lesson <span className="font-normal text-[#8995aa]">(optional)</span>
               </label>
-              <select
+              <AnimatedSelect
                 id={`${dialogId}-lesson`}
                 value={lessonId}
-                onChange={(event) => setLessonId(event.target.value)}
+                onChange={setLessonId}
                 disabled={isSubmitting || lessonsQuery.isLoading}
-                className="h-11 w-full rounded-xl border border-[#dce3ef] bg-white px-3.5 text-sm text-[#17233f] outline-none transition focus:border-[#a9b7d0] focus:ring-4 focus:ring-[#101d49]/5 disabled:bg-[#f5f6f8]"
-              >
-                <option value="">Programme-level assignment</option>
-                {lessons.map((lesson) => (
-                  <option key={lesson.id} value={lesson.id}>
-                    {lesson.sequence}. {lesson.title}{lesson.status === "DRAFT" ? " · Draft" : ""}
-                  </option>
-                ))}
-              </select>
+                ariaLabel="Optional lesson"
+                options={[
+                  { value: "", label: "Programme-level assignment" },
+                  ...lessons.map((lesson) => ({
+                    value: lesson.id,
+                    label: `${lesson.sequence}. ${lesson.title}${lesson.status === "DRAFT" ? " · Draft" : ""}`,
+                  })),
+                ]}
+                className="h-11 w-full rounded-xl border-[#dce3ef]"
+              />
               {lessonsQuery.isLoading ? (
                 <p className="text-xs text-[#8995aa]">Loading lessons for this programme…</p>
               ) : lessonsQuery.isError ? (
@@ -733,31 +737,44 @@ function CreateAssignmentDialog({
                 <label htmlFor={`${dialogId}-available`} className="block text-sm font-semibold text-[#34415e]">
                   Available from <span className="text-red-500">*</span>
                 </label>
-                <input
-                  id={`${dialogId}-available`}
-                  type="datetime-local"
-                  required
-                  value={availableAt}
-                  onChange={(event) => setAvailableAt(event.target.value)}
-                  disabled={isSubmitting}
-                  className="h-11 w-full rounded-xl border border-[#dce3ef] bg-white px-3 text-sm text-[#17233f] outline-none transition focus:border-[#a9b7d0] focus:ring-4 focus:ring-[#101d49]/5 disabled:bg-[#f5f6f8]"
-                />
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_7rem]">
+                  <DatePicker
+                    value={availableAt.split("T")[0] || ""}
+                    onChange={(date) => setAvailableAt((current) => `${date}T${current.split("T")[1] || "09:00"}`)}
+                    ariaLabel="Availability date"
+                    className="w-full"
+                  />
+                  <TimeInput
+                    id={`${dialogId}-available-time`}
+                    required
+                    value={availableAt.split("T")[1] || ""}
+                    ariaLabel="Availability time"
+                    onChange={(value) => setAvailableAt((current) => `${current.split("T")[0] || ""}T${value}`)}
+                    disabled={isSubmitting}
+                  />
+                </div>
                 <p className="text-xs leading-5 text-[#8995aa]">Uses your device&apos;s local timezone.</p>
               </div>
               <div className="space-y-1.5">
                 <label htmlFor={`${dialogId}-due`} className="block text-sm font-semibold text-[#34415e]">
                   Due date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  id={`${dialogId}-due`}
-                  type="datetime-local"
-                  required
-                  min={availableAt || undefined}
-                  value={dueAt}
-                  onChange={(event) => setDueAt(event.target.value)}
-                  disabled={isSubmitting}
-                  className="h-11 w-full rounded-xl border border-[#dce3ef] bg-white px-3 text-sm text-[#17233f] outline-none transition focus:border-[#a9b7d0] focus:ring-4 focus:ring-[#101d49]/5 disabled:bg-[#f5f6f8]"
-                />
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_7rem]">
+                  <DatePicker
+                    value={dueAt.split("T")[0] || ""}
+                    onChange={(date) => setDueAt((current) => `${date}T${current.split("T")[1] || "09:00"}`)}
+                    ariaLabel="Assignment due date"
+                    className="w-full"
+                  />
+                  <TimeInput
+                    id={`${dialogId}-due-time`}
+                    required
+                    value={dueAt.split("T")[1] || ""}
+                    ariaLabel="Assignment due time"
+                    onChange={(value) => setDueAt((current) => `${current.split("T")[0] || ""}T${value}`)}
+                    disabled={isSubmitting}
+                  />
+                </div>
                 <p className="text-xs leading-5 text-[#8995aa]">Must be later than the availability date.</p>
               </div>
             </div>

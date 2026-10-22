@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import MainLayout from "@/components/layout/dashboard/MainLayout";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
 
 type AnnouncementType =
   | "Class Today"
@@ -85,6 +86,14 @@ const courses = [
   "Web Development",
   "UI/UX Design",
   "Data Analysis",
+];
+
+const announcementTypes: AnnouncementType[] = [
+  "Class Today",
+  "Postponed",
+  "Cancelled",
+  "Rescheduled",
+  "General Notice",
 ];
 
 const typeStyles: Record<AnnouncementType, string> = {
@@ -312,28 +321,28 @@ export default function TutorAnnouncementsPage() {
 
             {/* Filters */}
             <div className="flex flex-col gap-3 border-b border-[#E4E9F2] px-5 py-4 sm:flex-row">
-              <select
+              <AnimatedSelect
+                ariaLabel="Filter announcements by type"
                 value={typeFilter}
-                onChange={(event) => setTypeFilter(event.target.value)}
-                className="rounded-lg border border-[#E4E9F2] bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[#101D49]"
-              >
-                <option>All types</option>
-                <option>Class Today</option>
-                <option>Postponed</option>
-                <option>Cancelled</option>
-                <option>Rescheduled</option>
-                <option>General Notice</option>
-              </select>
+                onChange={setTypeFilter}
+                options={[
+                  { value: "All types", label: "All types" },
+                  ...announcementTypes.map((item) => ({ value: item, label: item })),
+                ]}
+                className="w-full sm:w-auto"
+              />
 
-              <select
+              <AnimatedSelect
+                ariaLabel="Filter announcements by status"
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="rounded-lg border border-[#E4E9F2] bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[#101D49]"
-              >
-                <option>All statuses</option>
-                <option>Published</option>
-                <option>Draft</option>
-              </select>
+                onChange={setStatusFilter}
+                options={[
+                  { value: "All statuses", label: "All statuses" },
+                  { value: "Published", label: "Published" },
+                  { value: "Draft", label: "Draft" },
+                ]}
+                className="w-full sm:w-auto"
+              />
 
               <div className="flex items-center text-sm text-gray-500 sm:ml-auto">
                 {filteredAnnouncements.length} announcement
@@ -545,18 +554,14 @@ export default function TutorAnnouncementsPage() {
                       Course
                     </label>
 
-                    <select
+                    <AnimatedSelect
                       id="announcement-course"
+                      ariaLabel="Course"
                       value={course}
-                      onChange={(event) => setCourse(event.target.value)}
-                      className="w-full rounded-xl border border-[#E4E9F2] bg-white px-4 py-3 text-sm outline-none focus:border-[#101D49]"
-                    >
-                      {courses.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setCourse}
+                      options={courses.map((item) => ({ value: item, label: item }))}
+                      className="min-h-12 w-full rounded-xl"
+                    />
                   </div>
 
                   <div>
@@ -567,20 +572,14 @@ export default function TutorAnnouncementsPage() {
                       Announcement type
                     </label>
 
-                    <select
+                    <AnimatedSelect
                       id="announcement-type"
+                      ariaLabel="Announcement type"
                       value={type}
-                      onChange={(event) =>
-                        setType(event.target.value as AnnouncementType)
-                      }
-                      className="w-full rounded-xl border border-[#E4E9F2] bg-white px-4 py-3 text-sm outline-none focus:border-[#101D49]"
-                    >
-                      <option>Class Today</option>
-                      <option>Postponed</option>
-                      <option>Cancelled</option>
-                      <option>Rescheduled</option>
-                      <option>General Notice</option>
-                    </select>
+                      onChange={(value) => setType(value as AnnouncementType)}
+                      options={announcementTypes.map((item) => ({ value: item, label: item }))}
+                      className="min-h-12 w-full rounded-xl"
+                    />
                   </div>
                 </div>
 
@@ -616,17 +615,17 @@ export default function TutorAnnouncementsPage() {
                     Publication status
                   </label>
 
-                  <select
+                  <AnimatedSelect
                     id="announcement-status"
+                    ariaLabel="Publication status"
                     value={status}
-                    onChange={(event) =>
-                      setStatus(event.target.value as AnnouncementStatus)
-                    }
-                    className="w-full rounded-xl border border-[#E4E9F2] bg-white px-4 py-3 text-sm outline-none focus:border-[#101D49]"
-                  >
-                    <option>Published</option>
-                    <option>Draft</option>
-                  </select>
+                    onChange={(value) => setStatus(value as AnnouncementStatus)}
+                    options={[
+                      { value: "Published", label: "Published" },
+                      { value: "Draft", label: "Draft" },
+                    ]}
+                    className="min-h-12 w-full rounded-xl"
+                  />
 
                   <p className="mt-2 text-xs leading-5 text-gray-500">
                     This is a UI preview. Publishing does not send notifications

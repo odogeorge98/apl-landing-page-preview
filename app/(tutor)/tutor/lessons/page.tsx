@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 
 import { MainLayout } from "@/components/layout/dashboard";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
 import { toast } from "@/components/ui/Toaster";
 import { usePublishLesson } from "@/lib/hooks/lessons/use-publish-lesson";
 import { useTutorLessons } from "@/lib/hooks/lessons/use-tutor-lessons";
@@ -455,14 +456,12 @@ export default function TutorLessonsPage() {
     setSearchValue(event.target.value.slice(0, 100));
   };
 
-  const handleStatusChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const value = event.target.value;
+  const handleStatusChange = (value: string) => {
     setStatus(value === "DRAFT" || value === "PUBLISHED" ? value : "");
     resetPagination();
   };
 
-  const handleProgrammeChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const nextProgrammeId = event.target.value;
+  const handleProgrammeChange = (nextProgrammeId: string) => {
     setProgrammeId(nextProgrammeId);
     router.replace(
       nextProgrammeId
@@ -473,8 +472,8 @@ export default function TutorLessonsPage() {
     resetPagination();
   };
 
-  const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const value = Number(event.target.value);
+  const handlePageSizeChange = (rawValue: string) => {
+    const value = Number(rawValue);
     if (!Number.isInteger(value) || value < 1 || value > 50) return;
     setPageSize(value);
     resetPagination();
@@ -568,17 +567,28 @@ export default function TutorLessonsPage() {
                   <input type="search" value={searchValue} onChange={handleSearchChange} maxLength={100} placeholder="Search lessons or programmes…" aria-label="Search lessons by title, description, or programme" className={cn(inputClass, "pl-9 pr-9")} />
                   {searchValue && <button type="button" onClick={() => setSearchValue("")} aria-label="Clear lesson search" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#8995aa] hover:bg-[#f3f5f9]"><X size={15} aria-hidden="true" /></button>}
                 </label>
-                <select aria-label="Filter lessons by status" value={status} onChange={handleStatusChange} className={cn(inputClass, "sm:min-w-36 xl:w-40")}>
-                  <option value="">All statuses</option>
-                  <option value="DRAFT">Draft</option>
-                  <option value="PUBLISHED">Published</option>
-                </select>
-                <select aria-label="Filter lessons by programme" value={programmeId} onChange={handleProgrammeChange} disabled={programmesQuery.isLoading || assignedProgrammes.length === 0} className={cn(inputClass, "sm:min-w-48 xl:w-56")}>
-                  <option value="">
-                    {programmesQuery.isLoading ? "Loading programmes…" : assignedProgrammes.length ? "All programmes" : "No programmes assigned"}
-                  </option>
-                  {assignedProgrammes.map((programme) => <option key={programme.id} value={programme.id}>{programme.name}</option>)}
-                </select>
+                <AnimatedSelect
+                  ariaLabel="Filter lessons by status"
+                  value={status}
+                  onChange={handleStatusChange}
+                  options={[
+                    { value: "", label: "All statuses" },
+                    { value: "DRAFT", label: "Draft" },
+                    { value: "PUBLISHED", label: "Published" },
+                  ]}
+                  className={cn(inputClass, "sm:min-w-36 xl:w-40")}
+                />
+                <AnimatedSelect
+                  ariaLabel="Filter lessons by programme"
+                  value={programmeId}
+                  onChange={handleProgrammeChange}
+                  disabled={programmesQuery.isLoading || assignedProgrammes.length === 0}
+                  options={[
+                    { value: "", label: programmesQuery.isLoading ? "Loading programmes…" : assignedProgrammes.length ? "All programmes" : "No programmes assigned" },
+                    ...assignedProgrammes.map((programme) => ({ value: programme.id, label: programme.name })),
+                  ]}
+                  className={cn(inputClass, "sm:min-w-48 xl:w-56")}
+                />
                 <LessonDisplayMenu value={displayMode} onChange={setDisplayMode} />
               </div>
             </div>
@@ -643,9 +653,13 @@ export default function TutorLessonsPage() {
                   <div className="flex flex-wrap items-center gap-3">
                     <label className="flex items-center gap-2 text-xs text-[#718099]">
                       Rows
-                      <select aria-label="Lessons per page" value={pageSize} onChange={handlePageSizeChange} className="rounded-lg border border-[#e4e9f2] bg-white px-2.5 py-2 text-xs font-semibold text-[#34415e] outline-none focus:border-[#101d49]/40">
-                        {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
-                      </select>
+                      <AnimatedSelect
+                        ariaLabel="Lessons per page"
+                        value={String(pageSize)}
+                        onChange={handlePageSizeChange}
+                        options={PAGE_SIZE_OPTIONS.map((size) => ({ value: String(size), label: String(size) }))}
+                        className="min-h-9 min-w-[4.5rem] rounded-lg px-2.5 text-xs"
+                      />
                     </label>
                     <div className="flex items-center gap-2">
                       <button type="button" onClick={handlePreviousPage} disabled={currentPage <= 1 || lessonsQuery.isFetching} className={secondaryButtonClass} aria-label="Previous page"><ArrowLeft size={15} aria-hidden="true" /><span className="hidden sm:inline">Previous</span></button>

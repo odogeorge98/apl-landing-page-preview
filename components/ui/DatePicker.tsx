@@ -97,12 +97,13 @@ export function DatePicker({ value, onChange, ariaLabel, className }: DatePicker
       const padding = 12;
       const width = Math.min(296, window.innerWidth - padding * 2);
       const height = 400;
+      const maxTop = Math.max(padding, window.innerHeight - height - padding);
       const roomBelow = window.innerHeight - anchor.bottom - 8;
       const roomAbove = anchor.top - 8;
       const opensDown = roomBelow >= height || roomBelow >= roomAbove;
       const left = Math.max(padding, Math.min(anchor.left, window.innerWidth - width - padding));
       const top = opensDown
-        ? Math.min(anchor.bottom + 8, window.innerHeight - height - padding)
+        ? Math.max(padding, Math.min(anchor.bottom + 8, maxTop))
         : Math.max(padding, anchor.top - height - 8);
       setMenuStyle({ position: "fixed", top, left, width, maxHeight: window.innerHeight - padding * 2 });
     };
