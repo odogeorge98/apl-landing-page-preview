@@ -12,10 +12,14 @@ export const tutorLessonsQueryKeys = {
 };
 
 /** Fetch a filtered, cursor-paginated lesson list for the authenticated tutor. */
-export function useTutorLessons(params: GetTutorLessonsParams = {}) {
+export function useTutorLessons(
+  params: GetTutorLessonsParams = {},
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: tutorLessonsQueryKeys.list(params),
     queryFn: () => lessonsApi.listForTutor(params),
+    enabled: options.enabled ?? true,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: true,

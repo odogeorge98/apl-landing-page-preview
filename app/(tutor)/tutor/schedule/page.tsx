@@ -17,6 +17,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import MainLayout from "@/components/layout/dashboard/MainLayout";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimeInput } from "@/components/ui/TimeInput";
 
 type ClassSchedule = {
   id: string;
@@ -850,25 +853,22 @@ export default function TutorSchedulePage() {
                   Course <span className="text-red-500">*</span>
                 </label>
 
-                <select
+                <AnimatedSelect
                   id="schedule-course"
-                  required
                   value={form.course}
-                  onChange={(event) => {
+                  onChange={(value) => {
                     setForm((previous) => ({
                       ...previous,
-                      course: event.target.value,
+                      course: value,
                     }));
                   }}
-                  className="w-full rounded-xl border border-[#E4E9F2] bg-white px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49] focus:ring-2 focus:ring-[#101D49]/10"
-                >
-                  {courses.map((course) => (
-                    <option key={course} value={course}>
-                      {course}
-                    </option>
-                  ))}
-                  <option value="__new__">+ Add New Course</option>
-                </select>
+                  ariaLabel="Course"
+                  options={[
+                    ...courses.map((course) => ({ value: course, label: course })),
+                    { value: "__new__", label: "+ Add New Course" },
+                  ]}
+                  className="min-h-12 w-full rounded-xl"
+                />
               </div>
 
               {form.course === "__new__" && (
@@ -907,23 +907,19 @@ export default function TutorSchedulePage() {
                   >
                     Grade / Level
                   </label>
-                  <select
+                  <AnimatedSelect
                     id="schedule-grade"
                     value={form.grade}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setForm((previous) => ({
                         ...previous,
-                        grade: event.target.value,
+                        grade: value,
                       }))
                     }
-                    className="w-full rounded-xl border border-[#E4E9F2] bg-white px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
-                  >
-                    {grades.map((grade) => (
-                      <option key={grade} value={grade}>
-                        {grade}
-                      </option>
-                    ))}
-                  </select>
+                    ariaLabel="Grade or level"
+                    options={grades.map((grade) => ({ value: grade, label: grade }))}
+                    className="min-h-12 w-full rounded-xl"
+                  />
                 </div>
 
                 <div>
@@ -933,23 +929,19 @@ export default function TutorSchedulePage() {
                   >
                     Cohort / Intake
                   </label>
-                  <select
+                  <AnimatedSelect
                     id="schedule-cohort"
                     value={form.cohort}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setForm((previous) => ({
                         ...previous,
-                        cohort: event.target.value,
+                        cohort: value,
                       }))
                     }
-                    className="w-full rounded-xl border border-[#E4E9F2] bg-white px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
-                  >
-                    {cohorts.map((cohort) => (
-                      <option key={cohort} value={cohort}>
-                        {cohort}
-                      </option>
-                    ))}
-                  </select>
+                    ariaLabel="Cohort or intake"
+                    options={cohorts.map((cohort) => ({ value: cohort, label: cohort }))}
+                    className="min-h-12 w-full rounded-xl"
+                  />
                 </div>
               </div>
 
@@ -960,18 +952,16 @@ export default function TutorSchedulePage() {
                 >
                   Class Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  id="schedule-date"
-                  type="date"
-                  required
+                <DatePicker
                   value={form.date}
-                  onChange={(event) =>
+                  ariaLabel="Class date"
+                  onChange={(value) =>
                     setForm((previous) => ({
                       ...previous,
-                      date: event.target.value,
+                      date: value,
                     }))
                   }
-                  className="w-full rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
+                  className="w-full"
                 />
               </div>
 
@@ -983,18 +973,17 @@ export default function TutorSchedulePage() {
                   >
                     Start Time <span className="text-red-500">*</span>
                   </label>
-                  <input
+                  <TimeInput
                     id="schedule-start"
-                    type="time"
                     required
                     value={form.startTime}
-                    onChange={(event) =>
+                    ariaLabel="Start time"
+                    onChange={(value) =>
                       setForm((previous) => ({
                         ...previous,
-                        startTime: event.target.value,
+                        startTime: value,
                       }))
                     }
-                    className="w-full rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
                   />
                 </div>
 
@@ -1005,18 +994,17 @@ export default function TutorSchedulePage() {
                   >
                     End Time <span className="text-red-500">*</span>
                   </label>
-                  <input
+                  <TimeInput
                     id="schedule-end"
-                    type="time"
                     required
                     value={form.endTime}
-                    onChange={(event) =>
+                    ariaLabel="End time"
+                    onChange={(value) =>
                       setForm((previous) => ({
                         ...previous,
-                        endTime: event.target.value,
+                        endTime: value,
                       }))
                     }
-                    className="w-full rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
                   />
                 </div>
               </div>

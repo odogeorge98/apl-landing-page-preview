@@ -186,7 +186,7 @@ export default function AdminOnboardingClient() {
             <p className="text-xs text-white/35">
               Need help?{" "}
               <a
-                href="mailto:support@peppcruise.com"
+                href="mailto:support@innovations.com"
                 className="text-[#00d7c4] underline-offset-4 hover:underline"
               >
                 Contact support
@@ -252,7 +252,7 @@ export default function AdminOnboardingClient() {
             Complete your setup
           </h1>
           <p className="text-sm leading-relaxed text-white/50">
-            You've been invited to join the PEPP Cruise admin portal. Set a
+            You've been invited to join the Nugi Innovation admin portal. Set a
             secure password to activate your account.
           </p>
         </div>
@@ -425,21 +425,21 @@ function PageShell({ children }: { children: React.ReactNode }) {
         {/* Brand mark */}
         <div className="flex flex-col items-center gap-2">
           <Image
-            src="/peppcruise-mark.svg"
-            alt="PEPP Cruise"
+            src="/ni-logo.svg"
+            alt="Nugi Innovations"
             width={40}
             height={40}
             priority
           />
           <span className="text-sm font-semibold tracking-wide text-white/70">
-            PEPP Cruise Admin
+            Nugi Innovation Admin
           </span>
         </div>
 
         {children}
 
         <p className="text-center text-xs text-white/20">
-          © {new Date().getFullYear()} PEPP Cruise. All rights reserved.
+          © {new Date().getFullYear()} Nugi Innovations. All rights reserved.
         </p>
       </div>
     </div>
