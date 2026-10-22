@@ -22,6 +22,10 @@ type AnimatedSelectProps = {
   menuClassName?: string;
   disabled?: boolean;
   ariaInvalid?: boolean;
+  /** Allow the selected option to wrap when its label is long. */
+  wrapSelectedLabel?: boolean;
+  /** Stretch the trigger to its available width. */
+  fullWidth?: boolean;
 };
 
 /** Compact, branded select popover for dashboard filters and page-size controls. */
@@ -36,6 +40,8 @@ export function AnimatedSelect({
   menuClassName,
   disabled = false,
   ariaInvalid,
+  wrapSelectedLabel = false,
+  fullWidth = false,
 }: AnimatedSelectProps) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<CSSProperties | null>(null);
@@ -150,7 +156,7 @@ export function AnimatedSelect({
   );
 
   return (
-    <div ref={rootRef} className="relative inline-flex">
+    <div ref={rootRef} className={cn("relative inline-flex", fullWidth && "flex w-full min-w-0")}>
       <button
         id={id}
         ref={triggerRef}
@@ -165,10 +171,13 @@ export function AnimatedSelect({
         onClick={() => setOpen((current) => !current)}
         className={cn(
           "inline-flex min-h-10 min-w-[5.25rem] items-center justify-between gap-2 rounded-xl border border-[#e4e9f2] bg-white px-3 text-sm font-semibold text-[#34415e] shadow-sm outline-none transition hover:border-[#cbd4e3] hover:bg-[#f8f9fc] focus-visible:ring-2 focus-visible:ring-[#f5c542] disabled:cursor-not-allowed disabled:opacity-50",
+          wrapSelectedLabel && "h-auto py-2.5",
           className,
         )}
       >
-        <span className="truncate">{selectedOption?.label ?? value}</span>
+        <span className={cn(wrapSelectedLabel
+          ? "min-w-0 flex-1 whitespace-normal break-words text-left leading-5"
+          : "truncate")}>{selectedOption?.label ?? value}</span>
         <ChevronDown
           size={15}
           aria-hidden="true"

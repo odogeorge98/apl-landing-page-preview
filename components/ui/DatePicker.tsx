@@ -11,6 +11,8 @@ type DatePickerProps = {
   onChange: (value: string) => void;
   ariaLabel: string;
   className?: string;
+  /** Earliest selectable date, in YYYY-MM-DD local date format. */
+  minDate?: string;
 };
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -42,7 +44,7 @@ function dateLabel(value: string): string {
 }
 
 /** Branded calendar picker; its fixed portal popover does not affect page layout or scrollbar width. */
-export function DatePicker({ value, onChange, ariaLabel, className }: DatePickerProps) {
+export function DatePicker({ value, onChange, ariaLabel, className, minDate }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [menuStyle, setMenuStyle] = useState<CSSProperties | null>(null);
@@ -123,6 +125,7 @@ export function DatePicker({ value, onChange, ariaLabel, className }: DatePicker
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date();
   const todayKey = asDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+  const earliestDate = minDate && dateFromKey(minDate) ? minDate : undefined;
   const dayCells = Array.from({ length: firstWeekday + daysInMonth }, (_, index) =>
     index < firstWeekday ? null : index - firstWeekday + 1,
   );
@@ -147,7 +150,7 @@ export function DatePicker({ value, onChange, ariaLabel, className }: DatePicker
           className="z-[130] overflow-y-auto rounded-2xl border border-[#e4e9f2] bg-white p-4 shadow-[0_18px_48px_rgba(16,29,73,0.2)]"
         >
           <div className="flex items-center justify-between gap-3">
-            <button type="button" onClick={() => changeMonth(-1)} aria-label="Previous month" className="flex size-9 items-center justify-center rounded-xl text-[#52627f] transition hover:bg-[#f4f6fa] hover:text-[#101d49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542]">
+            <button type="button" onClick={() => changeMonth(-1)} disabled={Boolean(earliestDate && asDateKey(year, month, 1) <= asDateKey(Number(earliestDate.slice(0, 4)), Number(earliestDate.slice(5, 7)) - 1, 1))} aria-label="Previous month" className="flex size-9 items-center justify-center rounded-xl text-[#52627f] transition hover:bg-[#f4f6fa] hover:text-[#101d49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542] disabled:cursor-not-allowed disabled:opacity-35">
               <ChevronLeft size={18} aria-hidden="true" />
             </button>
             <p className="text-sm font-bold text-[#101d49]" aria-live="polite">{monthLabel(visibleMonth)}</p>
@@ -165,6 +168,7 @@ export function DatePicker({ value, onChange, ariaLabel, className }: DatePicker
               const dateKey = asDateKey(year, month, day);
               const isSelected = dateKey === value;
               const isToday = dateKey === todayKey;
+              const isBeforeMinimum = Boolean(earliestDate && dateKey < earliestDate);
               return (
                 <button
                   key={dateKey}
@@ -172,6 +176,8 @@ export function DatePicker({ value, onChange, ariaLabel, className }: DatePicker
                   role="gridcell"
                   aria-selected={isSelected}
                   aria-current={isToday ? "date" : undefined}
+                  aria-disabled={isBeforeMinimum}
+                  disabled={isBeforeMinimum}
                   aria-label={new Intl.DateTimeFormat("en", { dateStyle: "full" }).format(new Date(year, month, day))}
                   onClick={() => {
                     onChange(dateKey);
@@ -180,7 +186,7 @@ export function DatePicker({ value, onChange, ariaLabel, className }: DatePicker
                   }}
                   className={cn(
                     "relative flex size-9 items-center justify-center rounded-xl text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542]",
-                    isSelected ? "bg-[#101d49] font-bold text-white shadow-sm" : "text-[#34415e] hover:bg-[#f4f6fa]",
+                    isSelected ? "bg-[#101d49] font-bold text-white shadow-sm" : isBeforeMinimum ? "cursor-not-allowed text-[#c2c9d5]" : "text-[#34415e] hover:bg-[#f4f6fa]",
                     isToday && !isSelected && "font-bold text-[#101d49] ring-1 ring-inset ring-[#f5c542]",
                   )}
                 >
@@ -193,12 +199,13 @@ export function DatePicker({ value, onChange, ariaLabel, className }: DatePicker
           <div className="mt-4 flex items-center justify-between border-t border-[#edf0f6] pt-3">
             <button
               type="button"
+              disabled={Boolean(earliestDate && todayKey < earliestDate)}
               onClick={() => {
                 onChange(todayKey);
                 setOpen(false);
                 triggerRef.current?.focus();
               }}
-              className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-[#34415e] transition hover:bg-[#f4f6fa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542]"
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-[#34415e] transition hover:bg-[#f4f6fa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Check size={14} className="text-[#16845b]" aria-hidden="true" /> Today
             </button>
