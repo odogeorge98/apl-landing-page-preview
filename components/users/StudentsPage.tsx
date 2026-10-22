@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ChangeEvent } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import dayjs from "dayjs";
 import {
   ArrowLeft,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
 import { useStudentsList } from "@/lib/hooks/users/students/use-students";
 import type {
   GetStudentsParams,
@@ -139,6 +141,7 @@ function StudentRowsSkeleton() {
 }
 
 export default function StudentsPage() {
+  const prefersReducedMotion = useReducedMotion();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [gender, setGender] = useState<StudentGender | "">("");
@@ -176,11 +179,21 @@ export default function StudentsPage() {
       }
     };
 
-    document.body.style.overflow = "hidden";
+    const body = document.body;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+    const computedPaddingRight = Number.parseFloat(window.getComputedStyle(body).paddingRight) || 0;
+
+    body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${computedPaddingRight + scrollbarWidth}px`;
+    }
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = "";
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isRegisterModalOpen]);
@@ -219,17 +232,13 @@ export default function StudentsPage() {
     setCursorStack([null]);
   };
 
-  const handleGenderChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const value = event.target.value;
-
+  const handleGenderChange = (value: string) => {
     setGender(value === "male" || value === "female" ? value : "");
     resetPagination();
   };
 
-  const handleRowsPerPageChange = (
-    event: ChangeEvent<HTMLSelectElement>,
-  ) => {
-    const value = Number(event.target.value);
+  const handleRowsPerPageChange = (selectedValue: string) => {
+    const value = Number(selectedValue);
 
     if (!Number.isInteger(value) || value < 1 || value > 50) return;
 
@@ -262,7 +271,7 @@ export default function StudentsPage() {
   };
 
   const handleFormChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    event: ChangeEvent<HTMLInputElement>,
   ) => {
     const { name, value } = event.target;
 
@@ -275,6 +284,11 @@ export default function StudentsPage() {
       ...previous,
       [name]: "",
     }));
+  };
+
+  const handleFormSelectChange = (name: keyof StudentFormValues, value: string) => {
+    setFormValues((previous) => ({ ...previous, [name]: value } as StudentFormValues));
+    setFormErrors((previous) => ({ ...previous, [name]: "" }));
   };
 
   const validateForm = () => {
@@ -333,6 +347,10 @@ export default function StudentsPage() {
     setRegistrationAttempted(false);
     setIsRegisterModalOpen(true);
   };
+
+  const modalTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.32, ease: [0.22, 1, 0.36, 1] as const };
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-7">
@@ -465,16 +483,17 @@ export default function StudentsPage() {
               )}
             </label>
 
-            <select
-              aria-label="Filter by gender"
+            <AnimatedSelect
+              ariaLabel="Filter by gender"
               value={gender}
+              options={[
+                { value: "", label: "All genders" },
+                { value: "female", label: "Female" },
+                { value: "male", label: "Male" },
+              ]}
               onChange={handleGenderChange}
-              className="rounded-xl border border-[#e4e9f2] bg-white px-3 py-2.5 text-sm text-[#34415e] outline-none focus:border-[#101d49]/40"
-            >
-              <option value="">All genders</option>
-              <option value="female">Female</option>
-              <option value="male">Male</option>
-            </select>
+              className="min-h-10 min-w-[9.5rem] rounded-xl px-3 text-sm"
+            />
           </div>
         </div>
 
@@ -664,18 +683,13 @@ export default function StudentsPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-2 text-xs text-[#718099]">
                   Rows
-                  <select
-                    aria-label="Rows per page"
-                    value={rowsPerPage}
+                  <AnimatedSelect
+                    ariaLabel="Rows per page"
+                    value={String(rowsPerPage)}
+                    options={[5, 10, 20, 30, 50].map((size) => ({ value: String(size), label: String(size) }))}
                     onChange={handleRowsPerPageChange}
-                    className="rounded-lg border border-[#e4e9f2] bg-white px-2.5 py-2 text-xs font-semibold text-[#34415e] outline-none focus:border-[#101d49]/40"
-                  >
-                    {[5, 10, 20, 30, 50].map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </select>
+                    className="min-h-9 min-w-[4.5rem] rounded-lg px-2.5 text-xs"
+                  />
                 </label>
 
                 <div className="flex items-center gap-2">
@@ -708,21 +722,29 @@ export default function StudentsPage() {
       </section>
 
       {/* Register Student Modal */}
-      {isRegisterModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#101d49]/50 p-4 backdrop-blur-[3px]"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              closeRegisterModal();
-            }
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="register-student-title"
-            className="my-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-[#e4e9f2] bg-white shadow-2xl"
+      <AnimatePresence>
+        {isRegisterModalOpen && (
+          <motion.div
+            key="register-student-backdrop"
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+            transition={modalTransition}
+            className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#101d49]/50 p-4 backdrop-blur-[3px]"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeRegisterModal();
+            }}
           >
+            <motion.section
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 18, scale: 0.975 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0, y: 10, scale: 0.985 }}
+              transition={modalTransition}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="register-student-title"
+              className="my-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_24px_80px_rgba(7,16,39,0.28)]"
+            >
             <div className="flex items-start justify-between gap-4 border-b border-[#edf0f6] px-5 py-5 sm:px-7">
               <div className="flex items-start gap-3">
                 <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#fff5d8] text-[#101d49]">
@@ -898,26 +920,25 @@ export default function StudentsPage() {
                     >
                       Gender <span className="text-red-500">*</span>
                     </label>
-                    <select
+                    <AnimatedSelect
                       id="student-gender"
-                      name="gender"
+                      ariaLabel="Student gender"
                       value={formValues.gender}
-                      onChange={handleFormChange}
-                      aria-invalid={Boolean(formErrors.gender)}
-                      aria-describedby={
-                        formErrors.gender ? "student-gender-error" : undefined
-                      }
+                      options={[
+                        { value: "", label: "Select gender" },
+                        { value: "male", label: "Male" },
+                        { value: "female", label: "Female" },
+                      ]}
+                      onChange={(value) => handleFormSelectChange("gender", value)}
+                      ariaInvalid={Boolean(formErrors.gender)}
+                      ariaDescribedBy={formErrors.gender ? "student-gender-error" : undefined}
                       className={cn(
                         fieldClass,
+                        "justify-between",
                         !formValues.gender && "text-[#8995aa]",
-                        formErrors.gender &&
-                          "border-red-400 focus:border-red-400",
+                        formErrors.gender && "border-red-400 focus:border-red-400",
                       )}
-                    >
-                      <option value="">Select gender</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                    </select>
+                    />
                     {formErrors.gender && (
                       <p
                         id="student-gender-error"
@@ -958,30 +979,31 @@ export default function StudentsPage() {
                     Programme / Course <span className="text-red-500">*</span>
                   </label>
 
-                  <select
+                  <AnimatedSelect
                     id="student-programme"
-                    name="programme"
+                    ariaLabel="Student programme"
                     value={formValues.programme}
-                    onChange={handleFormChange}
-                    aria-invalid={Boolean(formErrors.programme)}
+                    options={[
+                      { value: "", label: "Select a programme" },
+                      { value: "computer-science", label: "Computer Science" },
+                      { value: "software-engineering", label: "Software Engineering" },
+                      { value: "data-science", label: "Data Science" },
+                      { value: "cybersecurity", label: "Cybersecurity" },
+                      { value: "information-technology", label: "Information Technology" },
+                    ]}
+                    onChange={(value) => handleFormSelectChange("programme", value)}
+                    ariaInvalid={Boolean(formErrors.programme)}
+                    ariaDescribedBy={formErrors.programme ? "student-programme-error" : undefined}
                     className={cn(
                       fieldClass,
+                      "justify-between",
                       !formValues.programme && "text-[#8995aa]",
-                      formErrors.programme && "border-red-400"
+                      formErrors.programme && "border-red-400",
                     )}
-                  >
-                    <option value="">Select a programme</option>
-                    <option value="computer-science">Computer Science</option>
-                    <option value="software-engineering">Software Engineering</option>
-                    <option value="data-science">Data Science</option>
-                    <option value="cybersecurity">Cybersecurity</option>
-                    <option value="information-technology">
-                      Information Technology
-                    </option>
-                  </select>
+                  />
 
                   {formErrors.programme && (
-                    <p className="mt-1.5 text-xs text-red-600">
+                    <p id="student-programme-error" className="mt-1.5 text-xs text-red-600">
                       {formErrors.programme}
                     </p>
                   )}
@@ -1013,9 +1035,10 @@ export default function StudentsPage() {
                 </button>
               </div>
             </form>
-          </section>
-        </div>
-      )}
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

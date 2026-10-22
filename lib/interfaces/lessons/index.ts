@@ -58,6 +58,39 @@ export interface TutorLessonsData {
   nextCursor: string | null;
 }
 
+/** Published lesson returned for a student's enrolled programme. */
+export interface StudentProgrammeLesson {
+  id: string;
+  programmeId: string;
+  title: string;
+  description: string;
+  sequence: number;
+  durationMinutes: number;
+  status: "PUBLISHED";
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudentProgrammeLessonsData {
+  items: StudentProgrammeLesson[];
+  nextCursor: string | null;
+}
+
+export interface StudentProgrammeLessonsApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: StudentProgrammeLessonsData;
+}
+
+export interface GetStudentProgrammeLessonsParams {
+  /** Number of lessons to request; the backend cursor response drives infinite loading. */
+  limit?: number;
+  /** Opaque cursor returned by the previous page. */
+  cursor?: string | null;
+}
+
 export interface TutorLessonsApiResponse {
   status: "success" | string;
   statusCode: number;

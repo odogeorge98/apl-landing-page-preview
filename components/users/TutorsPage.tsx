@@ -5,7 +5,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  type ChangeEvent,
   type FormEvent,
 } from "react";
 import Link from "next/link";
@@ -29,6 +28,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
 import { formatNigerianPhoneNumber } from "@/lib/utils/phone";
 import {
   useCreateTutor,
@@ -506,10 +506,8 @@ export default function TutorsPage() {
     setCursor(updatedStack[updatedStack.length - 1] ?? null);
   };
 
-  const handleRowsPerPageChange = (
-    event: ChangeEvent<HTMLSelectElement>,
-  ) => {
-    const value = Number(event.target.value);
+  const handleRowsPerPageChange = (selectedValue: string) => {
+    const value = Number(selectedValue);
 
     if (!Number.isInteger(value) || value < 1 || value > 50) return;
 
@@ -915,22 +913,16 @@ export default function TutorsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-xs text-[#718099]">
-              Rows
-
-              <select
-                aria-label="Rows per page"
-                value={rowsPerPage}
+            <div className="flex items-center gap-2 text-xs text-[#718099]">
+              <span>Rows</span>
+              <AnimatedSelect
+                ariaLabel="Rows per page"
+                value={String(rowsPerPage)}
+                options={[5, 10, 20, 30, 50].map((size) => ({ value: String(size), label: String(size) }))}
                 onChange={handleRowsPerPageChange}
-                className="rounded-lg border border-[#e4e9f2] bg-white px-2.5 py-2 text-xs font-semibold text-[#34415e] outline-none focus:border-[#101d49]/40"
-              >
-                {[5, 10, 20, 30, 50].map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </label>
+                className="min-h-9 min-w-[4.5rem] rounded-lg px-2.5 text-xs"
+              />
+            </div>
 
             <div className="flex items-center gap-2">
               <button

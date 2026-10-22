@@ -1,4 +1,4 @@
-export type AssignmentStatus = "DRAFT" | "PUBLISHED";
+export type AssignmentStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
 export interface AssignmentProgrammeSummary {
   id: string;
@@ -8,6 +8,45 @@ export interface AssignmentProgrammeSummary {
 export interface AssignmentLessonSummary {
   id: string;
   title?: string;
+  sequence?: number;
+}
+
+export interface AssignmentTutorSummary {
+  id: string;
+  name?: string;
+}
+
+export interface AdminAssignment extends TutorAssignment {
+  programme?: (AssignmentProgrammeSummary & {
+    description?: string;
+    hours?: number;
+  }) | null;
+  tutor?: AssignmentTutorSummary | null;
+  lesson?: (AssignmentLessonSummary & { sequence?: number }) | null;
+}
+
+export interface AdminAssignmentsData {
+  items: AdminAssignment[];
+  nextCursor: string | null;
+}
+
+export interface AdminAssignmentsApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: AdminAssignmentsData;
+}
+
+export interface GetAdminAssignmentsParams {
+  search?: string;
+  status?: AssignmentStatus;
+  availableAtFrom?: string;
+  availableAtTo?: string;
+  dueAtFrom?: string;
+  dueAtTo?: string;
+  limit?: number;
+  /** Opaque cursor returned by the previous page. */
+  cursor?: string | null;
 }
 
 /** Assignment fields returned by tutor assignment and lifecycle endpoints. */

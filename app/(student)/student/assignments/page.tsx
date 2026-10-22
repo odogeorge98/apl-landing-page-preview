@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Search,
@@ -18,12 +18,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 import MainLayout from "@/components/layout/dashboard/MainLayout";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
 import { useStudentAssignments } from "@/lib/hooks/assignments/use-student-assignments";
 import type { StudentAssignment } from "@/lib/interfaces/assignments";
 import { cn } from "@/lib/utils";
 
 type StudentAssignmentStatus = "Pending" | "Submitted" | "Graded" | "Overdue" | "Upcoming";
-type AssignmentFilter = "All" | StudentAssignmentStatus;
 
 type AssignmentView = {
   id: string;
@@ -38,7 +38,6 @@ type AssignmentView = {
   instructions: string[];
 };
 
-const filters: AssignmentFilter[] = ["All", "Upcoming", "Pending", "Submitted", "Graded", "Overdue"];
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 50] as const;
 const cardClass = "rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_2px_10px_rgba(16,29,73,0.025)]";
@@ -110,7 +109,6 @@ function getDeadline(assignment: AssignmentView) {
 export default function AssignmentsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState<AssignmentFilter>("All");
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [cursorStack, setCursorStack] = useState<(string | null)[]>([null]);
   const [selectedAssignment, setSelectedAssignment] =
@@ -141,12 +139,6 @@ export default function AssignmentsPage() {
   );
   const nextCursor = assignmentsQuery.data?.nextCursor ?? null;
   const currentPage = cursorStack.length;
-  const filteredAssignments = useMemo(
-    () => activeFilter === "All"
-      ? assignments
-      : assignments.filter((assignment) => assignment.status === activeFilter),
-    [assignments, activeFilter],
-  );
   const resetPagination = useCallback(() => setCursorStack([null]), []);
 
   const handleNextPage = () => {
@@ -159,8 +151,8 @@ export default function AssignmentsPage() {
     setCursorStack((previous) => previous.slice(0, -1));
   };
 
-  const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const value = Number(event.target.value);
+  const handlePageSizeChange = (selectedValue: string) => {
+    const value = Number(selectedValue);
     if (!Number.isInteger(value) || value < 1 || value > 50) return;
     setPageSize(value);
     resetPagination();
@@ -174,10 +166,9 @@ export default function AssignmentsPage() {
     overdue: assignments.filter((item) => item.status === "Overdue").length,
   };
 
-  const clearFilters = () => {
+  const clearSearch = () => {
     setSearch("");
     setDebouncedSearch("");
-    setActiveFilter("All");
     resetPagination();
   };
 
@@ -296,24 +287,6 @@ export default function AssignmentsPage() {
             </p>
           )}
 
-          <div className="mb-6 flex flex-wrap gap-2">
-            {filters.map((filter) => (
-              <button
-                key={filter}
-                type="button"
-                onClick={() => setActiveFilter(filter)}
-                aria-pressed={activeFilter === filter}
-                className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                  activeFilter === filter
-                    ? "bg-[#101d49] text-white"
-                    : "border border-[#dce3ef] bg-white text-[#64718a] hover:bg-[#f8f9fc]"
-                }`}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
-
           {assignmentsQuery.isLoading ? (
             <div className="grid gap-4" role="status" aria-label="Loading assignments">
               {Array.from({ length: 3 }, (_, index) => (
@@ -335,27 +308,27 @@ export default function AssignmentsPage() {
                 <RefreshCw size={15} className={assignmentsQuery.isFetching ? "animate-spin" : ""} aria-hidden="true" /> Try again
               </button>
             </div>
-          ) : filteredAssignments.length === 0 ? (
+          ) : assignments.length === 0 ? (
             <div className="flex min-h-[250px] flex-col items-center justify-center rounded-2xl border border-[#e4e9f2] bg-white px-6 py-12 text-center">
               <Search size={28} className="text-[#8490a6]" />
               <h3 className="mt-4 text-lg font-semibold text-[#101d49]">
                 No assignments found
               </h3>
               <p className="mt-2 text-sm text-[#64718a]">
-                Try another search term or select a different status.
+                {debouncedSearch ? "Try a different search term, or clear your search." : "Published assignments will appear here when they are available."}
               </p>
               <button
                 type="button"
-                onClick={clearFilters}
+                onClick={clearSearch}
                 className="mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-[#101d49] hover:bg-[#f4f6fa]"
               >
                 <RotateCcw size={15} />
-                Clear filters
+                Clear search
               </button>
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredAssignments.map((assignment) => (
+              {assignments.map((assignment) => (
                 <article key={assignment.id} className="rounded-2xl border border-[#e4e9f2] bg-white p-5 shadow-[0_2px_10px_rgba(16,29,73,0.025)] transition hover:shadow-[0_8px_24px_rgba(16,29,73,0.06)] sm:p-6">
                   <div className="flex items-start gap-4">
                     <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#eaf0ff] text-[#101d49]">
@@ -446,16 +419,20 @@ export default function AssignmentsPage() {
           {!assignmentsQuery.isLoading && !(assignmentsQuery.isError && !assignmentsQuery.data) && (
             <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-[#e4e9f2] bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
               <p className="text-xs text-[#8995aa]" aria-live="polite">
-                Showing <span className="font-semibold text-[#34415e]">{filteredAssignments.length}</span> {filteredAssignments.length === 1 ? "assignment" : "assignments"} on page <span className="font-semibold text-[#34415e]">{currentPage}</span>
+                Showing <span className="font-semibold text-[#34415e]">{assignments.length}</span> {assignments.length === 1 ? "assignment" : "assignments"} on page <span className="font-semibold text-[#34415e]">{currentPage}</span>
                 {debouncedSearch && <> matching <span className="font-semibold text-[#34415e]">“{debouncedSearch}”</span></>}
               </p>
               <div className="flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-2 text-xs text-[#718099]">
-                  Rows
-                  <select aria-label="Assignments per page" value={pageSize} onChange={handlePageSizeChange} className="rounded-lg border border-[#e4e9f2] bg-white px-2.5 py-2 text-xs font-semibold text-[#34415e] outline-none focus:border-[#101d49]/40">
-                    {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
-                  </select>
-                </label>
+                <div className="flex items-center gap-2 text-xs text-[#718099]">
+                  <span>Rows</span>
+                  <AnimatedSelect
+                    ariaLabel="Assignments per page"
+                    value={String(pageSize)}
+                    options={PAGE_SIZE_OPTIONS.map((size) => ({ value: String(size), label: String(size) }))}
+                    onChange={handlePageSizeChange}
+                    className="min-h-9 min-w-[4.5rem] rounded-lg px-2.5 text-xs"
+                  />
+                </div>
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={handlePreviousPage} disabled={currentPage <= 1 || assignmentsQuery.isFetching} className={secondaryButtonClass} aria-label="Previous page"><span aria-hidden="true">←</span><span className="hidden sm:inline">Previous</span></button>
                   <button type="button" onClick={handleNextPage} disabled={!nextCursor || assignmentsQuery.isFetching} className={primaryButtonClass} aria-label="Next page"><span className="hidden sm:inline">Next</span><span aria-hidden="true">→</span></button>

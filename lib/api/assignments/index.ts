@@ -1,9 +1,13 @@
 import { http } from "@/lib/utils/http";
 import type {
+  AdminAssignment,
+  AdminAssignmentsApiResponse,
+  AdminAssignmentsData,
   AssignmentLessonSummary,
   AssignmentProgrammeSummary,
   AssignmentStatus,
   CreateTutorAssignmentDto,
+  GetAdminAssignmentsParams,
   GetTutorAssignmentsParams,
   GetStudentAssignmentsParams,
   StudentAssignment,
@@ -18,7 +22,7 @@ import type {
 
 const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const ASSIGNMENT_STATUSES: readonly AssignmentStatus[] = ["DRAFT", "PUBLISHED"];
+const ASSIGNMENT_STATUSES: readonly AssignmentStatus[] = ["DRAFT", "PUBLISHED", "ARCHIVED"];
 const STUDENT_SUBMISSION_STATUSES: readonly StudentAssignmentSubmissionStatus[] = [
   "NOT_SUBMITTED",
   "SUBMITTED",
@@ -50,7 +54,7 @@ function isValidLesson(value: unknown): value is AssignmentLessonSummary {
 function isValidAssignment(value: unknown): value is TutorAssignment {
   if (!value || typeof value !== "object") return false;
 
-  const assignment = value as Record<string, unknown>;
+  const assignment = value as unknown as Record<string, unknown>;
   const maxScore = assignment.maxScore;
   const numericMaxScore = typeof maxScore === "number" ? maxScore : Number(maxScore);
   const hasValidProgramme =
@@ -96,6 +100,50 @@ function isTutorAssignmentsData(value: unknown): value is TutorAssignmentsData {
     (data.nextCursor === null || typeof data.nextCursor === "string") &&
     data.items.every(isValidAssignment)
   );
+}
+
+function isAdminAssignment(value: unknown): value is AdminAssignment {
+  if (!isValidAssignment(value)) return false;
+
+  const assignment = value as unknown as Record<string, unknown>;
+  const tutor = assignment.tutor;
+  const programme = assignment.programme as Record<string, unknown> | null | undefined;
+  const lesson = assignment.lesson as Record<string, unknown> | null | undefined;
+  return (
+    (tutor === undefined || tutor === null || (
+      typeof tutor === "object" &&
+      typeof (tutor as Record<string, unknown>).id === "string" &&
+      ((tutor as Record<string, unknown>).name === undefined ||
+        typeof (tutor as Record<string, unknown>).name === "string")
+    )) &&
+    (programme === undefined || programme === null || (
+      isValidProgramme(programme) &&
+      (programme.description === undefined || typeof programme.description === "string") &&
+      (programme.hours === undefined || (typeof programme.hours === "number" && Number.isFinite(programme.hours)))
+    )) &&
+    (lesson === undefined || lesson === null || (
+      isValidLesson(lesson) &&
+      (lesson.sequence === undefined || (typeof lesson.sequence === "number" && Number.isInteger(lesson.sequence)) )
+    ))
+  );
+}
+
+function isAdminAssignmentsData(value: unknown): value is AdminAssignmentsData {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return (
+    Array.isArray(data.items) &&
+    (data.nextCursor === null || typeof data.nextCursor === "string") &&
+    data.items.every(isAdminAssignment)
+  );
+}
+
+function normalizeAdminDate(value: string | undefined, fieldName: string): string | undefined {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
+    throw new Error(`Enter a valid ${fieldName} date.`);
+  }
+  return value;
 }
 
 function isValidStudentSubmission(value: unknown): boolean {
@@ -205,6 +253,63 @@ function normalizeCreatePayload(payload: CreateTutorAssignmentDto): CreateTutorA
 
 /** Tutor assignment endpoints: create, list and publish. */
 export const assignmentsApi = {
+  /** GET /assignments/admin — cursor-paginated assignments for the admin workspace. */
+  listForAdmin: async (
+    params: GetAdminAssignmentsParams = {},
+  ): Promise<AdminAssignmentsData> => {
+    const search = params.search?.trim();
+    const cursor = params.cursor;
+    const availableAtFrom = normalizeAdminDate(params.availableAtFrom, "availability start");
+    const availableAtTo = normalizeAdminDate(params.availableAtTo, "availability end");
+    const dueAtFrom = normalizeAdminDate(params.dueAtFrom, "due date start");
+    const dueAtTo = normalizeAdminDate(params.dueAtTo, "due date end");
+
+    if (search && search.length > 100) {
+      throw new RangeError("Assignment search must be 100 characters or fewer.");
+    }
+    if (params.status && !isAssignmentStatus(params.status)) {
+      throw new Error("Choose a valid assignment status.");
+    }
+    if (
+      params.limit !== undefined &&
+      (!Number.isInteger(params.limit) || params.limit < 1 || params.limit > 50)
+    ) {
+      throw new RangeError("Assignment page size must be an integer between 1 and 50.");
+    }
+    if (typeof cursor === "string" && cursor.length > 512) {
+      throw new RangeError("Assignment pagination cursor must be 512 characters or fewer.");
+    }
+    if (availableAtFrom && availableAtTo && Date.parse(availableAtFrom) > Date.parse(availableAtTo)) {
+      throw new Error("Availability start must be on or before availability end.");
+    }
+    if (dueAtFrom && dueAtTo && Date.parse(dueAtFrom) > Date.parse(dueAtTo)) {
+      throw new Error("Due date start must be on or before due date end.");
+    }
+
+    const queryParams: Record<string, string | number> = {};
+    if (search) queryParams.search = search;
+    if (params.status) queryParams.status = params.status;
+    if (availableAtFrom) queryParams.availableAtFrom = availableAtFrom;
+    if (availableAtTo) queryParams.availableAtTo = availableAtTo;
+    if (dueAtFrom) queryParams.dueAtFrom = dueAtFrom;
+    if (dueAtTo) queryParams.dueAtTo = dueAtTo;
+    if (params.limit !== undefined) queryParams.limit = params.limit;
+    if (typeof cursor === "string" && cursor.length > 0) queryParams.cursor = cursor;
+
+    const response = await http.get<AdminAssignmentsApiResponse>("/assignments/admin", {
+      params: queryParams,
+    });
+    const result = response.data;
+    if (result.status !== "success") {
+      throw new Error(result.message || "Unable to retrieve assignments.");
+    }
+    if (!isAdminAssignmentsData(result.data)) {
+      throw new Error("The admin assignments response was incomplete or invalid.");
+    }
+
+    return result.data;
+  },
+
   /** GET /assignments/student — cursor-paginated published assignments for the authenticated student. */
   listForStudent: async (
     params: GetStudentAssignmentsParams = {},
