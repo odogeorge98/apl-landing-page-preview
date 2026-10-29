@@ -1,4 +1,4 @@
-# Admin Assignments & Certificates (front end)
+# Admin Assignments, Certificates & Daily Reports + Student Daily Report (front end)
 
 Admin versions of the student **Assignments** and **Certificates** pages. Both
 routes were already linked from the admin sidebar
@@ -8,6 +8,7 @@ routes were already linked from the admin sidebar
 | --- | --- |
 | `/dashboard/assignments` | `app/(admin)/dashboard/assignments/page.tsx` |
 | `/dashboard/certificates` | `app/(admin)/dashboard/certificates/page.tsx` |
+| `/dashboard/reports` | `app/(admin)/dashboard/reports/page.tsx` |
 
 ## What admins can do
 
@@ -25,6 +26,44 @@ routes were already linked from the admin sidebar
 - Revoke with a recorded reason, then reinstate
 - Verify any certificate number
 - Template gallery with "set as default"
+
+**Daily reports** (sidebar: Insights › Reports)
+
+Students and interns send a plain-text end-of-day report covering what they
+accomplished and any problems they had. Admins get:
+- A "today at a glance" strip showing submitted out of expected, open problems,
+  reports waiting for review, and people who haven't submitted (each one is a shortcut).
+- A date-grouped inbox with search, Student/Intern, team, and Unread / Open
+  problems / To review filters. Use ↑/↓ (or j/k) to move through it.
+- A reading pane that shows the text exactly as written (line breaks kept), with
+  problems highlighted and marked "Needs follow-up" or "Resolved".
+- Plain-text replies (⌘/Ctrl+Enter to send; replying marks the report reviewed),
+  "Mark as reviewed", "Mark as unread", "Copy report text" and "Email".
+- A "Not submitted yet" drawer with per-person and bulk reminders.
+- On phones the list and reader are separate screens with a back button.
+- Access: `manageUsers` (admins only).
+- There is no INTERN role in `UserType` yet, so "Intern" is the report author's
+  type in `lib/mock/admin-daily-reports.ts`. The backend will need an INTERN
+  role or an `isIntern` flag.
+
+**Student / intern daily report** (`/student/reports`, sidebar: Workspace › Daily report)
+
+The submission side of the admin inbox above. It uses the same two plain-text fields.
+- "What did you accomplish today?" is required (20+ characters). An "Add bullet
+  point" helper starts a new "- " line.
+- "Any problems or blockers?": the learner either describes the problem or ticks
+  "No problems today", so an empty problems section always means none.
+- The draft autosaves to localStorage and survives a refresh. ⌘/Ctrl+Enter submits.
+- After sending: review progress (Sent → Seen → Reviewed), the problem's follow-up
+  state, and the feedback conversation (the learner can reply).
+- Today's report can be edited until an admin has seen it.
+- History of the last two weeks of working days, with missed days shown in place.
+- Week progress, streak (weekends never break it), open problems and feedback count.
+- Student dashboard: a "Today's report" prompt above the hero card.
+- Shared state: both pages use `lib/store/daily-reports.ts` (zustand). A report
+  submitted by a student shows up in the admin inbox in the same session, and
+  admin replies appear on the student's page. The demo learner is
+  `DEMO_REPORTER_ID` in the mock file, so swap in the session user when the API exists.
 
 ## Interaction details
 
@@ -58,8 +97,13 @@ must authorise every admin action.
 components/admin/shared/       admin-ui.ts, motion.ts, Select, AdminAccessGuard, AdminModal, ActionMenu, ConfirmDialog, RowAccent
 components/admin/assignments/  AssignmentFormModal, AssignmentDetailDrawer, GradeSubmissionModal, StatusBadges
 components/admin/certificates/ CertificatePreview, IssueCertificateModal
+components/admin/reports/      ReportReader, MissingReportsDrawer, ReporterBadge, report-utils.ts
+components/student/reports/    ReportComposer, SubmittedReport, ReportHistory, report-stats.ts
+components/dashboard/student/  DailyReportPrompt (dashboard nudge)
+lib/store/daily-reports.ts     shared client store (reports + persisted drafts)
 lib/mock/admin-assignments.ts  types + sample data
 lib/mock/admin-certificates.ts types + sample data
+lib/mock/admin-daily-reports.ts types + sample data (dates relative to today)
 ```
 
 ## Wiring up the backend
