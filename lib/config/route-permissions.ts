@@ -16,6 +16,7 @@ export type RoutePermission = {
 export const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Admin dashboard and administration.
   { pattern: "/dashboard", roles: [UserType.ADMIN] },
+  { pattern: "/business", roles: [UserType.ADMIN] },
   { pattern: "/organization", roles: [UserType.ADMIN] },
   { pattern: "/system", roles: [UserType.ADMIN] },
 
@@ -28,7 +29,7 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Shared authenticated pages.
   {
     pattern: "/settings",
-    roles: [UserType.ADMIN, UserType.TUTOR, UserType.STUDENT],
+    roles: [/* UserType.ADMIN, UserType.TUTOR, */UserType.STUDENT],
   },
   {
     pattern: "/profile",
