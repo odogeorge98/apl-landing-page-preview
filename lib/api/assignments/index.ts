@@ -11,9 +11,12 @@ import type {
   GetTutorAssignmentsParams,
   GetStudentAssignmentsParams,
   StudentAssignment,
+  StudentAssignmentSubmissionApiResponse,
+  StudentAssignmentSubmissionRecord,
   StudentAssignmentSubmissionStatus,
   StudentAssignmentsApiResponse,
   StudentAssignmentsData,
+  SubmitStudentAssignmentDto,
   TutorAssignment,
   TutorAssignmentApiResponse,
   TutorAssignmentsApiResponse,
@@ -25,6 +28,10 @@ const UUID_V4_PATTERN =
 const ASSIGNMENT_STATUSES: readonly AssignmentStatus[] = ["DRAFT", "PUBLISHED", "ARCHIVED"];
 const STUDENT_SUBMISSION_STATUSES: readonly StudentAssignmentSubmissionStatus[] = [
   "NOT_SUBMITTED",
+  "DRAFT",
+  "RETURNED",
+  "IN_REVIEW",
+  "REVIEWED",
   "SUBMITTED",
   "GRADED",
 ];
@@ -188,8 +195,8 @@ function isValidStudentAssignment(value: unknown): value is StudentAssignment {
     typeof assignment.instructions === "string" &&
     typeof assignment.availableAt === "string" &&
     Number.isFinite(Date.parse(assignment.availableAt)) &&
-    typeof assignment.dueAt === "string" &&
-    Number.isFinite(Date.parse(assignment.dueAt)) &&
+    (assignment.dueAt === null ||
+      (typeof assignment.dueAt === "string" && Number.isFinite(Date.parse(assignment.dueAt)))) &&
     (typeof maxScore === "string" || typeof maxScore === "number") &&
     Number.isFinite(numericMaxScore) &&
     assignment.status === "PUBLISHED" &&
@@ -208,6 +215,43 @@ function isStudentAssignmentsData(value: unknown): value is StudentAssignmentsDa
     Array.isArray(data.items) &&
     (data.nextCursor === null || typeof data.nextCursor === "string") &&
     data.items.every(isValidStudentAssignment)
+  );
+}
+
+function isValidStudentAssignmentSubmissionRecord(
+  value: unknown,
+): value is StudentAssignmentSubmissionRecord {
+  if (!value || typeof value !== "object") return false;
+
+  const submission = value as Record<string, unknown>;
+  const score = submission.score;
+  const hasValidScore =
+    score === null ||
+    ((typeof score === "string" || typeof score === "number") &&
+      Number.isFinite(Number(score)));
+
+  return (
+    typeof submission.id === "string" && UUID_V4_PATTERN.test(submission.id) &&
+    typeof submission.assignmentId === "string" && UUID_V4_PATTERN.test(submission.assignmentId) &&
+    typeof submission.tutorId === "string" && UUID_V4_PATTERN.test(submission.tutorId) &&
+    typeof submission.programmeId === "string" && UUID_V4_PATTERN.test(submission.programmeId) &&
+    typeof submission.studentId === "string" && UUID_V4_PATTERN.test(submission.studentId) &&
+    typeof submission.attemptNumber === "number" &&
+    Number.isInteger(submission.attemptNumber) && submission.attemptNumber >= 1 &&
+    typeof submission.answerText === "string" &&
+    (submission.fileUrl === null || typeof submission.fileUrl === "string") &&
+    typeof submission.submittedAt === "string" && Number.isFinite(Date.parse(submission.submittedAt)) &&
+    (submission.status === "SUBMITTED" ||
+      submission.status === "IN_REVIEW" ||
+      submission.status === "REVIEWED" ||
+      submission.status === "RETURNED" ||
+      submission.status === "GRADED") &&
+    typeof submission.updatedAt === "string" && Number.isFinite(Date.parse(submission.updatedAt)) &&
+    typeof submission.createdAt === "string" && Number.isFinite(Date.parse(submission.createdAt)) &&
+    hasValidScore &&
+    (submission.feedback === null || typeof submission.feedback === "string") &&
+    (submission.reviewedAt === null ||
+      (typeof submission.reviewedAt === "string" && Number.isFinite(Date.parse(submission.reviewedAt))))
   );
 }
 
@@ -353,6 +397,36 @@ export const assignmentsApi = {
     }
     if (!isStudentAssignmentsData(result.data)) {
       throw new Error("The student assignments response was incomplete or invalid.");
+    }
+
+    return result.data;
+  },
+
+  /** POST /assignments/:id/submit — submit the authenticated student's answer. */
+  submitForStudent: async (
+    assignmentId: string,
+    payload: SubmitStudentAssignmentDto,
+  ): Promise<StudentAssignmentSubmissionRecord> => {
+    const normalizedAssignmentId = assertUuid(assignmentId, "assignment ID");
+    if (typeof payload.answerText !== "string" || payload.answerText.trim().length === 0) {
+      throw new Error("Write an answer before submitting this assignment.");
+    }
+
+    // Keep the answer text intact so Markdown and intentional whitespace survive the request.
+    const response = await http.post<StudentAssignmentSubmissionApiResponse>(
+      `/assignments/${encodeURIComponent(normalizedAssignmentId)}/submit`,
+      { answerText: payload.answerText },
+    );
+    const result = response.data;
+
+    if (result.status !== "success") {
+      throw new Error(result.message || "Unable to submit this assignment.");
+    }
+    if (
+      !isValidStudentAssignmentSubmissionRecord(result.data) ||
+      result.data.assignmentId !== normalizedAssignmentId
+    ) {
+      throw new Error("The assignment submission response was incomplete or invalid.");
     }
 
     return result.data;

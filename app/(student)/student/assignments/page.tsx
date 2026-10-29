@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Search,
@@ -21,21 +22,24 @@ import MainLayout from "@/components/layout/dashboard/MainLayout";
 import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
 import { useStudentAssignments } from "@/lib/hooks/assignments/use-student-assignments";
 import type { StudentAssignment } from "@/lib/interfaces/assignments";
+import useStudentAssignmentAttemptStore from "@/lib/store/student-assignment-attempts";
 import { cn } from "@/lib/utils";
 
-type StudentAssignmentStatus = "Pending" | "Submitted" | "Graded" | "Overdue" | "Upcoming";
+type StudentAssignmentStatus = "Pending" | "Submitted" | "Returned" | "Graded" | "Overdue" | "Upcoming";
 
 type AssignmentView = {
   id: string;
   title: string;
   course: string;
   description: string;
-  dueDate: string;
+  dueDate: string | null;
   availableAt: string;
   points: number;
   status: StudentAssignmentStatus;
   score?: number;
   instructions: string[];
+  source: StudentAssignment;
+  submissionStatus?: string;
 };
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -48,21 +52,25 @@ const statusStyles: Record<StudentAssignmentStatus, string> = {
   Pending: "bg-[#fff7dc] text-[#765800] border-[#f5e6a9]",
   Upcoming: "bg-blue-50 text-blue-700 border-blue-100",
   Submitted: "bg-blue-50 text-blue-700 border-blue-100",
+  Returned: "bg-amber-50 text-amber-800 border-amber-200",
   Graded: "bg-emerald-50 text-emerald-700 border-emerald-100",
   Overdue: "bg-red-50 text-red-700 border-red-100",
 };
 
-function formatDateTime(value: string) {
+function formatDateTime(value: string | null) {
+  if (value === null) return "No deadline";
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "Date unavailable";
   return new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Lagos" }).format(date);
 }
 
 function getAssignmentStatus(assignment: StudentAssignment, now = Date.now()): StudentAssignmentStatus {
-  if (assignment.submission?.status === "GRADED") return "Graded";
-  if (assignment.submission?.status === "SUBMITTED") return "Submitted";
-  const dueAt = Date.parse(assignment.dueAt);
+  const submissionStatus = assignment.submission?.status;
+  if (submissionStatus === "GRADED" || submissionStatus === "REVIEWED") return "Graded";
+  if (submissionStatus === "SUBMITTED" || submissionStatus === "IN_REVIEW") return "Submitted";
+  const dueAt = assignment.dueAt === null ? Number.POSITIVE_INFINITY : Date.parse(assignment.dueAt);
   if (Number.isFinite(dueAt) && dueAt < now) return "Overdue";
+  if (submissionStatus === "RETURNED") return "Returned";
   const availableAt = Date.parse(assignment.availableAt);
   if (Number.isFinite(availableAt) && availableAt > now) return "Upcoming";
   return "Pending";
@@ -86,6 +94,8 @@ function toAssignmentView(assignment: StudentAssignment): AssignmentView {
     status: getAssignmentStatus(assignment),
     ...(numericScore !== undefined && Number.isFinite(numericScore) ? { score: numericScore } : {}),
     instructions,
+    source: assignment,
+    submissionStatus: assignment.submission?.status,
   };
 }
 
@@ -94,6 +104,7 @@ function getDeadline(assignment: AssignmentView) {
   if (assignment.status === "Submitted") return "Submission received";
   if (assignment.status === "Overdue") return "Deadline passed";
   if (assignment.status === "Upcoming") return `Available ${formatDateTime(assignment.availableAt)}`;
+  if (assignment.dueDate === null) return "No submission deadline";
 
   const dateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos", year: "numeric", month: "2-digit", day: "2-digit" });
   const todayKey = dateFormatter.format(new Date());
@@ -107,6 +118,8 @@ function getDeadline(assignment: AssignmentView) {
 }
 
 export default function AssignmentsPage() {
+  const router = useRouter();
+  const rememberAssignment = useStudentAssignmentAttemptStore((state) => state.rememberAssignment);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
@@ -395,6 +408,8 @@ export default function AssignmentsPage() {
                                 ? "Awaiting review"
                                 : assignment.status === "Overdue"
                                   ? "Submission deadline has passed"
+                                  : assignment.status === "Returned"
+                                    ? "Returned for changes — resubmission is available"
                                   : "Remember to submit before the deadline"}
                             </p>
                           )}
@@ -535,6 +550,37 @@ export default function AssignmentsPage() {
               <p className="mt-4 text-xs leading-5 text-[#8490a6]">
               Assignment availability and deadlines are shown in West Africa Time. Submission and grading details appear here when available.
               </p>
+
+              {(selectedAssignment.status === "Pending" || selectedAssignment.status === "Returned") && (
+                <div className="mt-4 rounded-xl border border-[#e4e9f2] bg-[#f8f9fc] p-4">
+                  <p className="text-sm font-semibold text-[#101d49]">
+                    {selectedAssignment.status === "Returned" ? "Revise your response" : "Ready to begin?"}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[#64718a]">
+                    Your in-progress answer is saved only in this browser on this device. It is sent to your tutor when you submit.
+                  </p>
+                </div>
+              )}
+
+              {(selectedAssignment.status === "Pending" || selectedAssignment.status === "Returned") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    rememberAssignment(selectedAssignment.source);
+                    router.push(`/student/assignments/${encodeURIComponent(selectedAssignment.id)}/attempt`);
+                  }}
+                  className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#f5c542] px-4 py-3 text-sm font-bold text-[#101d49] transition hover:bg-[#f8d35f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#101d49] focus-visible:ring-offset-2"
+                >
+                  {selectedAssignment.status === "Returned" ? "Revise and resubmit" : "Start assignment"}
+                  <ArrowRight size={16} />
+                </button>
+              )}
+
+              {selectedAssignment.status === "Upcoming" && (
+                <p className="mt-4 rounded-xl bg-blue-50 p-3 text-sm text-blue-800">
+                  This assignment becomes available {formatDateTime(selectedAssignment.availableAt)}.
+                </p>
+              )}
 
               <button
                 type="button"
