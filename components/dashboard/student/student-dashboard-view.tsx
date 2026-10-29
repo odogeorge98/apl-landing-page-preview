@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { DailyReportPrompt } from "@/components/dashboard/student/DailyReportPrompt";
 import { useCurrentUser } from "@/lib/hooks/auth/use-current-user";
 import { useDashboardUIConfig } from "@/lib/hooks/ui-config/use-dashboard-ui-config";
 import type {
@@ -382,6 +383,9 @@ export default function StudentDashboardView({
           </div>
         </div>
       )}
+
+      {/* Daily report nudge, links to /student/reports. */}
+      <DailyReportPrompt />
 
       <section className="relative overflow-hidden rounded-2xl bg-[#101d49] px-6 py-7 text-white shadow-[0_12px_36px_rgba(16,29,73,0.14)] sm:px-8 sm:py-9">
         <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-24 size-72 rounded-full border border-white/10" />

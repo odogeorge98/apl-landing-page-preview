@@ -17,6 +17,7 @@ import {
   Megaphone,
   MessageSquare,
   MonitorPlay,
+  NotebookPen,
   Settings,
   ShieldCheck,
   UserCircle,
@@ -254,7 +255,7 @@ const adminConfig: DashboardUIConfig = {
     {
       label: "Reports",
       href: "/dashboard/reports",
-      description: "Learning and operational analytics",
+      description: "Daily student & intern reports",
       icon: BarChart3,
       section: "Insights",
     },
@@ -529,6 +530,13 @@ const studentConfig: DashboardUIConfig = {
       href: "/student/dashboard",
       description: "Your learning overview",
       icon: LayoutDashboard,
+      section: "Workspace",
+    },
+    {
+      label: "Daily report",
+      href: "/student/reports",
+      description: "Tell us what you did today",
+      icon: NotebookPen,
       section: "Workspace",
     },
     {
