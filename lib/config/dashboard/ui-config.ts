@@ -335,7 +335,7 @@ const tutorConfig: DashboardUIConfig = {
       key: "create-assignment",
       title: "Create Assignment",
       description: "Prepare work for your students.",
-      href: "/tutor/assignments/new",
+      href: "/tutor/assignments",
       icon: CheckSquare,
     },
     {
