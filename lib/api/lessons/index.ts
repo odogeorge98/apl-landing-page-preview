@@ -3,7 +3,11 @@ import type {
   CreateLessonApiResponse,
   CreateLessonDto,
   CreatedLesson,
+  GetStudentProgrammeLessonsParams,
   GetTutorLessonsParams,
+  StudentProgrammeLesson,
+  StudentProgrammeLessonsApiResponse,
+  StudentProgrammeLessonsData,
   TutorLesson,
   TutorLessonApiResponse,
   TutorLessonsApiResponse,
@@ -53,6 +57,40 @@ function isTutorLessonsData(value: unknown): value is TutorLessonsData {
   );
 }
 
+function isStudentProgrammeLesson(value: unknown): value is StudentProgrammeLesson {
+  if (!value || typeof value !== "object") return false;
+  const lesson = value as Record<string, unknown>;
+  return (
+    typeof lesson.id === "string" &&
+    typeof lesson.programmeId === "string" &&
+    typeof lesson.title === "string" &&
+    typeof lesson.description === "string" &&
+    typeof lesson.sequence === "number" &&
+    Number.isInteger(lesson.sequence) &&
+    lesson.sequence >= 1 &&
+    typeof lesson.durationMinutes === "number" &&
+    Number.isInteger(lesson.durationMinutes) &&
+    lesson.durationMinutes >= 1 &&
+    lesson.status === "PUBLISHED" &&
+    (lesson.publishedAt === null ||
+      (typeof lesson.publishedAt === "string" && Number.isFinite(Date.parse(lesson.publishedAt)))) &&
+    typeof lesson.createdAt === "string" &&
+    Number.isFinite(Date.parse(lesson.createdAt)) &&
+    typeof lesson.updatedAt === "string" &&
+    Number.isFinite(Date.parse(lesson.updatedAt))
+  );
+}
+
+function isStudentProgrammeLessonsData(value: unknown): value is StudentProgrammeLessonsData {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return (
+    Array.isArray(data.items) &&
+    (data.nextCursor === null || typeof data.nextCursor === "string") &&
+    data.items.every(isStudentProgrammeLesson)
+  );
+}
+
 function isCreatedLesson(value: unknown): value is CreatedLesson {
   if (!value || typeof value !== "object") return false;
 
@@ -76,6 +114,47 @@ function isCreatedLesson(value: unknown): value is CreatedLesson {
 
 /** POST /lessons — creates a lesson in a tutor-assigned programme. */
 export const lessonsApi = {
+  /** GET /lessons/programmes/:programmeId — cursor-paginated published lessons for an enrolled programme. */
+  listForStudentProgramme: async (
+    programmeId: string,
+    params: GetStudentProgrammeLessonsParams = {},
+  ): Promise<StudentProgrammeLessonsData> => {
+    const normalizedProgrammeId = programmeId.trim();
+    if (!UUID_V4_PATTERN.test(normalizedProgrammeId)) {
+      throw new Error("Choose a valid enrolled programme to view lessons.");
+    }
+    if (
+      params.limit !== undefined &&
+      (!Number.isInteger(params.limit) || params.limit < 1 || params.limit > 50)
+    ) {
+      throw new RangeError("Lesson page size must be an integer between 1 and 50.");
+    }
+    if (typeof params.cursor === "string" && params.cursor.length > 512) {
+      throw new RangeError("Lesson pagination cursor must be 512 characters or fewer.");
+    }
+
+    const queryParams: Record<string, string | number> = {};
+    if (params.limit !== undefined) queryParams.limit = params.limit;
+    // Cursor values are opaque; never trim or otherwise rewrite them.
+    if (typeof params.cursor === "string" && params.cursor.length > 0) {
+      queryParams.cursor = params.cursor;
+    }
+
+    const response = await http.get<StudentProgrammeLessonsApiResponse>(
+      `/lessons/programmes/${encodeURIComponent(normalizedProgrammeId)}`,
+      { params: queryParams },
+    );
+    const result = response.data;
+    if (result.status !== "success") {
+      throw new Error(result.message || "Unable to retrieve lessons for this programme.");
+    }
+    if (!isStudentProgrammeLessonsData(result.data)) {
+      throw new Error("The programme lessons response was incomplete or invalid.");
+    }
+
+    return result.data;
+  },
+
   /** GET /lessons/tutor — cursor-paginated lessons assigned to this tutor. */
   listForTutor: async (
     params: GetTutorLessonsParams = {},

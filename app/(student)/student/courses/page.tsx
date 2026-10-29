@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   AlertCircle,
   ArrowRight,
-  ArrowUpRight,
   BookOpen,
+  BookOpenCheck,
   CalendarDays,
   CircleHelp,
   Clock3,
   GraduationCap,
+  MoreVertical,
   RefreshCw,
+  TrendingUp,
 } from "lucide-react";
 
 import MainLayout from "@/components/layout/dashboard/MainLayout";
@@ -90,17 +94,96 @@ function EnrolmentCard({
     hours: number;
   };
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const prefersReducedMotion = useReducedMotion();
+  const menuId = `course-actions-${enrolment.id}`;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
+
   return (
-    <article className={cn(cardClass, "flex h-full flex-col overflow-hidden transition-shadow hover:shadow-[0_8px_24px_rgba(16,29,73,0.07)]")}>
-      <div className="h-1.5 bg-[#f5c542]" />
+    <article className={cn(cardClass, "relative flex h-full flex-col transition-shadow hover:shadow-[0_8px_24px_rgba(16,29,73,0.07)]")}>
+      <div className="h-1.5 rounded-t-2xl bg-[#f5c542]" />
       <div className="flex flex-1 flex-col p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#eaf0ff] text-[#101d49]">
             <GraduationCap size={23} aria-hidden="true" />
           </span>
-          <span className="inline-flex items-center rounded-full bg-[#e7f5ee] px-3 py-1 text-xs font-semibold text-[#16845b]">
-            Enrolled
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-[#e7f5ee] px-3 py-1 text-xs font-semibold text-[#16845b]">
+              Enrolled
+            </span>
+            <div className="relative" ref={menuRef}>
+              <button
+                ref={triggerRef}
+                type="button"
+                aria-label={`Actions for ${programme?.name ?? "this programme"}`}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                aria-controls={menuId}
+                onClick={() => setMenuOpen((open) => !open)}
+                className="inline-flex size-9 items-center justify-center rounded-xl border border-[#e4e9f2] bg-white text-[#52627f] transition hover:border-[#cbd4e3] hover:bg-[#f6f8fc] hover:text-[#101d49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542]"
+              >
+                <MoreVertical size={18} aria-hidden="true" />
+              </button>
+              <AnimatePresence>
+                {menuOpen && (
+                  <motion.div
+                    id={menuId}
+                    role="menu"
+                    aria-label={`${programme?.name ?? "Programme"} actions`}
+                    initial={prefersReducedMotion ? false : { opacity: 0, y: -6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={prefersReducedMotion ? undefined : { opacity: 0, y: -4, scale: 0.985 }}
+                    transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.18, ease: "easeOut" }}
+                    className="absolute right-0 top-[calc(100%+8px)] z-30 w-56 origin-top-right rounded-xl border border-[#e4e9f2] bg-white p-1.5 shadow-[0_14px_40px_rgba(16,29,73,0.16)]"
+                  >
+                    <p role="presentation" className="px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#8995aa]">
+                      Programme actions
+                    </p>
+                    <Link
+                      href={`/student/lessons?programmeId=${encodeURIComponent(enrolment.programmeId)}`}
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-[#34415e] transition hover:bg-[#f4f6fa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542]"
+                    >
+                      <BookOpenCheck size={16} aria-hidden="true" />
+                      View lessons
+                    </Link>
+                    <Link
+                      href="/student/progress"
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-[#34415e] transition hover:bg-[#f4f6fa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542]"
+                    >
+                      <TrendingUp size={16} aria-hidden="true" />
+                      View learning progress
+                    </Link>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
 
         <div className="mt-5 min-w-0 flex-1">
@@ -135,13 +218,6 @@ function EnrolmentCard({
           </p>
         )}
 
-        <Link
-          href="/student/progress"
-          className="mt-5 inline-flex min-h-10 items-center justify-between gap-2 rounded-xl bg-[#f4f6fa] px-4 py-2.5 text-sm font-semibold text-[#101d49] transition hover:bg-[#eaf0ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#101d49]"
-        >
-          View learning progress
-          <ArrowUpRight size={16} aria-hidden="true" />
-        </Link>
       </div>
     </article>
   );
@@ -308,7 +384,7 @@ export default function StudentCoursesPage() {
                   href="/student/dashboard"
                   className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#f5c542] px-4 py-2 text-sm font-semibold text-[#101d49] transition hover:bg-[#edb92e]"
                 >
-                  Back to dashboard <ArrowUpRight size={15} aria-hidden="true" />
+                  Back to dashboard <ArrowRight size={15} aria-hidden="true" />
                 </Link>
               </section>
             )}

@@ -1,68 +1,73 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+  AlertTriangle,
   ArrowLeft,
+  BookOpen,
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock3,
-  Edit3,
+  ExternalLink,
+  MapPin,
   Plus,
-  Trash2,
-  BookOpen,
-  Users,
+  RefreshCw,
+  Video,
   X,
-  AlertTriangle,
 } from "lucide-react";
 import MainLayout from "@/components/layout/dashboard/MainLayout";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimeInput } from "@/components/ui/TimeInput";
+import { useTutorSessions } from "@/lib/hooks/tutor-sessions/use-tutor-sessions";
+import { useCreateTutorSession } from "@/lib/hooks/tutor-sessions/use-create-tutor-session";
+import { useMyTutorProgrammes } from "@/lib/hooks/tutor-programmes/use-my-programmes";
+import { useTutorLessons } from "@/lib/hooks/lessons/use-tutor-lessons";
+import type { CreateTutorSessionDto, TutorSession } from "@/lib/interfaces/tutor-sessions";
 
-type ClassSchedule = {
-  id: string;
-  course: string;
-  grade: string;
-  cohort: string;
+type SessionForm = {
+  programmeId: string;
+  lessonId: string;
+  title: string;
   date: string;
-  startTime: string;
-  endTime: string;
+  startsAt: string;
+  endsAt: string;
   location: string;
+  meetingUrl: string;
   notes: string;
 };
 
-const COURSES_KEY = "nugi-tutor-courses";
-const SCHEDULES_KEY = "nugi-tutor-schedules";
-
-const initialCourses = [
-  "Web Development",
-  "UI/UX Design",
-  "Data Analysis",
-];
-
-const grades = [
-  "Junior Grade",
-  "Intermediate Grade",
-  "Senior Grade",
-];
-
-const cohorts = [
-  "Cohort A — Early Intake",
-  "Cohort B — Later Intake",
-  "Cohort C — New Intake",
-];
-
-function getLocalDateString(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+function localDateString(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function addDays(dateString: string, amount: number) {
   const date = new Date(`${dateString}T12:00:00`);
   date.setDate(date.getDate() + amount);
-  return getLocalDateString(date);
+  return localDateString(date);
+}
+
+function getWeekStart(date: Date) {
+  const monday = new Date(date);
+  monday.setHours(12, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  return localDateString(monday);
+}
+
+function getWeekDays(weekStart: string) {
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addDays(weekStart, index);
+    const parsed = new Date(`${date}T12:00:00`);
+    return {
+      date,
+      day: parsed.toLocaleDateString("en-US", { weekday: "short" }),
+      number: parsed.getDate(),
+    };
+  });
 }
 
 function formatDate(dateString: string) {
@@ -73,249 +78,140 @@ function formatDate(dateString: string) {
   });
 }
 
-function formatTime(time: string) {
-  if (!time) return "";
-
-  const [hours, minutes] = time.split(":").map(Number);
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-
-  return date.toLocaleTimeString("en-US", {
+function formatSessionTime(isoDate: string) {
+  return new Date(isoDate).toLocaleTimeString("en-GB", {
     hour: "numeric",
     minute: "2-digit",
   });
 }
 
-function getWeekStart(date: Date) {
-  const result = new Date(date);
-  result.setHours(12, 0, 0, 0);
-
-  const day = result.getDay();
-  result.setDate(result.getDate() - (day === 0 ? 6 : day - 1));
-
-  return getLocalDateString(result);
+function toLocalDate(isoDate: string) {
+  return localDateString(new Date(isoDate));
 }
 
-function getWeekDays(weekStart: string) {
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = addDays(weekStart, index);
-    const parsed = new Date(`${date}T12:00:00`);
-
-    return {
-      date,
-      day: parsed.toLocaleDateString("en-US", {
-        weekday: "short",
-      }),
-      number: parsed.getDate(),
-      fullDay: parsed.toLocaleDateString("en-US", {
-        weekday: "long",
-      }),
-    };
-  });
+function toIsoDateTime(date: string, time: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const [hours, minutes] = time.split(":").map(Number);
+  const value = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  if (
+    !Number.isFinite(value.getTime()) ||
+    value.getFullYear() !== year ||
+    value.getMonth() !== month - 1 ||
+    value.getDate() !== day ||
+    value.getHours() !== hours ||
+    value.getMinutes() !== minutes
+  ) {
+    throw new Error("Enter a valid session date and time.");
+  }
+  return value.toISOString();
 }
 
-function getSampleSchedules(): ClassSchedule[] {
-  const today = getLocalDateString(new Date());
-  const weekStart = getWeekStart(new Date());
-
-  return [
-    {
-      id: "sample-1",
-      course: "Web Development",
-      grade: "Junior Grade",
-      cohort: "Cohort A — Early Intake",
-      date: weekStart,
-      startTime: "09:00",
-      endTime: "10:30",
-      location: "Room 1",
-      notes: "HTML and CSS fundamentals",
-    },
-    {
-      id: "sample-2",
-      course: "Web Development",
-      grade: "Intermediate Grade",
-      cohort: "Cohort B — Later Intake",
-      date: weekStart,
-      startTime: "11:00",
-      endTime: "12:30",
-      location: "Room 2",
-      notes: "React and TypeScript",
-    },
-    {
-      id: "sample-3",
-      course: "UI/UX Design",
-      grade: "Junior Grade",
-      cohort: "Cohort C — New Intake",
-      date: addDays(weekStart, 2),
-      startTime: "14:00",
-      endTime: "15:30",
-      location: "Design Lab",
-      notes: "Introduction to design",
-    },
-    {
-      id: "sample-4",
-      course: "Data Analysis",
-      grade: "Senior Grade",
-      cohort: "Cohort A — Early Intake",
-      date: today,
-      startTime: "16:00",
-      endTime: "17:00",
-      location: "Room 3",
-      notes: "",
-    },
-  ];
+function createEmptyForm(date: string, programmeId = ""): SessionForm {
+  return {
+    programmeId,
+    lessonId: "",
+    title: "",
+    date,
+    startsAt: "09:00",
+    endsAt: "10:00",
+    location: "",
+    meetingUrl: "",
+    notes: "",
+  };
 }
 
-const emptyForm = {
-  course: "Web Development",
-  newCourse: "",
-  grade: "Junior Grade",
-  cohort: cohorts[0],
-  date: getLocalDateString(new Date()),
-  startTime: "09:00",
-  endTime: "10:00",
-  location: "",
-  notes: "",
-};
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unable to create this session. Please try again.";
+}
 
 export default function TutorSchedulePage() {
-  const [courses, setCourses] = useState(initialCourses);
-  const [schedules, setSchedules] = useState<ClassSchedule[]>([]);
-  const [weekStart, setWeekStart] = useState(
-    () => getWeekStart(new Date()),
-  );
-  const [selectedDate, setSelectedDate] = useState(
-    () => getLocalDateString(new Date()),
-  );
-
+  const prefersReducedMotion = useReducedMotion();
+  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
+  const [weekDirection, setWeekDirection] = useState(1);
+  const [selectedDate, setSelectedDate] = useState(() => localDateString(new Date()));
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
-  const [storageReady, setStorageReady] = useState(false);
+  const [form, setForm] = useState<SessionForm>(() => createEmptyForm(localDateString(new Date())));
   const [formError, setFormError] = useState("");
-  const [showAllCourses, setShowAllCourses] = useState(false);
+  const isSavingRef = useRef(false);
 
-  // Load local sample data and previously saved browser data.
-  useEffect(() => {
-    try {
-      const savedCourses = localStorage.getItem(COURSES_KEY);
-      const savedSchedules = localStorage.getItem(SCHEDULES_KEY);
+  const sessionsQuery = useTutorSessions({ limit: 50 });
+  const programmesQuery = useMyTutorProgrammes();
+  const createSession = useCreateTutorSession();
+  const lessonsQuery = useTutorLessons(
+    { programmeId: form.programmeId || undefined, limit: 50 },
+    { enabled: modalOpen && Boolean(form.programmeId) },
+  );
 
-      if (savedCourses) {
-        const parsedCourses: unknown = JSON.parse(savedCourses);
-
-        if (
-          Array.isArray(parsedCourses) &&
-          parsedCourses.every(
-            (course) => typeof course === "string",
-          )
-        ) {
-          setCourses(Array.from(new Set([...initialCourses, ...parsedCourses])));
-        }
-      }
-
-      if (savedSchedules) {
-        const parsedSchedules: unknown = JSON.parse(savedSchedules);
-
-        if (
-          Array.isArray(parsedSchedules) &&
-          parsedSchedules.every(
-            (schedule) =>
-              schedule &&
-              typeof schedule.id === "string" &&
-              typeof schedule.course === "string" &&
-              typeof schedule.date === "string" &&
-              typeof schedule.startTime === "string" &&
-              typeof schedule.endTime === "string",
-          )
-        ) {
-          setSchedules(parsedSchedules);
-        } else {
-          setSchedules(getSampleSchedules());
-        }
-      } else {
-        setSchedules(getSampleSchedules());
-      }
-    } catch {
-      setSchedules(getSampleSchedules());
-    } finally {
-      setStorageReady(true);
+  const sessions = useMemo(() => {
+    const unique = new Map<string, TutorSession>();
+    for (const page of sessionsQuery.data?.pages ?? []) {
+      for (const session of page.items) unique.set(session.id, session);
     }
-  }, []);
+    return Array.from(unique.values()).sort(
+      (a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt),
+    );
+  }, [sessionsQuery.data]);
 
-  // Save schedules and courses locally in this browser.
-  useEffect(() => {
-    if (!storageReady) return;
+  const programmes = useMemo(() => {
+    const unique = new Map<string, { id: string; name: string }>();
+    for (const page of programmesQuery.data?.pages ?? []) {
+      for (const assignment of page.items) {
+        unique.set(assignment.programme.id, assignment.programme);
+      }
+    }
+    return Array.from(unique.values());
+  }, [programmesQuery.data]);
 
-    localStorage.setItem(COURSES_KEY, JSON.stringify(courses));
-    localStorage.setItem(SCHEDULES_KEY, JSON.stringify(schedules));
-  }, [courses, schedules, storageReady]);
-
-  const weekDays = useMemo(
-    () => getWeekDays(weekStart),
-    [weekStart],
+  const lessons = lessonsQuery.data?.items ?? [];
+  const weekDays = useMemo(() => getWeekDays(weekStart), [weekStart]);
+  const weekEnd = addDays(weekStart, 6);
+  const weeklySessions = useMemo(
+    () => sessions.filter((session) => {
+      const date = toLocalDate(session.startsAt);
+      return date >= weekStart && date <= weekEnd;
+    }),
+    [sessions, weekStart, weekEnd],
   );
-
-  const weeklySchedules = useMemo(
-    () =>
-      schedules
-        .filter(
-          (schedule) =>
-            schedule.date >= weekStart &&
-            schedule.date <= addDays(weekStart, 6),
-        )
-        .sort(
-          (a, b) =>
-            a.date.localeCompare(b.date) ||
-            a.startTime.localeCompare(b.startTime),
-        ),
-    [schedules, weekStart],
-  );
-
-  const today = getLocalDateString(new Date());
-
-  const todaySchedules = schedules.filter(
-    (schedule) => schedule.date === today,
-  );
-
-  const upcomingCount = schedules.filter(
-    (schedule) => schedule.date >= today,
+  const today = localDateString(new Date());
+  const todayCount = sessions.filter((session) =>
+    toLocalDate(session.startsAt) === today,
   ).length;
-
-  const selectedSchedules = weeklySchedules.filter(
-    (schedule) => schedule.date === selectedDate,
+  const upcomingCount = sessionsQuery.data?.pages[0]?.upcomingSessions ?? 0;
+  const selectedSessions = weeklySessions.filter(
+    (session) => toLocalDate(session.startsAt) === selectedDate,
   );
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const body = document.body;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const currentPaddingRight = Number.parseFloat(window.getComputedStyle(body).paddingRight) || 0;
+    body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) body.style.paddingRight = `${currentPaddingRight + scrollbarWidth}px`;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isSavingRef.current) setModalOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [modalOpen]);
 
   function openCreateModal(date = selectedDate) {
-    setEditingId(null);
-    setForm({
-      ...emptyForm,
-      course: courses[0] || "__new__",
-      date,
-    });
-    setFormError("");
-    setModalOpen(true);
-  }
-
-  function openEditModal(schedule: ClassSchedule) {
-    setEditingId(schedule.id);
-    setForm({
-      course: schedule.course,
-      newCourse: "",
-      grade: schedule.grade,
-      cohort: schedule.cohort,
-      date: schedule.date,
-      startTime: schedule.startTime,
-      endTime: schedule.endTime,
-      location: schedule.location,
-      notes: schedule.notes,
-    });
+    const firstProgrammeId = programmes[0]?.id ?? "";
+    const todayDate = localDateString(new Date());
+    setForm(createEmptyForm(date < todayDate ? todayDate : date, firstProgrammeId));
     setFormError("");
     setModalOpen(true);
   }
 
   function changeWeek(amount: number) {
+    setWeekDirection(amount);
     const nextWeek = addDays(weekStart, amount * 7);
     setWeekStart(nextWeek);
     setSelectedDate(nextWeek);
@@ -323,783 +219,419 @@ export default function TutorSchedulePage() {
 
   function selectDate(date: string) {
     setSelectedDate(date);
-
-    if (date < weekStart || date > addDays(weekStart, 6)) {
+    if (date < weekStart || date > weekEnd) {
       setWeekStart(getWeekStart(new Date(`${date}T12:00:00`)));
     }
   }
 
-  function handleSave(event: React.FormEvent<HTMLFormElement>) {
+  async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
-
-    const course =
-      form.course === "__new__"
-        ? form.newCourse.trim()
-        : form.course;
-
-    if (!course) {
-      setFormError("Please select a course or enter a new course name.");
+    if (!form.programmeId) {
+      setFormError("Select one of your assigned programmes.");
+      return;
+    }
+    if (!form.title.trim()) {
+      setFormError("Enter a title for this class.");
+      return;
+    }
+    if (form.date < localDateString(new Date())) {
+      setFormError("Choose today or a future date for this class.");
       return;
     }
 
-    if (!form.date || !form.startTime || !form.endTime) {
-      setFormError("Please complete the date and class times.");
-      return;
-    }
-
-    if (form.endTime <= form.startTime) {
-      setFormError("The end time must be later than the start time.");
-      return;
-    }
-
-    const hasConflict = schedules.some((schedule) => {
-      if (schedule.id === editingId || schedule.date !== form.date) {
-        return false;
-      }
-
-      return (
-        form.startTime < schedule.endTime &&
-        form.endTime > schedule.startTime
-      );
-    });
-
-    if (hasConflict) {
-      setFormError(
-        "This time overlaps another scheduled class. Please choose another time.",
-      );
-      return;
-    }
-
-    setSaving(true);
-
+    let payload: CreateTutorSessionDto;
     try {
-      if (!courses.includes(course)) {
-        setCourses((previous) => [...previous, course]);
-      }
-
-      const updatedSchedule: ClassSchedule = {
-        id: editingId || crypto.randomUUID(),
-        course,
-        grade: form.grade,
-        cohort: form.cohort,
-        date: form.date,
-        startTime: form.startTime,
-        endTime: form.endTime,
-        location: form.location.trim(),
-        notes: form.notes.trim(),
+      payload = {
+        programmeId: form.programmeId,
+        ...(form.lessonId ? { lessonId: form.lessonId } : {}),
+        title: form.title.trim(),
+        startsAt: toIsoDateTime(form.date, form.startsAt),
+        endsAt: toIsoDateTime(form.date, form.endsAt),
+        ...(form.location.trim() ? { location: form.location.trim() } : {}),
+        ...(form.meetingUrl.trim() ? { meetingUrl: form.meetingUrl.trim() } : {}),
+        ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
       };
+      if (Date.parse(payload.endsAt) <= Date.parse(payload.startsAt)) {
+        setFormError("The end time must be later than the start time.");
+        return;
+      }
+    } catch (error) {
+      setFormError(getErrorMessage(error));
+      return;
+    }
 
-      setSchedules((previous) => {
-        if (editingId) {
-          return previous.map((schedule) =>
-            schedule.id === editingId ? updatedSchedule : schedule,
-          );
-        }
-
-        return [...previous, updatedSchedule];
-      });
-
+    isSavingRef.current = true;
+    try {
+      await createSession.mutateAsync(payload);
       setWeekStart(getWeekStart(new Date(`${form.date}T12:00:00`)));
       setSelectedDate(form.date);
       setModalOpen(false);
-      setForm(emptyForm);
-    } catch {
-      setFormError("Unable to save this schedule. Please try again.");
+      setForm(createEmptyForm(localDateString(new Date()), programmes[0]?.id ?? ""));
+    } catch (error) {
+      setFormError(getErrorMessage(error));
     } finally {
-      setSaving(false);
+      isSavingRef.current = false;
     }
   }
 
-  function deleteSchedule(id: string) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this class schedule?",
-    );
-
-    if (!confirmed) return;
-
-    setSchedules((previous) =>
-      previous.filter((schedule) => schedule.id !== id),
-    );
-  }
-
-  function removeCourse(course: string) {
-    const isUsed = schedules.some(
-      (schedule) => schedule.course === course,
-    );
-
-    if (isUsed) {
-      window.alert(
-        "This course is assigned to a schedule. Remove or update those schedules first.",
-      );
-      return;
-    }
-
-    if (initialCourses.includes(course)) {
-      window.alert("Default courses cannot be removed.");
-      return;
-    }
-
-    if (!window.confirm(`Remove "${course}" from your course list?`)) {
-      return;
-    }
-
-    setCourses((previous) => previous.filter((item) => item !== course));
-  }
+  const modalTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.32, ease: "easeOut" as const };
+  const weekTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.24, ease: "easeOut" as const };
 
   return (
     <MainLayout>
       <div className="min-h-screen bg-[#F6F8FC] p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-7">
-          {/* Header */}
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <Link
-                href="/tutor/attendance"
-                className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-[#64718A] hover:text-[#101D49]"
-              >
-                <ArrowLeft size={17} />
-                Back to Attendance
+              <Link href="/tutor/attendance" className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-[#64718A] hover:text-[#101D49]">
+                <ArrowLeft size={17} /> Back to Attendance
               </Link>
-
-              <p className="mb-2 text-sm text-[#64718A]">
-                Tutor Workspace / Schedule
-              </p>
-
-              <h1 className="text-2xl font-bold text-[#101D49] sm:text-3xl">
-                Class Schedule
-              </h1>
-
+              <p className="mb-2 text-sm text-[#64718A]">Tutor Workspace / Schedule</p>
+              <h1 className="text-2xl font-bold text-[#101D49] sm:text-3xl">Class Schedule</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#64718A]">
-                Organise your classes, manage different student intakes,
-                and keep track of your teaching timetable.
+                Plan teaching sessions for your assigned programmes and keep your timetable up to date.
               </p>
             </div>
-
             <button
+              type="button"
               onClick={() => openCreateModal()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#101D49] px-5 py-3 font-semibold text-white transition hover:bg-[#172A60]"
+              disabled={programmesQuery.isPending || programmes.length === 0}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#101D49] px-5 py-3 font-semibold text-white transition hover:bg-[#172A60] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Plus size={19} />
-              Create Schedule
+              <Plus size={19} /> Create Schedule
             </button>
           </div>
 
-          {/* Summary cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-2xl border border-[#E4E9F2] bg-white p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[#64718A]">Classes Today</p>
-                  <h2 className="mt-2 text-3xl font-bold text-[#101D49]">
-                    {todaySchedules.length}
-                  </h2>
-                </div>
-                <div className="rounded-xl bg-[#EAF0FF] p-3 text-[#101D49]">
-                  <CalendarDays size={23} />
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-[#64718A]">
-                Classes scheduled for today
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-[#E4E9F2] bg-white p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[#64718A]">Upcoming Classes</p>
-                  <h2 className="mt-2 text-3xl font-bold text-[#101D49]">
-                    {upcomingCount}
-                  </h2>
-                </div>
-                <div className="rounded-xl bg-[#FFF6D8] p-3 text-[#101D49]">
-                  <Clock3 size={23} />
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-[#64718A]">
-                Scheduled for today or later
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-[#E4E9F2] bg-white p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[#64718A]">Available Courses</p>
-                  <h2 className="mt-2 text-3xl font-bold text-[#101D49]">
-                    {courses.length}
-                  </h2>
-                </div>
-                <div className="rounded-xl bg-[#E8F7EE] p-3 text-[#16834A]">
-                  <BookOpen size={23} />
-                </div>
-              </div>
-              <button
-                onClick={() => setShowAllCourses((previous) => !previous)}
-                className="mt-3 text-xs font-semibold text-[#101D49] hover:underline"
-              >
-                {showAllCourses ? "Hide course list" : "Manage course list"}
-              </button>
-            </div>
+            <MetricCard title="Classes Today" value={todayCount} description="Scheduled sessions in your loaded calendar" icon={<CalendarDays size={23} />} iconClass="bg-[#EAF0FF] text-[#101D49]" />
+            <MetricCard title="Upcoming Classes" value={upcomingCount} description="Upcoming sessions across your schedule" icon={<Clock3 size={23} />} iconClass="bg-[#FFF6D8] text-[#101D49]" loading={sessionsQuery.isPending || sessionsQuery.isError} />
+            <MetricCard title="Assigned Programmes" value={programmes.length} description="Programmes available for scheduling" icon={<BookOpen size={23} />} iconClass="bg-[#E8F7EE] text-[#16834A]" loading={programmesQuery.isPending} />
           </div>
 
-          {/* Course management */}
-          {showAllCourses && (
-            <section className="rounded-2xl border border-[#E4E9F2] bg-white p-5 sm:p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <BookOpen size={20} className="text-[#101D49]" />
-                <h2 className="font-bold text-[#101D49]">
-                  Course List
-                </h2>
-              </div>
-
-              <p className="mb-4 text-sm text-[#64718A]">
-                Courses added from the schedule form appear here. Removing
-                a course does not remove any existing class records.
-              </p>
-
-              <div className="flex flex-wrap gap-2">
-                {courses.map((course) => (
-                  <div
-                    key={course}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#E4E9F2] bg-[#F6F8FC] px-3 py-2 text-sm text-[#101D49]"
-                  >
-                    <span>{course}</span>
-                    {!initialCourses.includes(course) && (
-                      <button
-                        type="button"
-                        onClick={() => removeCourse(course)}
-                        aria-label={`Remove ${course}`}
-                        className="rounded p-1 text-[#64718A] hover:bg-red-50 hover:text-red-600"
-                      >
-                        <X size={15} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
+          {programmesQuery.isError && (
+            <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+              <span>Could not load your assigned programmes: {getErrorMessage(programmesQuery.error)}</span>
+              <button type="button" onClick={() => programmesQuery.refetch()} className="font-semibold underline">Try again</button>
+            </div>
           )}
 
-          {/* Weekly calendar */}
           <section className="rounded-2xl border border-[#E4E9F2] bg-white p-5 sm:p-6">
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-bold text-[#101D49]">
-                  Weekly Timetable
-                </h2>
-                <p className="mt-1 text-sm text-[#64718A]">
-                  Select a day to view its scheduled classes.
-                </p>
+                <h2 className="text-lg font-bold text-[#101D49]">Weekly Timetable</h2>
+                <p className="mt-1 text-sm text-[#64718A]">Select a day to view its scheduled classes.</p>
               </div>
-
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => changeWeek(-1)}
-                  aria-label="Previous week"
-                  className="rounded-xl border border-[#E4E9F2] p-2.5 text-[#101D49] hover:bg-[#F6F8FC]"
-                >
-                  <ChevronLeft size={19} />
-                </button>
-
-                <span className="min-w-32 text-center text-sm font-semibold text-[#101D49]">
-                  {formatDate(weekStart)} – {formatDate(addDays(weekStart, 6))}
+                <button type="button" onClick={() => changeWeek(-1)} aria-label="Previous week" className="rounded-xl border border-[#E4E9F2] p-2.5 text-[#101D49] hover:bg-[#F6F8FC]"><ChevronLeft size={19} /></button>
+                <span className="min-w-44 text-center text-sm font-semibold text-[#101D49]">
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span key={weekStart} initial={prefersReducedMotion ? false : { opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={prefersReducedMotion ? undefined : { opacity: 0, y: -5 }} transition={weekTransition} className="inline-block">
+                      {formatDate(weekStart)} – {formatDate(weekEnd)}
+                    </motion.span>
+                  </AnimatePresence>
                 </span>
-
-                <button
-                  onClick={() => changeWeek(1)}
-                  aria-label="Next week"
-                  className="rounded-xl border border-[#E4E9F2] p-2.5 text-[#101D49] hover:bg-[#F6F8FC]"
-                >
-                  <ChevronRight size={19} />
-                </button>
+                <button type="button" onClick={() => changeWeek(1)} aria-label="Next week" className="rounded-xl border border-[#E4E9F2] p-2.5 text-[#101D49] hover:bg-[#F6F8FC]"><ChevronRight size={19} /></button>
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+            <AnimatePresence mode="wait" initial={false} custom={weekDirection}>
+              <motion.div
+                key={weekStart}
+                custom={weekDirection}
+                variants={{
+                  enter: (direction: number) => ({ opacity: 0, x: direction > 0 ? 24 : -24 }),
+                  center: { opacity: 1, x: 0 },
+                  exit: (direction: number) => ({ opacity: 0, x: direction > 0 ? -24 : 24 }),
+                }}
+                initial={prefersReducedMotion ? false : "enter"}
+                animate="center"
+                exit={prefersReducedMotion ? undefined : "exit"}
+                transition={weekTransition}
+                className="grid grid-cols-4 gap-2 sm:grid-cols-7"
+              >
               {weekDays.map((day) => {
                 const isSelected = selectedDate === day.date;
                 const isToday = today === day.date;
-                const dayCount = weeklySchedules.filter(
-                  (schedule) => schedule.date === day.date,
-                ).length;
-
+                const dayCount = weeklySessions.filter((session) => toLocalDate(session.startsAt) === day.date).length;
+                const hasScheduledClass = weeklySessions.some(
+                  (session) => toLocalDate(session.startsAt) === day.date && session.status === "SCHEDULED",
+                );
                 return (
-                  <button
-                    key={day.date}
-                    onClick={() => selectDate(day.date)}
-                    className={`rounded-xl border p-3 text-center transition ${
-                      isSelected
-                        ? "border-[#101D49] bg-[#101D49] text-white"
-                        : "border-[#E4E9F2] bg-white text-[#101D49] hover:bg-[#F6F8FC]"
-                    }`}
-                  >
-                    <span
-                      className={`block text-xs ${
-                        isSelected ? "text-white/70" : "text-[#64718A]"
-                      }`}
-                    >
-                      {day.day}
-                    </span>
-
-                    <span className="my-2 block text-lg font-bold">
-                      {day.number}
-                    </span>
-
-                    <span
-                      className={`mx-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
-                        isSelected
-                          ? "bg-white text-[#101D49]"
-                          : "bg-[#FFF6D8] text-[#101D49]"
-                      }`}
-                    >
-                      {dayCount}
-                    </span>
-
-                    {isToday && (
-                      <span className="mt-2 block text-[10px] font-semibold">
-                        Today
-                      </span>
-                    )}
+                  <button key={day.date} type="button" onClick={() => selectDate(day.date)} aria-pressed={isSelected} aria-label={`${day.day} ${day.number}, ${dayCount} ${dayCount === 1 ? "session" : "sessions"}${hasScheduledClass ? ", includes a scheduled class" : ""}`} className={`rounded-xl border p-3 text-center transition ${isSelected ? "border-[#101D49] bg-[#101D49] text-white" : hasScheduledClass ? "border-[#EBC13D] bg-[#FFF8E2] text-[#101D49] hover:bg-[#FFF2C2]" : "border-[#E4E9F2] bg-white text-[#101D49] hover:bg-[#F6F8FC]"}`}>
+                    <span className={`block text-xs ${isSelected ? "text-white/70" : "text-[#64718A]"}`}>{day.day}</span>
+                    <span className="my-2 block text-lg font-bold">{day.number}</span>
+                    <span className={`mx-auto flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-sm font-extrabold tabular-nums ${isSelected ? hasScheduledClass ? "bg-[#F5C542] text-[#101D49]" : "bg-white text-[#101D49]" : hasScheduledClass ? "bg-[#F5C542] text-[#101D49] shadow-sm" : "bg-[#F1F4F8] text-[#718099]"}`}>{dayCount}</span>
+                    {isToday && <span className="mt-2 block text-[10px] font-semibold">Today</span>}
                   </button>
                 );
               })}
-            </div>
+              </motion.div>
+            </AnimatePresence>
 
-            {/* Selected day's classes */}
             <div className="mt-7">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="font-bold text-[#101D49]">
-                    {new Date(`${selectedDate}T12:00:00`).toLocaleDateString(
-                      "en-US",
-                      { weekday: "long" },
-                    )}
-                  </h3>
-                  <p className="mt-1 text-sm text-[#64718A]">
-                    {formatDate(selectedDate)}
-                  </p>
+                  <h3 className="font-bold text-[#101D49]">{new Date(`${selectedDate}T12:00:00`).toLocaleDateString("en-US", { weekday: "long" })}</h3>
+                  <p className="mt-1 text-sm text-[#64718A]">{formatDate(selectedDate)}</p>
                 </div>
-
-                <button
-                  onClick={() => openCreateModal(selectedDate)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#E4E9F2] px-4 py-2.5 text-sm font-semibold text-[#101D49] hover:bg-[#F6F8FC]"
-                >
-                  <Plus size={17} />
-                  Add Class
+                <button type="button" onClick={() => openCreateModal(selectedDate)} disabled={programmes.length === 0} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#E4E9F2] px-4 py-2.5 text-sm font-semibold text-[#101D49] hover:bg-[#F6F8FC] disabled:cursor-not-allowed disabled:opacity-50">
+                  <Plus size={17} /> Add Class
                 </button>
               </div>
 
-              {selectedSchedules.length === 0 ? (
+              {sessionsQuery.isPending ? (
+                <div className="flex min-h-48 items-center justify-center rounded-xl border border-[#E4E9F2] text-sm text-[#64718A]" role="status"><RefreshCw size={17} className="mr-2 animate-spin" /> Loading your schedule…</div>
+              ) : sessionsQuery.isError ? (
+                <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-red-100 bg-red-50/50 px-5 text-center">
+                  <AlertTriangle size={25} className="mb-3 text-red-600" />
+                  <p className="font-semibold text-[#101D49]">Could not load your schedule</p>
+                  <p className="mt-2 max-w-lg text-sm text-[#64718A]">{getErrorMessage(sessionsQuery.error)}</p>
+                  <button type="button" onClick={() => sessionsQuery.refetch()} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#101D49] px-4 py-2 text-sm font-semibold text-white"><RefreshCw size={15} /> Try again</button>
+                </div>
+              ) : selectedSessions.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[#E4E9F2] px-5 py-12 text-center">
-                  <CalendarDays
-                    size={30}
-                    className="mx-auto mb-3 text-[#64718A]"
-                  />
-                  <p className="font-semibold text-[#101D49]">
-                    No classes scheduled
-                  </p>
-                  <p className="mt-2 text-sm text-[#64718A]">
-                    There are no classes planned for this day yet.
-                  </p>
-                  <button
-                    onClick={() => openCreateModal(selectedDate)}
-                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#101D49] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#172A60]"
-                  >
-                    <Plus size={16} />
-                    Create a Schedule
-                  </button>
+                  <CalendarDays size={30} className="mx-auto mb-3 text-[#64718A]" />
+                  <p className="font-semibold text-[#101D49]">No classes scheduled</p>
+                  <p className="mt-2 text-sm text-[#64718A]">There are no sessions planned for this day yet.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {selectedSchedules.map((schedule) => (
-                    <article
-                      key={schedule.id}
-                      className="rounded-xl border border-[#E4E9F2] bg-white p-4 sm:p-5"
-                    >
+                  {selectedSessions.map((session) => (
+                    <article key={session.id} className="rounded-xl border border-[#E4E9F2] bg-white p-4 sm:p-5">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="flex gap-3">
-                          <div className="flex min-w-[76px] flex-col items-center justify-center rounded-xl bg-[#EEF2FF] px-3 py-3 text-center">
-                            <span className="text-sm font-bold text-[#101D49]">
-                              {formatTime(schedule.startTime)}
-                            </span>
-                            <span className="my-1 text-xs text-[#64718A]">
-                              to
-                            </span>
-                            <span className="text-sm font-semibold text-[#101D49]">
-                              {formatTime(schedule.endTime)}
-                            </span>
+                        <div className="flex min-w-0 gap-3">
+                          <div className="flex min-w-[82px] flex-col items-center justify-center rounded-xl bg-[#EEF2FF] px-3 py-3 text-center">
+                            <span className="text-sm font-bold text-[#101D49]">{formatSessionTime(session.startsAt)}</span>
+                            <span className="my-1 text-xs text-[#64718A]">to</span>
+                            <span className="text-sm font-semibold text-[#101D49]">{formatSessionTime(session.endsAt)}</span>
                           </div>
-
                           <div className="min-w-0 flex-1">
-                            <h4 className="font-bold text-[#101D49]">
-                              {schedule.course}
-                            </h4>
-
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              <span className="rounded-lg bg-[#FFF6D8] px-2.5 py-1 text-xs font-medium text-[#101D49]">
-                                {schedule.grade}
-                              </span>
-                              <span className="rounded-lg bg-[#EAF0FF] px-2.5 py-1 text-xs font-medium text-[#101D49]">
-                                {schedule.cohort}
-                              </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="font-bold text-[#101D49]">{session.title}</h4>
+                              <SessionStatus status={session.status} />
                             </div>
-
-                            {schedule.location && (
-                              <p className="mt-3 text-sm text-[#64718A]">
-                                Location: {schedule.location}
-                              </p>
-                            )}
-
-                            {schedule.notes && (
-                              <p className="mt-2 text-sm leading-5 text-[#64718A]">
-                                {schedule.notes}
-                              </p>
-                            )}
+                            <p className="mt-1 text-sm font-bold text-[#34415E]">{session.programme?.name ?? "Assigned programme"}</p>
+                            {session.lesson?.title && <p className="mt-1 text-sm text-[#64718A]">Lesson {session.lesson.sequence}: {session.lesson.title}</p>}
+                            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#64718A]">
+                              {session.location && <span className="inline-flex items-center gap-1.5"><MapPin size={14} />{session.location}</span>}
+                              {session.meetingUrl && <a href={session.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 font-semibold text-[#101D49] hover:underline"><Video size={14} />Join meeting<ExternalLink size={12} /></a>}
+                            </div>
+                            {session.notes && <p className="mt-3 whitespace-pre-wrap text-sm leading-5 text-[#64718A]">{session.notes}</p>}
                           </div>
-                        </div>
-
-                        <div className="flex shrink-0 gap-2 self-end sm:self-start">
-                          <button
-                            onClick={() => openEditModal(schedule)}
-                            aria-label="Edit schedule"
-                            className="rounded-lg border border-[#E4E9F2] p-2.5 text-[#101D49] hover:bg-[#F6F8FC]"
-                          >
-                            <Edit3 size={17} />
-                          </button>
-
-                          <button
-                            onClick={() => deleteSchedule(schedule.id)}
-                            aria-label="Delete schedule"
-                            className="rounded-lg border border-red-100 p-2.5 text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 size={17} />
-                          </button>
                         </div>
                       </div>
                     </article>
                   ))}
                 </div>
               )}
+
+              {sessionsQuery.hasNextPage && (
+                <div className="mt-4 flex justify-center">
+                  <button type="button" onClick={() => sessionsQuery.fetchNextPage()} disabled={sessionsQuery.isFetchingNextPage} className="inline-flex items-center gap-2 rounded-xl border border-[#E4E9F2] bg-white px-4 py-2.5 text-sm font-semibold text-[#101D49] transition hover:bg-[#F6F8FC] disabled:opacity-60">
+                    {sessionsQuery.isFetchingNextPage && <RefreshCw size={15} className="animate-spin" />}
+                    {sessionsQuery.isFetchingNextPage ? "Loading more sessions…" : "Load more sessions"}
+                  </button>
+                </div>
+              )}
             </div>
           </section>
 
-          {/* Data notice */}
-          <div className="flex items-start gap-3 rounded-xl border border-[#F1DCA0] bg-[#FFF9E8] p-4">
-            <AlertTriangle
-              size={20}
-              className="mt-0.5 shrink-0 text-[#8A6700]"
-            />
-            <div>
-              <p className="text-sm font-semibold text-[#101D49]">
-                Sample schedule mode
-              </p>
-              <p className="mt-1 text-sm leading-6 text-[#64718A]">
-                Schedules and added courses are saved in this browser only.
-                They are not yet connected to the Nugi Innovations backend
-                and will not automatically appear on another device.
-              </p>
-            </div>
+          <div className="flex items-start gap-3 rounded-xl border border-[#E4E9F2] bg-white p-4">
+            <CheckCircle2 size={19} className="mt-0.5 shrink-0 text-[#16834A]" />
+            <p className="text-sm leading-6 text-[#64718A]">Sessions are synced with your tutor schedule. The upcoming total is supplied by the session service; calendar entries show the records loaded so far.</p>
           </div>
         </div>
       </div>
 
-      {/* Create / edit schedule modal */}
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#101D49]/50 p-4"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setModalOpen(false);
-            }
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="schedule-modal-title"
-            className="my-auto max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+      <AnimatePresence>
+        {modalOpen && (
+          <motion.div
+            key="create-tutor-session-overlay"
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+            transition={modalTransition}
+            className="fixed inset-0 z-[100] flex items-center justify-center overflow-x-hidden overflow-y-auto bg-[#071027]/60 p-4 backdrop-blur-sm"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget && !createSession.isPending) setModalOpen(false);
+            }}
           >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#E4E9F2] bg-white px-5 py-4 sm:px-7">
-              <div>
-                <h2
-                  id="schedule-modal-title"
-                  className="text-xl font-bold text-[#101D49]"
-                >
-                  {editingId ? "Edit Schedule" : "Create Class Schedule"}
-                </h2>
-                <p className="mt-1 text-sm text-[#64718A]">
-                  Set the course, student group, and class time.
-                </p>
+            <motion.section
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 20, scale: 0.975 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0, y: 10, scale: 0.985 }}
+              transition={modalTransition}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="session-modal-title"
+              className="no-scrollbar my-auto max-h-[92vh] w-full max-w-5xl overflow-x-hidden overflow-y-auto rounded-2xl border border-[#E4E9F2] bg-white shadow-[0_24px_80px_rgba(7,16,39,0.28)]"
+            >
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#E4E9F2] bg-white px-5 py-4 sm:px-7">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A96AA]">Tutor schedule</p>
+                  <h2 id="session-modal-title" className="mt-1 text-xl font-bold text-[#101D49]">Create a class session</h2>
+                  <p className="mt-1 text-sm text-[#64718A]">Add a session to one of your assigned programmes.</p>
+                </div>
+                <button type="button" onClick={() => setModalOpen(false)} disabled={createSession.isPending} aria-label="Close modal" className="rounded-lg p-2 text-[#64718A] transition hover:bg-[#F6F8FC] disabled:opacity-50"><X size={21} /></button>
               </div>
 
-              <button
-                onClick={() => setModalOpen(false)}
-                aria-label="Close modal"
-                className="rounded-lg p-2 text-[#64718A] hover:bg-[#F6F8FC]"
-              >
-                <X size={21} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-5 p-5 sm:p-7">
-              <div>
-                <label
-                  htmlFor="schedule-course"
-                  className="mb-2 block text-sm font-semibold text-[#101D49]"
-                >
-                  Course <span className="text-red-500">*</span>
-                </label>
-
-                <select
-                  id="schedule-course"
-                  required
-                  value={form.course}
-                  onChange={(event) => {
-                    setForm((previous) => ({
-                      ...previous,
-                      course: event.target.value,
-                    }));
-                  }}
-                  className="w-full rounded-xl border border-[#E4E9F2] bg-white px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49] focus:ring-2 focus:ring-[#101D49]/10"
-                >
-                  {courses.map((course) => (
-                    <option key={course} value={course}>
-                      {course}
-                    </option>
-                  ))}
-                  <option value="__new__">+ Add New Course</option>
-                </select>
-              </div>
-
-              {form.course === "__new__" && (
-                <div>
-                  <label
-                    htmlFor="new-course"
-                    className="mb-2 block text-sm font-semibold text-[#101D49]"
-                  >
-                    New Course Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="new-course"
-                    required
-                    value={form.newCourse}
-                    onChange={(event) =>
-                      setForm((previous) => ({
-                        ...previous,
-                        newCourse: event.target.value,
-                      }))
-                    }
-                    placeholder="Enter the new course name"
-                    className="w-full rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49] focus:ring-2 focus:ring-[#101D49]/10"
-                  />
-                  <p className="mt-2 text-xs text-[#64718A]">
-                    The new course will be added to this browser's course list
-                    when you save the schedule.
-                  </p>
+              <form onSubmit={handleCreate} className="space-y-5 p-5 sm:p-7">
+                <div className="grid gap-5 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                  <Field label="Programme" required htmlFor="session-programme">
+                    <AnimatedSelect
+                      id="session-programme"
+                      value={form.programmeId}
+                      onChange={(value) => setForm((current) => ({ ...current, programmeId: value, lessonId: "" }))}
+                      ariaLabel="Programme"
+                      fullWidth
+                      disabled={programmesQuery.isPending || programmes.length === 0}
+                      options={[
+                        { value: "", label: programmesQuery.isPending ? "Loading programmes…" : "Select a programme" },
+                        ...programmes.map((programme) => ({ value: programme.id, label: programme.name })),
+                      ]}
+                      className="min-h-12 w-full rounded-xl"
+                    />
+                    {programmesQuery.hasNextPage && <button type="button" onClick={() => programmesQuery.fetchNextPage()} disabled={programmesQuery.isFetchingNextPage} className="mt-1 text-xs font-semibold text-[#425579] hover:underline">{programmesQuery.isFetchingNextPage ? "Loading…" : "Load more assigned programmes"}</button>}
+                  </Field>
+                  <Field label="Lesson" htmlFor="session-lesson">
+                    <AnimatedSelect
+                      id="session-lesson"
+                      value={form.lessonId}
+                      onChange={(value) => setForm((current) => ({ ...current, lessonId: value }))}
+                      ariaLabel="Lesson (optional)"
+                      fullWidth
+                      wrapSelectedLabel
+                      disabled={!form.programmeId || lessonsQuery.isPending || lessons.length === 0}
+                      options={[
+                        { value: "", label: lessonsQuery.isPending ? "Loading lessons…" : "Programme level session" },
+                        ...lessons.map((lesson) => ({ value: lesson.id, label: `Lesson ${lesson.sequence}: ${lesson.title}` })),
+                      ]}
+                      className="min-h-12 w-full rounded-xl"
+                    />
+                    <p className="mt-1 text-xs text-[#64718A]">Optional. Leave empty for a programme-wide session.</p>
+                  </Field>
                 </div>
-              )}
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="schedule-grade"
-                    className="mb-2 block text-sm font-semibold text-[#101D49]"
-                  >
-                    Grade / Level
-                  </label>
-                  <select
-                    id="schedule-grade"
-                    value={form.grade}
-                    onChange={(event) =>
-                      setForm((previous) => ({
-                        ...previous,
-                        grade: event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-[#E4E9F2] bg-white px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
-                  >
-                    {grades.map((grade) => (
-                      <option key={grade} value={grade}>
-                        {grade}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {lessonsQuery.isError && form.programmeId && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Lessons could not be loaded. You can still schedule a programme-level session.</p>}
+
+                <Field label="Session title" required htmlFor="session-title">
+                  <input id="session-title" required maxLength={255} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="e.g. Network security live class" className="w-full rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none transition placeholder:text-[#9AA5B8] focus:border-[#A9B7D0] focus:ring-4 focus:ring-[#101D49]/5" />
+                </Field>
 
                 <div>
-                  <label
-                    htmlFor="schedule-cohort"
-                    className="mb-2 block text-sm font-semibold text-[#101D49]"
-                  >
-                    Cohort / Intake
-                  </label>
-                  <select
-                    id="schedule-cohort"
-                    value={form.cohort}
-                    onChange={(event) =>
-                      setForm((previous) => ({
-                        ...previous,
-                        cohort: event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-[#E4E9F2] bg-white px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
-                  >
-                    {cohorts.map((cohort) => (
-                      <option key={cohort} value={cohort}>
-                        {cohort}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="schedule-date"
-                  className="mb-2 block text-sm font-semibold text-[#101D49]"
-                >
-                  Class Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="schedule-date"
-                  type="date"
-                  required
-                  value={form.date}
-                  onChange={(event) =>
-                    setForm((previous) => ({
-                      ...previous,
-                      date: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
-                />
-              </div>
-
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="schedule-start"
-                    className="mb-2 block text-sm font-semibold text-[#101D49]"
-                  >
-                    Start Time <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="schedule-start"
-                    type="time"
-                    required
-                    value={form.startTime}
-                    onChange={(event) =>
-                      setForm((previous) => ({
-                        ...previous,
-                        startTime: event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
-                  />
+                  <Field label="Class date" required>
+                    <DatePicker value={form.date} minDate={localDateString(new Date())} ariaLabel="Class date" onChange={(value) => setForm((current) => ({ ...current, date: value }))} className="w-full" />
+                  </Field>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="schedule-end"
-                    className="mb-2 block text-sm font-semibold text-[#101D49]"
-                  >
-                    End Time <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="schedule-end"
-                    type="time"
-                    required
-                    value={form.endTime}
-                    onChange={(event) =>
-                      setForm((previous) => ({
-                        ...previous,
-                        endTime: event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
-                  />
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field label="Starts at" required htmlFor="session-start">
+                    <TimeInput id="session-start" required value={form.startsAt} ariaLabel="Session start time" onChange={(value) => setForm((current) => ({ ...current, startsAt: value }))} />
+                  </Field>
+                  <Field label="Ends at" required htmlFor="session-end">
+                    <TimeInput id="session-end" required value={form.endsAt} ariaLabel="Session end time" onChange={(value) => setForm((current) => ({ ...current, endsAt: value }))} />
+                  </Field>
                 </div>
-              </div>
+                <p className="-mt-3 text-xs text-[#64718A]">Times are interpreted in your device’s local timezone and sent to the API as ISO 8601 timestamps.</p>
 
-              <div>
-                <label
-                  htmlFor="schedule-location"
-                  className="mb-2 block text-sm font-semibold text-[#101D49]"
-                >
-                  Classroom / Meeting Link
-                </label>
-                <input
-                  id="schedule-location"
-                  value={form.location}
-                  onChange={(event) =>
-                    setForm((previous) => ({
-                      ...previous,
-                      location: event.target.value,
-                    }))
-                  }
-                  placeholder="e.g. Room 1 or a meeting URL"
-                  className="w-full rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="schedule-notes"
-                  className="mb-2 block text-sm font-semibold text-[#101D49]"
-                >
-                  Class Notes
-                </label>
-                <textarea
-                  id="schedule-notes"
-                  rows={3}
-                  value={form.notes}
-                  onChange={(event) =>
-                    setForm((previous) => ({
-                      ...previous,
-                      notes: event.target.value,
-                    }))
-                  }
-                  placeholder="Topics to cover or additional information"
-                  className="w-full resize-y rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none focus:border-[#101D49]"
-                />
-              </div>
-
-              {formError && (
-                <div
-                  role="alert"
-                  className="flex items-start gap-2 rounded-xl bg-red-50 p-4 text-sm text-red-700"
-                >
-                  <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-                  <span>{formError}</span>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field label="Location" htmlFor="session-location">
+                    <input id="session-location" maxLength={2000} value={form.location} onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))} placeholder="Room 2, Innovation hub" className="w-full rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none transition placeholder:text-[#9AA5B8] focus:border-[#A9B7D0] focus:ring-4 focus:ring-[#101D49]/5" />
+                  </Field>
+                  <Field label="Meeting URL" htmlFor="session-url">
+                    <input id="session-url" type="url" maxLength={2048} value={form.meetingUrl} onChange={(event) => setForm((current) => ({ ...current, meetingUrl: event.target.value }))} placeholder="https://meet.example.com/..." className="w-full rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none transition placeholder:text-[#9AA5B8] focus:border-[#A9B7D0] focus:ring-4 focus:ring-[#101D49]/5" />
+                  </Field>
                 </div>
-              )}
 
-              <div className="flex flex-col-reverse gap-3 border-t border-[#E4E9F2] pt-5 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="rounded-xl border border-[#E4E9F2] px-5 py-3 text-sm font-semibold text-[#101D49] hover:bg-[#F6F8FC]"
-                >
-                  Cancel
-                </button>
+                <Field label="Notes" htmlFor="session-notes">
+                  <textarea id="session-notes" rows={3} maxLength={20000} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Preparation notes or details for learners" className="w-full resize-y rounded-xl border border-[#E4E9F2] px-4 py-3 text-sm text-[#101D49] outline-none transition placeholder:text-[#9AA5B8] focus:border-[#A9B7D0] focus:ring-4 focus:ring-[#101D49]/5" />
+                </Field>
 
-                <button
-                  type="submit"
-                  disabled={saving || !storageReady}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#101D49] px-5 py-3 text-sm font-semibold text-white hover:bg-[#172A60] disabled:opacity-50"
-                >
-                  <Plus size={17} />
-                  {saving
-                    ? "Saving..."
-                    : editingId
-                      ? "Update Schedule"
-                      : "Save Schedule"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                {formError && <div role="alert" className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700"><AlertTriangle size={18} className="mt-0.5 shrink-0" /><span>{formError}</span></div>}
+
+                <div className="flex flex-col-reverse gap-3 border-t border-[#E4E9F2] pt-5 sm:flex-row sm:justify-end">
+                  <button type="button" onClick={() => setModalOpen(false)} disabled={createSession.isPending} className="rounded-xl border border-[#E4E9F2] px-5 py-3 text-sm font-semibold text-[#101D49] transition hover:bg-[#F6F8FC] disabled:opacity-50">Cancel</button>
+                  <button type="submit" disabled={createSession.isPending || programmesQuery.isPending || programmes.length === 0} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#101D49] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#172A60] disabled:cursor-not-allowed disabled:opacity-50">
+                    {createSession.isPending ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={17} />}
+                    {createSession.isPending ? "Creating session…" : "Create session"}
+                  </button>
+                </div>
+              </form>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </MainLayout>
   );
+}
+
+function MetricCard({
+  title,
+  value,
+  description,
+  icon,
+  iconClass,
+  loading = false,
+}: {
+  title: string;
+  value: number;
+  description: string;
+  icon: React.ReactNode;
+  iconClass: string;
+  loading?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-[#E4E9F2] bg-white p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-[#64718A]">{title}</p>
+          <h2 className="mt-2 text-3xl font-bold text-[#101D49]">{loading ? "—" : value}</h2>
+        </div>
+        <div className={`rounded-xl p-3 ${iconClass}`}>{icon}</div>
+      </div>
+      <p className="mt-3 text-xs text-[#64718A]">{description}</p>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  htmlFor,
+  required = false,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="mb-2 block text-sm font-semibold text-[#101D49]">
+          {label}{required && <span className="text-red-500"> *</span>}
+        </label>
+      ) : (
+        <p className="mb-2 block text-sm font-semibold text-[#101D49]">
+          {label}{required && <span className="text-red-500"> *</span>}
+        </p>
+      )}
+      {children}
+    </div>
+  );
+}
+
+function SessionStatus({ status }: { status: TutorSession["status"] }) {
+  const style = status === "SCHEDULED"
+    ? "bg-[#E8F7EE] text-[#16834A]"
+    : status === "COMPLETED"
+      ? "bg-[#EAF0FF] text-[#344F91]"
+      : "bg-[#F2F4F8] text-[#64718A]";
+  const label = status.charAt(0) + status.slice(1).toLowerCase();
+  return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${style}`}>{label}</span>;
 }

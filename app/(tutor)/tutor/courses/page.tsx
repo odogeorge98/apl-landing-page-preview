@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import Link from "next/link";
 import {
   AlertCircle,
   BookOpen,
   BookPlus,
+  ClipboardList,
   Clock3,
   FileText,
   GraduationCap,
@@ -16,10 +18,16 @@ import {
 } from "lucide-react";
 
 import { MainLayout } from "@/components/layout/dashboard";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimeInput } from "@/components/ui/TimeInput";
 import { toast } from "@/components/ui/Toaster";
 import { useCreateLesson } from "@/lib/hooks/lessons/use-create-lesson";
+import { useProgrammeLessonOptions } from "@/lib/hooks/lessons/use-programme-lesson-options";
+import { useCreateAssignment } from "@/lib/hooks/assignments/use-create-assignment";
 import { useMyTutorProgrammes } from "@/lib/hooks/tutor-programmes/use-my-programmes";
 import type { CreateLessonDto } from "@/lib/interfaces/lessons";
+import type { CreateTutorAssignmentDto } from "@/lib/interfaces/assignments";
 import type { TutorProgrammeAssignment } from "@/lib/interfaces/tutor-programmes";
 
 const cardClass =
@@ -41,6 +49,11 @@ function formatDate(value: string): string {
   }).format(date);
 }
 
+function toDateTimeLocalValue(date: Date): string {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+}
+
 function formatStatus(status: string): string {
   return status
     .trim()
@@ -52,9 +65,11 @@ function formatStatus(status: string): string {
 function CourseActionsMenu({
   assignment,
   onAddLesson,
+  onCreateAssignment,
 }: {
   assignment: TutorProgrammeAssignment;
   onAddLesson: (assignment: TutorProgrammeAssignment) => void;
+  onCreateAssignment: (assignment: TutorProgrammeAssignment) => void;
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -93,7 +108,7 @@ function CourseActionsMenu({
         ref={triggerRef}
         type="button"
         aria-label={`Actions for ${assignment.programme.name}`}
-        aria-haspopup="true"
+        aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
@@ -106,17 +121,19 @@ function CourseActionsMenu({
         {open && (
           <motion.div
             id={menuId}
+            role="menu"
             initial={prefersReducedMotion ? false : { opacity: 0, y: -5, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={prefersReducedMotion ? undefined : { opacity: 0, y: -4, scale: 0.98 }}
             transition={transition}
-            className="absolute right-0 top-11 z-40 w-56 origin-top-right rounded-xl border border-[#e4e9f2] bg-white p-1.5 shadow-[0_14px_40px_rgba(16,29,73,0.16)]"
+            className="absolute right-0 top-11 z-40 w-60 origin-top-right rounded-xl border border-[#e4e9f2] bg-white p-1.5 shadow-[0_14px_40px_rgba(16,29,73,0.16)]"
           >
             <p className="px-3 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8995aa]">
               Course actions
             </p>
             <button
               type="button"
+              role="menuitem"
               disabled
               title="Learning materials management is not available yet."
               className="flex min-h-10 w-full cursor-not-allowed items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium text-[#9aa5b8]"
@@ -128,6 +145,7 @@ function CourseActionsMenu({
             <div className="my-1.5 border-t border-[#edf0f6]" />
             <button
               type="button"
+              role="menuitem"
               onClick={() => {
                 setOpen(false);
                 onAddLesson(assignment);
@@ -136,6 +154,28 @@ function CourseActionsMenu({
             >
               <BookPlus size={16} className="text-[#101d49]" aria-hidden="true" />
               Add lesson
+            </button>
+            <Link
+              href={`/tutor/lessons?programmeId=${encodeURIComponent(assignment.programmeId)}`}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-semibold text-[#17233f] transition hover:bg-[#f4f6fa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542]"
+            >
+              <BookOpen size={16} className="text-[#101d49]" aria-hidden="true" />
+              View lessons
+            </Link>
+            <div className="my-1.5 border-t border-[#edf0f6]" />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onCreateAssignment(assignment);
+              }}
+              className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-semibold text-[#17233f] transition hover:bg-[#f4f6fa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542]"
+            >
+              <ClipboardList size={16} className="text-[#101d49]" aria-hidden="true" />
+              Create assignment
             </button>
           </motion.div>
         )}
@@ -147,9 +187,11 @@ function CourseActionsMenu({
 function CourseCard({
   assignment,
   onAddLesson,
+  onCreateAssignment,
 }: {
   assignment: TutorProgrammeAssignment;
   onAddLesson: (assignment: TutorProgrammeAssignment) => void;
+  onCreateAssignment: (assignment: TutorProgrammeAssignment) => void;
 }) {
   const isActive = assignment.status.trim().toUpperCase() === "ACTIVE";
 
@@ -177,7 +219,11 @@ function CourseCard({
               <span className={`size-1.5 rounded-full ${isActive ? "bg-[#1d9a67]" : "bg-[#8490a6]"}`} aria-hidden="true" />
               {formatStatus(assignment.status)}
             </span>
-            <CourseActionsMenu assignment={assignment} onAddLesson={onAddLesson} />
+            <CourseActionsMenu
+              assignment={assignment}
+              onAddLesson={onAddLesson}
+              onCreateAssignment={onCreateAssignment}
+            />
           </div>
         </div>
 
@@ -469,6 +515,360 @@ function CreateLessonModal({
   );
 }
 
+function CreateAssignmentDialog({
+  assignment,
+  onClose,
+  onSubmit,
+  isSubmitting,
+  error,
+  prefersReducedMotion,
+}: {
+  assignment: TutorProgrammeAssignment;
+  onClose: () => void;
+  onSubmit: (payload: CreateTutorAssignmentDto) => Promise<void>;
+  isSubmitting: boolean;
+  error: string | null;
+  prefersReducedMotion: boolean | null;
+}) {
+  const [title, setTitle] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [lessonId, setLessonId] = useState("");
+  const [maxScore, setMaxScore] = useState("100");
+  const [availableAt, setAvailableAt] = useState(() => toDateTimeLocalValue(new Date()));
+  const [dueAt, setDueAt] = useState(() => {
+    const initialDueAt = new Date();
+    initialDueAt.setDate(initialDueAt.getDate() + 7);
+    return toDateTimeLocalValue(initialDueAt);
+  });
+  const isSubmittingRef = useRef(isSubmitting);
+  isSubmittingRef.current = isSubmitting;
+  const lessonsQuery = useProgrammeLessonOptions(assignment.programmeId);
+  const lessons = lessonsQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const dialogId = `create-assignment-${assignment.id}`;
+  const availableAtTimestamp = Date.parse(availableAt);
+  const dueAtTimestamp = Date.parse(dueAt);
+  const dateRangeIsValid =
+    Number.isFinite(availableAtTimestamp) &&
+    Number.isFinite(dueAtTimestamp) &&
+    dueAtTimestamp > availableAtTimestamp;
+  const score = Number(maxScore);
+  const scoreIsValid = Number.isFinite(score) && score > 0;
+
+  useEffect(() => {
+    const body = document.body;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const currentPaddingRight = Number.parseFloat(window.getComputedStyle(body).paddingRight) || 0;
+
+    body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${currentPaddingRight + scrollbarWidth}px`;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isSubmittingRef.current) onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [assignment.id, onClose]);
+
+  const transition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!dateRangeIsValid || !scoreIsValid) return;
+
+    await onSubmit({
+      programmeId: assignment.programmeId,
+      ...(lessonId ? { lessonId } : {}),
+      title: title.trim(),
+      instructions: instructions.trim(),
+      availableAt: new Date(availableAt).toISOString(),
+      dueAt: new Date(dueAt).toISOString(),
+      maxScore: score,
+    });
+  };
+
+  return (
+    <motion.div
+      key={`create-assignment-backdrop-${assignment.id}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={transition}
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#071027]/60 p-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isSubmitting) onClose();
+      }}
+    >
+      <motion.section
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 18, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={prefersReducedMotion ? undefined : { opacity: 0, y: 10, scale: 0.985 }}
+        transition={transition}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${dialogId}-title`}
+        aria-describedby={`${dialogId}-description`}
+        className="my-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_24px_80px_rgba(7,16,39,0.28)]"
+      >
+        <div className="flex items-start justify-between border-b border-[#edf0f6] px-6 py-5">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#fff5d1] text-[#101d49]">
+              <ClipboardList size={21} aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 id={`${dialogId}-title`} className="text-lg font-bold tracking-tight text-[#101d49]">
+                Create an assignment
+              </h2>
+              <p className="mt-1 truncate text-sm leading-5 text-[#718099]">
+                For <span className="font-semibold text-[#34415e]">{assignment.programme.name}</span>
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            aria-label="Close create assignment dialog"
+            className="rounded-lg p-2 text-[#718099] transition hover:bg-[#f3f5f9] hover:text-[#101d49] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="max-h-[min(68vh,620px)] space-y-5 overflow-y-auto px-6 py-6">
+            <p id={`${dialogId}-description`} className="text-sm leading-6 text-[#64718a]">
+              Assign work to learners in this programme. You can attach it to a lesson or leave it at programme level. New assignments are saved as drafts.
+            </p>
+
+            {error && (
+              <div role="alert" className="flex items-start gap-2.5 rounded-xl border border-red-100 bg-red-50 p-3.5 text-sm text-red-700">
+                <AlertCircle size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+                <p>{error}</p>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label htmlFor={`${dialogId}-title-input`} className="block text-sm font-semibold text-[#34415e]">
+                Assignment title <span className="text-red-500">*</span>
+              </label>
+              <input
+                id={`${dialogId}-title-input`}
+                autoFocus
+                required
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="e.g. Network security assessment"
+                autoComplete="off"
+                disabled={isSubmitting}
+                className="h-11 w-full rounded-xl border border-[#dce3ef] bg-white px-3.5 text-sm text-[#17233f] outline-none transition placeholder:text-[#9aa5b8] focus:border-[#a9b7d0] focus:ring-4 focus:ring-[#101d49]/5 disabled:bg-[#f5f6f8]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor={`${dialogId}-instructions`} className="block text-sm font-semibold text-[#34415e]">
+                Instructions <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id={`${dialogId}-instructions`}
+                required
+                rows={4}
+                value={instructions}
+                onChange={(event) => setInstructions(event.target.value)}
+                placeholder="Explain what learners need to submit and how it will be assessed."
+                disabled={isSubmitting}
+                className="w-full resize-y rounded-xl border border-[#dce3ef] bg-white px-3.5 py-3 text-sm leading-6 text-[#17233f] outline-none transition placeholder:text-[#9aa5b8] focus:border-[#a9b7d0] focus:ring-4 focus:ring-[#101d49]/5 disabled:bg-[#f5f6f8]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor={`${dialogId}-lesson`} className="block text-sm font-semibold text-[#34415e]">
+                Lesson <span className="font-normal text-[#8995aa]">(optional)</span>
+              </label>
+              <AnimatedSelect
+                id={`${dialogId}-lesson`}
+                value={lessonId}
+                onChange={setLessonId}
+                disabled={isSubmitting || lessonsQuery.isLoading}
+                ariaLabel="Optional lesson"
+                options={[
+                  { value: "", label: "Programme-level assignment" },
+                  ...lessons.map((lesson) => ({
+                    value: lesson.id,
+                    label: `${lesson.sequence}. ${lesson.title}${lesson.status === "DRAFT" ? " · Draft" : ""}`,
+                  })),
+                ]}
+                className="h-11 w-full rounded-xl border-[#dce3ef]"
+              />
+              {lessonsQuery.isLoading ? (
+                <p className="text-xs text-[#8995aa]">Loading lessons for this programme…</p>
+              ) : lessonsQuery.isError ? (
+                <div role="status" className="flex flex-wrap items-center gap-2 text-xs text-[#8a6500]">
+                  <span>Lessons could not be loaded. You can still create a programme-level assignment.</span>
+                  <button type="button" onClick={() => void lessonsQuery.refetch()} className="font-semibold underline underline-offset-2">Retry</button>
+                </div>
+              ) : lessonsQuery.hasNextPage ? (
+                <button
+                  type="button"
+                  onClick={() => void lessonsQuery.fetchNextPage()}
+                  disabled={lessonsQuery.isFetchingNextPage}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#101d49] underline decoration-[#c4cede] underline-offset-2 hover:decoration-[#101d49] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {lessonsQuery.isFetchingNextPage && <RefreshCw size={13} className="animate-spin" aria-hidden="true" />}
+                  {lessonsQuery.isFetchingNextPage ? "Loading more lessons…" : "Load more lesson options"}
+                </button>
+              ) : lessons.length === 0 ? (
+                <p className="text-xs text-[#8995aa]">No lessons are available for this programme yet.</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor={`${dialogId}-available`} className="block text-sm font-semibold text-[#34415e]">
+                  Available from <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_7rem]">
+                  <DatePicker
+                    value={availableAt.split("T")[0] || ""}
+                    onChange={(date) => setAvailableAt((current) => `${date}T${current.split("T")[1] || "09:00"}`)}
+                    ariaLabel="Availability date"
+                    className="w-full"
+                  />
+                  <TimeInput
+                    id={`${dialogId}-available-time`}
+                    required
+                    value={availableAt.split("T")[1] || ""}
+                    ariaLabel="Availability time"
+                    onChange={(value) => setAvailableAt((current) => `${current.split("T")[0] || ""}T${value}`)}
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <p className="text-xs leading-5 text-[#8995aa]">Uses your device&apos;s local timezone.</p>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor={`${dialogId}-due`} className="block text-sm font-semibold text-[#34415e]">
+                  Due date <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_7rem]">
+                  <DatePicker
+                    value={dueAt.split("T")[0] || ""}
+                    onChange={(date) => setDueAt((current) => `${date}T${current.split("T")[1] || "09:00"}`)}
+                    ariaLabel="Assignment due date"
+                    className="w-full"
+                  />
+                  <TimeInput
+                    id={`${dialogId}-due-time`}
+                    required
+                    value={dueAt.split("T")[1] || ""}
+                    ariaLabel="Assignment due time"
+                    onChange={(value) => setDueAt((current) => `${current.split("T")[0] || ""}T${value}`)}
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <p className="text-xs leading-5 text-[#8995aa]">Must be later than the availability date.</p>
+              </div>
+            </div>
+
+            {!dateRangeIsValid && availableAt && dueAt && (
+              <p role="alert" className="-mt-3 text-xs font-medium text-red-600">
+                Choose a due date and time later than the availability date.
+              </p>
+            )}
+
+            <div className="max-w-xs space-y-1.5">
+              <label htmlFor={`${dialogId}-score`} className="block text-sm font-semibold text-[#34415e]">
+                Maximum score <span className="text-red-500">*</span>
+              </label>
+              <input
+                id={`${dialogId}-score`}
+                type="number"
+                inputMode="decimal"
+                min={0.01}
+                step="any"
+                required
+                value={maxScore}
+                onChange={(event) => setMaxScore(event.target.value)}
+                disabled={isSubmitting}
+                className="h-11 w-full rounded-xl border border-[#dce3ef] bg-white px-3.5 text-sm text-[#17233f] outline-none transition focus:border-[#a9b7d0] focus:ring-4 focus:ring-[#101d49]/5 disabled:bg-[#f5f6f8]"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 border-t border-[#edf0f6] bg-[#fbfcfe] px-6 py-4 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#dce3ef] bg-white px-4 py-2.5 text-sm font-semibold text-[#52627f] transition hover:bg-[#f5f7fa] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || !title.trim() || !instructions.trim() || !dateRangeIsValid || !scoreIsValid}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#f5c542] px-4 py-2.5 text-sm font-semibold text-[#101d49] transition hover:bg-[#f8d35f] disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="size-4 animate-spin rounded-full border-2 border-[#101d49]/25 border-t-[#101d49]" />
+                  Creating assignment…
+                </>
+              ) : (
+                <>
+                  <Plus size={17} aria-hidden="true" />
+                  Create draft
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </motion.section>
+    </motion.div>
+  );
+}
+
+function CreateAssignmentModal({
+  assignment,
+  onClose,
+  onSubmit,
+  isSubmitting,
+  error,
+  prefersReducedMotion,
+}: {
+  assignment: TutorProgrammeAssignment | null;
+  onClose: () => void;
+  onSubmit: (payload: CreateTutorAssignmentDto) => Promise<void>;
+  isSubmitting: boolean;
+  error: string | null;
+  prefersReducedMotion: boolean | null;
+}) {
+  return (
+    <AnimatePresence>
+      {assignment && (
+        <CreateAssignmentDialog
+          key={assignment.id}
+          assignment={assignment}
+          onClose={onClose}
+          onSubmit={onSubmit}
+          isSubmitting={isSubmitting}
+          error={error}
+          prefersReducedMotion={prefersReducedMotion}
+        />
+      )}
+    </AnimatePresence>
+  );
+}
+
 function CourseSkeleton() {
   return (
     <div className="space-y-6" role="status" aria-label="Loading your courses">
@@ -517,9 +917,14 @@ function CoursesError({
 export default function TutorCoursesPage() {
   const coursesQuery = useMyTutorProgrammes();
   const createLessonMutation = useCreateLesson();
+  const createAssignmentMutation = useCreateAssignment();
+  const createAssignmentPendingRef = useRef(createAssignmentMutation.isPending);
+  createAssignmentPendingRef.current = createAssignmentMutation.isPending;
   const prefersReducedMotion = useReducedMotion();
   const [selectedAssignment, setSelectedAssignment] = useState<TutorProgrammeAssignment | null>(null);
+  const [assignmentToCreateFor, setAssignmentToCreateFor] = useState<TutorProgrammeAssignment | null>(null);
   const [lessonError, setLessonError] = useState<string | null>(null);
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
   const assignments = useMemo(
     () => coursesQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [coursesQuery.data],
@@ -543,6 +948,17 @@ export default function TutorCoursesPage() {
     setSelectedAssignment(null);
   }, []);
 
+  const openCreateAssignment = useCallback((assignment: TutorProgrammeAssignment) => {
+    setAssignmentError(null);
+    setAssignmentToCreateFor(assignment);
+  }, []);
+
+  const closeCreateAssignment = useCallback(() => {
+    if (createAssignmentPendingRef.current) return;
+    setAssignmentError(null);
+    setAssignmentToCreateFor(null);
+  }, []);
+
   const submitLesson = async (payload: CreateLessonDto) => {
     if (createLessonMutation.isPending) return;
 
@@ -560,6 +976,23 @@ export default function TutorCoursesPage() {
         error instanceof Error
           ? error.message
           : "We couldn’t create the lesson. Please try again.",
+      );
+    }
+  };
+
+  const submitAssignment = async (payload: CreateTutorAssignmentDto) => {
+    if (createAssignmentMutation.isPending) return;
+
+    setAssignmentError(null);
+    try {
+      const createdAssignment = await createAssignmentMutation.mutateAsync(payload);
+      toast.success(`“${createdAssignment.title}” was saved as a draft.`);
+      setAssignmentToCreateFor(null);
+    } catch (error) {
+      setAssignmentError(
+        error instanceof Error
+          ? error.message
+          : "We couldn’t create the assignment. Please try again.",
       );
     }
   };
@@ -677,6 +1110,7 @@ export default function TutorCoursesPage() {
                       key={assignment.id}
                       assignment={assignment}
                       onAddLesson={openAddLesson}
+                      onCreateAssignment={openCreateAssignment}
                     />
                   ))}
                 </div>
@@ -707,6 +1141,14 @@ export default function TutorCoursesPage() {
         onSubmit={submitLesson}
         isSubmitting={createLessonMutation.isPending}
         error={lessonError}
+        prefersReducedMotion={prefersReducedMotion}
+      />
+      <CreateAssignmentModal
+        assignment={assignmentToCreateFor}
+        onClose={closeCreateAssignment}
+        onSubmit={submitAssignment}
+        isSubmitting={createAssignmentMutation.isPending}
+        error={assignmentError}
         prefersReducedMotion={prefersReducedMotion}
       />
     </MainLayout>

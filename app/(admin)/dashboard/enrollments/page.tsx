@@ -14,12 +14,13 @@ import {
 } from "lucide-react";
 
 import { MainLayout } from "@/components/layout/dashboard";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
 import { useAdminStudentProgrammeEnrolments } from "@/lib/hooks/student-programmes/use-admin-enrolments";
 import type { StudentProgrammeEnrolment } from "@/lib/interfaces/student-programmes";
 import { cn } from "@/lib/utils";
 
 const cardClass =
-  "overflow-hidden rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_2px_10px_rgba(16,29,73,0.025)]";
+  "rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_2px_10px_rgba(16,29,73,0.025)]";
 const secondaryButtonClass =
   "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#e4e9f2] bg-white px-4 py-2 text-sm font-semibold text-[#34415e] transition hover:border-[#cbd4e3] hover:bg-[#f6f8fc] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c542]";
 const inputClass =
@@ -250,17 +251,15 @@ export default function AdminEnrolmentsPage() {
               </label>
               <p id="enrolment-search-help" className="sr-only">Search is sent to the enrolment service.</p>
 
-              <label className="flex shrink-0 items-center gap-2 text-sm text-[#64718a]">
+              <div className="flex shrink-0 items-center gap-2 text-sm text-[#64718a]">
                 <span className="whitespace-nowrap">Rows per page</span>
-                <select
-                  value={pageSize}
-                  onChange={(event) => setPageSize(Number(event.target.value))}
-                  className={`${inputClass} w-[5.5rem] px-3 font-semibold`}
-                  aria-label="Rows per page"
-                >
-                  {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
-                </select>
-              </label>
+                <AnimatedSelect
+                  value={String(pageSize)}
+                  options={PAGE_SIZE_OPTIONS.map((size) => ({ value: String(size), label: String(size) }))}
+                  onChange={(value) => setPageSize(Number(value))}
+                  ariaLabel="Rows per page"
+                />
+              </div>
               {searchValue.trim() !== debouncedSearch && (
                 <span className="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-[#64718a]" role="status">
                   <RefreshCw size={14} className="animate-spin" aria-hidden="true" /> Searching…

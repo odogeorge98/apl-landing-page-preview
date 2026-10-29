@@ -1,21 +1,40 @@
-import { cn } from '@/lib/utils'
+"use client";
 
-const SelectInput = ({ options, isEmpty, firstItem }: { options: string[], isEmpty: boolean, firstItem?: string }) => {
+import { useState } from "react";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
+
+const SelectInput = ({
+  options,
+  isEmpty,
+  firstItem,
+}: {
+  options: string[];
+  isEmpty: boolean;
+  firstItem?: string;
+}) => {
+  const [selectedValue, setSelectedValue] = useState(
+    firstItem !== undefined ? "" : options[0] ?? "",
+  );
+  const hasPlaceholder = firstItem !== undefined;
+  const availableValue =
+    (hasPlaceholder && selectedValue === "") || options.includes(selectedValue)
+      ? selectedValue
+      : options[0] ?? "";
+  const selectOptions = [
+    ...(hasPlaceholder ? [{ value: "", label: firstItem ?? "" }] : []),
+    ...options.map((option) => ({ value: option, label: option })),
+  ];
+
   return (
-    <select 
-    className={
-        cn('w-full outline-none text-[#D5D9DE] pointer-events-none', 
-        !isEmpty && 'pointer-events-auto text-[#212121]')}
-    >
-        {firstItem && <option value={''}>{firstItem}</option>}
-        {
-            options.map(item => (
-                <option key={item} value={item}>{item}</option>
-            ))
-        }
-    </select>
-  )
+    <AnimatedSelect
+      ariaLabel={firstItem || "Select an option"}
+      value={availableValue}
+      options={selectOptions}
+      onChange={setSelectedValue}
+      disabled={isEmpty || selectOptions.length === 0}
+      className="w-full justify-between"
+    />
+  );
+};
 
-}
-
-export default SelectInput
+export default SelectInput;

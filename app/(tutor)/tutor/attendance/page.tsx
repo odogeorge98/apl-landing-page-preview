@@ -4,7 +4,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  CalendarDays,
   CheckCircle2,
   ClipboardList,
   Clock3,
@@ -15,6 +14,8 @@ import {
   XCircle,
 } from "lucide-react";
 import MainLayout from "@/components/layout/dashboard/MainLayout";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
+import { DatePicker } from "@/components/ui/DatePicker";
 import {
   getAttendance,
   getLocalDate,
@@ -166,16 +167,12 @@ export default function TutorAttendancePage() {
                 Select the date whose records you want to review.
               </p>
             </div>
-            <div className="flex items-center gap-2 rounded-xl border border-[#E4E9F2] px-3 py-2">
-              <CalendarDays size={18} className="text-[#64718A]" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(event) => setSelectedDate(event.target.value)}
-                className="bg-transparent text-sm text-[#17233F] outline-none"
-                aria-label="Attendance date"
-              />
-            </div>
+            <DatePicker
+              value={selectedDate}
+              onChange={setSelectedDate}
+              ariaLabel="Attendance date"
+              className="w-full sm:w-64"
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -235,28 +232,21 @@ export default function TutorAttendancePage() {
                 />
               </div>
 
-              <select
+              <AnimatedSelect
                 value={courseFilter}
-                onChange={(event) => setCourseFilter(event.target.value)}
-                className="rounded-xl border border-[#E4E9F2] bg-white px-3 py-3 text-sm outline-none"
-                aria-label="Filter by course"
-              >
-                {courses.map((course) => (
-                  <option key={course} value={course}>{course}</option>
-                ))}
-              </select>
+                onChange={setCourseFilter}
+                options={courses.map((course) => ({ value: course, label: course }))}
+                ariaLabel="Filter by course"
+                className="min-h-12 w-full rounded-xl"
+              />
 
-              <select
+              <AnimatedSelect
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="rounded-xl border border-[#E4E9F2] bg-white px-3 py-3 text-sm outline-none"
-                aria-label="Filter by status"
-              >
-                <option>All statuses</option>
-                <option>Present</option>
-                <option>Absent</option>
-                <option>Late</option>
-              </select>
+                onChange={setStatusFilter}
+                options={["All statuses", "Present", "Absent", "Late"].map((status) => ({ value: status, label: status }))}
+                ariaLabel="Filter by status"
+                className="min-h-12 w-full rounded-xl"
+              />
             </div>
 
             <div className="overflow-x-auto">
@@ -294,21 +284,13 @@ export default function TutorAttendancePage() {
                         <StatusBadge status={record.status} />
                       </td>
                       <td className="px-4 py-4">
-                        <select
+                        <AnimatedSelect
                           value={record.status}
-                          onChange={(event) =>
-                            changeStatus(
-                              record.id,
-                              event.target.value as AttendanceStatus,
-                            )
-                          }
-                          className="rounded-lg border border-[#E4E9F2] bg-white px-2 py-2 text-sm"
-                          aria-label={`Change status for ${record.studentName}`}
-                        >
-                          <option value="Present">Present</option>
-                          <option value="Absent">Absent</option>
-                          <option value="Late">Late</option>
-                        </select>
+                          onChange={(value) => changeStatus(record.id, value as AttendanceStatus)}
+                          options={["Present", "Absent", "Late"].map((status) => ({ value: status, label: status }))}
+                          ariaLabel={`Change status for ${record.studentName}`}
+                          className="min-h-9 rounded-lg px-2 text-xs"
+                        />
                       </td>
                     </tr>
                   ))}
