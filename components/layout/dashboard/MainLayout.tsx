@@ -688,7 +688,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                       My profile
                     </Link>
 
-                    <Link
+                    {/* <Link
                       href={
                         role === "ADMIN"
                           ? "/settings"
@@ -700,7 +700,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     >
                       <Settings size={17} className="text-[#64718a]" />
                       Settings
-                    </Link>
+                    </Link> */}
 
                     <button
                       type="button"

@@ -104,6 +104,46 @@ export interface AdminDashboardApiResponse {
   data: AdminDashboardData;
 }
 
+export interface StudentEnrollmentAnalyticsPeriod {
+  fromDate: string;
+  toDate: string;
+  /** Returned for calendar-year queries; omitted for custom date ranges. */
+  year?: number;
+}
+
+export interface StudentEnrollmentAnalyticsSummary {
+  totalStudents: number;
+}
+
+export interface StudentEnrollmentAnalyticsMonth {
+  /** Calendar month in YYYY-MM format. */
+  month: string;
+  newStudents: number;
+  cumulativeStudents: number;
+}
+
+export interface StudentEnrollmentAnalyticsData {
+  period: StudentEnrollmentAnalyticsPeriod;
+  summary: StudentEnrollmentAnalyticsSummary;
+  series: StudentEnrollmentAnalyticsMonth[];
+}
+
+export interface StudentEnrollmentAnalyticsApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: StudentEnrollmentAnalyticsData;
+}
+
+export interface GetStudentEnrollmentAnalyticsParams {
+  /** Calendar year (2000–2100). Mutually exclusive with fromDate/toDate. */
+  year?: number;
+  /** Inclusive UTC calendar start date; must be paired with toDate. */
+  fromDate?: string;
+  /** Inclusive UTC calendar end date; must be paired with fromDate. */
+  toDate?: string;
+}
+
 export interface StudentDashboardAssignments {
   total: number;
   submitted: number;
