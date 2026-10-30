@@ -13,6 +13,8 @@ type DatePickerProps = {
   className?: string;
   /** Earliest selectable date, in YYYY-MM-DD local date format. */
   minDate?: string;
+  /** Hide the clear control when the selection is required by the form/API. */
+  clearable?: boolean;
 };
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -44,7 +46,7 @@ function dateLabel(value: string): string {
 }
 
 /** Branded calendar picker; its fixed portal popover does not affect page layout or scrollbar width. */
-export function DatePicker({ value, onChange, ariaLabel, className, minDate }: DatePickerProps) {
+export function DatePicker({ value, onChange, ariaLabel, className, minDate, clearable = true }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [menuStyle, setMenuStyle] = useState<CSSProperties | null>(null);
@@ -233,7 +235,7 @@ export function DatePicker({ value, onChange, ariaLabel, className, minDate }: D
         <span className={cn("min-w-0 flex-1 truncate", !value && "text-[#9aa5b8]")}>{dateLabel(value)}</span>
         <ChevronDown size={15} className={cn("shrink-0 text-[#718099] transition-transform duration-200", open && "rotate-180")} aria-hidden="true" />
       </button>
-      {value && (
+      {value && clearable && (
         <button
           type="button"
           aria-label={`Clear ${ariaLabel.toLowerCase()}`}
