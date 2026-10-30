@@ -13,13 +13,14 @@ export const studentProgrammesQueryKeys = {
 };
 
 /** Cursor-paginated programme enrolments for the authenticated student. */
-export function useMyProgrammes() {
+export function useMyProgrammes(options: { enabled?: boolean } = {}) {
   return useInfiniteQuery({
     queryKey: studentProgrammesQueryKeys.myProgrammes(),
     queryFn: ({ pageParam }) =>
       studentProgrammesApi.listMyProgrammes({ cursor: pageParam }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: options.enabled ?? true,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: true,
