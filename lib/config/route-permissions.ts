@@ -21,10 +21,10 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   { pattern: "/system", roles: [UserType.ADMIN] },
 
   // Tutor portal.
-  { pattern: "/tutor/dashboard", roles: [UserType.TUTOR] },
+  { pattern: "/tutor", roles: [UserType.TUTOR] },
 
   // Student portal.
-  { pattern: "/student/dashboard", roles: [UserType.STUDENT] },
+  { pattern: "/student", roles: [UserType.STUDENT] },
 
   // Shared authenticated pages.
   {

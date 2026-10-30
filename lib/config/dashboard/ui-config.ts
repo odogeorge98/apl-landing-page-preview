@@ -217,13 +217,13 @@ const adminConfig: DashboardUIConfig = {
       icon: Library,
       section: "Management",
     },
-    {
-      label: "Cohorts",
-      href: "/dashboard/cohorts",
-      description: "Training groups and schedules",
-      icon: Users,
-      section: "Management",
-    },
+    // {
+    //   label: "Cohorts",
+    //   href: "/dashboard/cohorts",
+    //   description: "Training groups and schedules",
+    //   icon: Users,
+    //   section: "Management",
+    // },
     {
       label: "Enrolments",
       href: "/dashboard/enrollments",
@@ -259,13 +259,13 @@ const adminConfig: DashboardUIConfig = {
       icon: BarChart3,
       section: "Insights",
     },
-    {
-      label: "Settings",
-      href: "/system/settings",
-      description: "Platform configuration",
-      icon: Settings,
-      section: "System",
-    },
+    // {
+    //   label: "Settings",
+    //   href: "/system/settings",
+    //   description: "Platform configuration",
+    //   icon: Settings,
+    //   section: "System",
+    // },
     {
       label: "Profile",
       href: "/dashboard/profile",
