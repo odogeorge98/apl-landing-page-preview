@@ -1,6 +1,16 @@
 import { http } from "@/lib/utils/http";
 import type {
+  AdminReport,
+  AdminReportReviewApiResponse,
+  AdminReportReviewResult,
+  AdminReportSummary,
+  AdminReportSummaryApiResponse,
+  AdminReportsApiResponse,
+  AdminReportsPage,
+  AdminVisibleReportStatus,
   CreateStudentReportFeedbackDto,
+  GetAdminReportSummaryParams,
+  GetAdminReportsParams,
   GetStudentReportDashboardParams,
   GetStudentReportsParams,
   SaveStudentReportDraftDto,
@@ -8,6 +18,7 @@ import type {
   StudentReportApiResponse,
   StudentReportDashboardApiResponse,
   StudentReportDashboardData,
+  StudentDailyReportCheckApiResponse,
   StudentReportFeedbackApiResponse,
   StudentReportFeedbackMessage,
   StudentReportsApiResponse,
@@ -93,10 +104,62 @@ function isStudentReportsPage(value: unknown): value is StudentReportsPage {
     value.items.every(isStudentReport);
 }
 
+function isAdminReport(value: unknown): value is AdminReport {
+  if (!isRecord(value)) return false;
+  const isReportPerson = (person: unknown) =>
+    isRecord(person) && typeof person.id === "string" && UUID_V4_PATTERN.test(person.id) && typeof person.name === "string";
+  return (
+    typeof value.id === "string" && UUID_V4_PATTERN.test(value.id) &&
+    isDateOnly(value.reportDate) &&
+    (value.status === "SUBMITTED" || value.status === "REVIEWED" || value.status === "RETURNED") &&
+    Array.isArray(value.accomplishments) && value.accomplishments.every((item) => typeof item === "string") &&
+    typeof value.noProblemsToday === "boolean" &&
+    (typeof value.blockerDescription === "string" || value.blockerDescription === null) &&
+    (typeof value.problemStatus === "string" || value.problemStatus === null) &&
+    isTimestamp(value.resolvedAt, true) &&
+    isTimestamp(value.submittedAt, true) &&
+    isTimestamp(value.reviewedAt, true) &&
+    typeof value.feedbackCount === "number" && Number.isInteger(value.feedbackCount) && value.feedbackCount >= 0 &&
+    isReportPerson(value.student) && isReportPerson(value.programme) && isReportPerson(value.tutor)
+  );
+}
+
+function isAdminReportsPage(value: unknown): value is AdminReportsPage {
+  return isRecord(value) &&
+    Array.isArray(value.items) &&
+    (value.nextCursor === null || (typeof value.nextCursor === "string" && value.nextCursor.length <= 512)) &&
+    value.items.every(isAdminReport);
+}
+
+function isAdminReportSummary(value: unknown): value is AdminReportSummary {
+  if (!isRecord(value) || !isRecord(value.period) || !isRecord(value.summary)) return false;
+  const period = value.period;
+  const summary = value.summary;
+  return (
+    isDateOnly(period.fromDate) && isDateOnly(period.toDate) &&
+    period.fromDate <= period.toDate &&
+    ["submittedReports", "expectedReports", "notSubmittedReports", "openProblems", "awaitingReview"]
+      .every((key) => typeof summary[key] === "number" && Number.isInteger(summary[key]) && (summary[key] as number) >= 0)
+  );
+}
+
+function isAdminReportReviewResult(value: unknown): value is AdminReportReviewResult {
+  return isRecord(value) &&
+    typeof value.id === "string" && UUID_V4_PATTERN.test(value.id) &&
+    value.status === "REVIEWED" &&
+    isTimestamp(value.submittedAt, true) &&
+    isTimestamp(value.reviewedAt) &&
+    isTimestamp(value.updatedAt);
+}
+
 function isStudentReportDashboard(value: unknown): value is StudentReportDashboardData {
   if (!isRecord(value) || !isProgrammeSummary(value.programme) || !Array.isArray(value.assignedTutors)) return false;
   if (!value.assignedTutors.every(isPersonSummary)) return false;
-  if (value.reportingPolicy !== null && !isRecord(value.reportingPolicy)) return false;
+  if (value.reportingPolicy !== null) {
+    if (!isRecord(value.reportingPolicy) || typeof value.reportingPolicy.timezone !== "string" ||
+      !Array.isArray(value.reportingPolicy.requiredWeekdays) ||
+      !value.reportingPolicy.requiredWeekdays.every((day) => Number.isInteger(day) && day >= 0 && day <= 6)) return false;
+  }
 
   const overview = value.overview;
   if (!isRecord(overview) || !isRecord(overview.thisWeek)) return false;
@@ -110,7 +173,10 @@ function isStudentReportDashboard(value: unknown): value is StudentReportDashboa
     typeof overview.feedbackReceived === "number" && Number.isInteger(overview.feedbackReceived) && overview.feedbackReceived >= 0 &&
     isRecord(today) && isDateOnly(today.reportDate) &&
     (today.report === null || isStudentReport(today.report)) &&
-    Array.isArray(value.recentDays) && value.recentDays.every(isRecord)
+    Array.isArray(value.recentDays) && value.recentDays.every((day) =>
+      isRecord(day) && isDateOnly(day.reportDate) &&
+      (day.report === null || (isStudentReport(day.report) && day.report.reportDate === day.reportDate)),
+    )
   );
 }
 
@@ -199,8 +265,65 @@ function normalizeListParams(params: GetStudentReportsParams): Record<string, st
   return query;
 }
 
+function normalizeAdminListParams(params: GetAdminReportsParams): Record<string, string | number> {
+  const query: Record<string, string | number> = {};
+  const search = params.search?.trim();
+  if (search && search.length > 100) throw new RangeError("Report search must be 100 characters or fewer.");
+  if (params.limit !== undefined && (!Number.isInteger(params.limit) || params.limit < 1 || params.limit > 50)) {
+    throw new RangeError("Report page size must be an integer between 1 and 50.");
+  }
+  if (params.cursor != null && (typeof params.cursor !== "string" || params.cursor.length > 512)) {
+    throw new RangeError("Report cursor must be a string of 512 characters or fewer.");
+  }
+
+  const fromDate = params.fromDate ? assertDateOnly(params.fromDate, "Start date") : undefined;
+  const toDate = params.toDate ? assertDateOnly(params.toDate, "End date") : undefined;
+  if ((fromDate && !toDate) || (!fromDate && toDate)) {
+    throw new Error("Select both a start date and an end date for the report range.");
+  }
+  if (fromDate && toDate && fromDate > toDate) throw new Error("Start date must be on or before end date.");
+
+  if (params.programmeId) query.programmeId = assertUuid(params.programmeId, "Programme ID");
+  if (params.status) {
+    const status = params.status as string;
+    if (!["SUBMITTED", "REVIEWED", "RETURNED"].includes(status)) {
+      throw new Error("Choose a valid admin report status.");
+    }
+    query.status = status as AdminVisibleReportStatus;
+  }
+  if (params.problemStatus !== undefined) {
+    const problemStatus = String(params.problemStatus).trim();
+    if (!problemStatus) throw new Error("Choose a valid blocker status.");
+    query.problemStatus = problemStatus;
+  }
+  if (fromDate && toDate) {
+    query.fromDate = fromDate;
+    query.toDate = toDate;
+  }
+  if (search) query.search = search;
+  if (params.limit !== undefined) query.limit = params.limit;
+  if (params.cursor) query.cursor = params.cursor;
+  return query;
+}
+
+function normalizeAdminSummaryParams(params: GetAdminReportSummaryParams): GetAdminReportSummaryParams {
+  const fromDate = assertDateOnly(params.fromDate, "Start date");
+  const toDate = assertDateOnly(params.toDate, "End date");
+  if (fromDate > toDate) throw new Error("Start date must be on or before end date.");
+  return { fromDate, toDate };
+}
+
 /** Student daily report endpoints. All methods return the `data` payload. */
 export const studentReportsApi = {
+  /** GET /reports/student/daily-check — whether the student should be prompted to report today. */
+  dailyCheck: async (signal?: AbortSignal): Promise<boolean> => {
+    const response = await http.get<StudentDailyReportCheckApiResponse>("/reports/student/daily-check", { signal });
+    const result = response.data;
+    if (result.status !== "success") throw new Error(result.message || "Unable to check today's report requirement.");
+    if (typeof result.data !== "boolean") throw new Error("The daily report check response was invalid.");
+    return result.data;
+  },
+
   /** GET /reports/student — cursor-paginated reports for the authenticated student. */
   list: async (params: GetStudentReportsParams = {}, signal?: AbortSignal): Promise<StudentReportsPage> => {
     const response = await http.get<StudentReportsApiResponse>("/reports/student", {
@@ -288,5 +411,48 @@ export const studentReportsApi = {
     const feedback = unwrap(response, isFeedbackMessage, "Unable to send report feedback.");
     if (feedback.reportId !== normalizedReportId) throw new Error("Feedback was returned for a different report.");
     return feedback;
+  },
+};
+
+/** Admin daily report endpoints. Methods return the validated `data` payload. */
+export const adminReportsApi = {
+  /** GET /reports/admin — cursor-paginated submitted-report feed. */
+  list: async (params: GetAdminReportsParams = {}, signal?: AbortSignal): Promise<AdminReportsPage> => {
+    const response = await http.get<AdminReportsApiResponse>("/reports/admin", {
+      params: normalizeAdminListParams(params),
+      signal,
+    });
+    return unwrap(response, isAdminReportsPage, "Unable to retrieve admin reports.");
+  },
+
+  /** GET /reports/admin/summary — server-computed metrics for an inclusive date range. */
+  summary: async (params: GetAdminReportSummaryParams, signal?: AbortSignal): Promise<AdminReportSummary> => {
+    const normalizedParams = normalizeAdminSummaryParams(params);
+    const response = await http.get<AdminReportSummaryApiResponse>("/reports/admin/summary", {
+      params: normalizedParams,
+      signal,
+    });
+    const summary = unwrap(response, isAdminReportSummary, "Unable to retrieve the reports summary.");
+    if (summary.period.fromDate !== normalizedParams.fromDate || summary.period.toDate !== normalizedParams.toDate) {
+      throw new Error("The reports summary response did not match the requested date range.");
+    }
+    return summary;
+  },
+
+  /** POST /reports/admin/:reportId/feedback — shares the validated all-users endpoint implementation. */
+  sendFeedback: (
+    reportId: string,
+    payload: CreateStudentReportFeedbackDto,
+  ): Promise<StudentReportFeedbackMessage> => studentReportsApi.sendFeedback(reportId, payload),
+
+  /** PATCH /reports/admin/:reportId/review — mark one submitted report as reviewed. */
+  markReviewed: async (reportId: string): Promise<AdminReportReviewResult> => {
+    const normalizedReportId = assertUuid(reportId, "Report ID");
+    const response = await http.patch<AdminReportReviewApiResponse>(
+      `/reports/admin/${encodeURIComponent(normalizedReportId)}/review`,
+    );
+    const result = unwrap(response, isAdminReportReviewResult, "Unable to mark the report as reviewed.");
+    if (result.id !== normalizedReportId) throw new Error("The review response did not match the requested report.");
+    return result;
   },
 };

@@ -20,7 +20,7 @@ import { useStudentReportDashboard } from "@/lib/hooks/reports/use-student-repor
 import { useStudentReports } from "@/lib/hooks/reports/use-student-reports";
 import { useSubmitStudentReportDraft } from "@/lib/hooks/reports/use-submit-student-report-draft";
 import { useUpdateStudentReportDraft } from "@/lib/hooks/reports/use-update-student-report-draft";
-import type { StudentReport } from "@/lib/interfaces/reports";
+import type { StudentRecentReportDay, StudentReport, StudentReportFeedbackMessage } from "@/lib/interfaces/reports";
 import type { StudentProgrammeEnrolment } from "@/lib/interfaces/student-programmes";
 import { UserType } from "@/lib/types/users";
 import { cn } from "@/lib/utils";
@@ -94,6 +94,7 @@ function DailyReportWorkspace() {
   const feedbackMutation = useSendStudentReportFeedback();
 
   const [historyId, setHistoryId] = useState<string | null>(null);
+  const [feedbackMessagesByReport, setFeedbackMessagesByReport] = useState<Record<string, StudentReportFeedbackMessage[]>>({});
   const [saveStatus, setSaveStatus] = useState<"idle" | "dirty" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | undefined>();
@@ -275,9 +276,16 @@ function DailyReportWorkspace() {
     }
   };
 
-  const sendFeedback = async (report: StudentReport, message: string) => {
-    await feedbackMutation.mutateAsync({ reportId: report.id, programmeId: report.programmeId, payload: { message } });
+  const sendFeedback = async (report: StudentReport, message: string): Promise<StudentReportFeedbackMessage> => {
+    const feedback = await feedbackMutation.mutateAsync({ reportId: report.id, programmeId: report.programmeId, payload: { message } });
+    setFeedbackMessagesByReport((current) => {
+      const messages = current[report.id] ?? [];
+      return messages.some((item) => item.id === feedback.id)
+        ? current
+        : { ...current, [report.id]: [...messages, feedback] };
+    });
     toast.success("Message sent", { description: "Your tutor will see your feedback." });
+    return feedback;
   };
 
   const content = (() => {
@@ -340,7 +348,12 @@ function DailyReportWorkspace() {
                     <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-700" aria-hidden="true" />
                     <div><p className="text-sm font-semibold text-emerald-900">Your report has been submitted.</p><p className="mt-1 text-sm text-emerald-800">You can review it here. A new report can be submitted when the reporting schedule allows.</p></div>
                   </div>
-                  <StudentReportDetails report={report} />
+                  <StudentReportDetails
+                    report={report}
+                    onSendFeedback={(message) => sendFeedback(report, message)}
+                    feedbackMessages={feedbackMessagesByReport[report.id]}
+                    sendingFeedback={feedbackMutation.isPending}
+                  />
                 </div>
               ) : canCompose ? (
                 <>
@@ -380,6 +393,7 @@ function DailyReportWorkspace() {
           </section>
 
           <aside className="space-y-4 lg:sticky lg:top-6">
+            <RecentReportDays days={dashboard.recentDays} />
             <StudentReportHistory
               reports={pastReports}
               onOpen={(item) => setHistoryId(item.id)}
@@ -399,13 +413,51 @@ function DailyReportWorkspace() {
         </div>
 
         <AdminModal open={Boolean(historyId)} onClose={() => setHistoryId(null)} variant="drawer" eyebrow="Report details" title={selectedHistoryReport ? formatDate(selectedHistoryReport.reportDate) : "Previous report"} description={selectedHistoryReport?.programme?.name ?? dashboard.programme.name}>
-          {selectedHistoryReport && <StudentReportDetails report={selectedHistoryReport} onSendFeedback={(message) => sendFeedback(selectedHistoryReport, message)} sendingFeedback={feedbackMutation.isPending} compact />}
+          {selectedHistoryReport && <StudentReportDetails report={selectedHistoryReport} onSendFeedback={(message) => sendFeedback(selectedHistoryReport, message)} feedbackMessages={feedbackMessagesByReport[selectedHistoryReport.id]} sendingFeedback={feedbackMutation.isPending} compact />}
         </AdminModal>
       </div>
     );
   })();
 
   return content;
+}
+
+function RecentReportDays({ days }: { days: StudentRecentReportDay[] }) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_2px_10px_rgba(16,29,73,0.025)]" aria-labelledby="recent-report-days-title">
+      <div className="border-b border-[#edf0f6] px-5 py-4">
+        <h2 id="recent-report-days-title" className="font-bold text-[#101d49]">Recent reporting days</h2>
+        <p className="mt-0.5 text-xs text-[#8995aa]">A quick view of your recent report activity</p>
+      </div>
+      {days.length === 0 ? (
+        <div className="px-5 py-7 text-center">
+          <CalendarDays size={19} className="mx-auto text-[#8995aa]" aria-hidden="true" />
+          <p className="mt-2 text-sm font-semibold text-[#34415e]">No recent days to show</p>
+          <p className="mt-1 text-xs text-[#8995aa]">Recent reporting dates will appear here.</p>
+        </div>
+      ) : (
+        <ol className="divide-y divide-[#f0f2f7]">
+          {days.map(({ reportDate, report }) => (
+            <li key={reportDate} className="flex items-start gap-3 px-5 py-3.5">
+              <span className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg", report ? "bg-emerald-50 text-emerald-700" : "bg-[#f3f5f9] text-[#8995aa]")}>
+                {report ? <CheckCircle2 size={16} aria-hidden="true" /> : <CalendarDays size={15} aria-hidden="true" />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-[#101d49]">{formatDate(reportDate, { weekday: "short", day: "numeric", month: "short" })}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-[#718099]">
+                  {report ? `${statusLabelForReport(report.status)}${report.accomplishments.length ? ` · ${report.accomplishments.length} accomplishment${report.accomplishments.length === 1 ? "" : "s"}` : ""}` : "No report recorded for this day"}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+function statusLabelForReport(status: string) {
+  return status.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function Stat({ label, value, note, icon, children }: { label: string; value: string; note: string; icon?: ReactNode; children?: ReactNode }) {

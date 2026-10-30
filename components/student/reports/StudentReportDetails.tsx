@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { AlertCircle, CheckCircle2, Clock3, Loader2, MessageSquareText, Send } from "lucide-react";
 import { darkButtonClass, inputClass } from "@/components/admin/shared/admin-ui";
 import { cn } from "@/lib/utils";
-import type { StudentReport } from "@/lib/interfaces/reports";
+import type { StudentReport, StudentReportFeedbackMessage } from "@/lib/interfaces/reports";
 
 function formatReportDate(value: string): string {
   const date = new Date(`${value}T12:00:00`);
@@ -23,16 +23,24 @@ function statusLabel(status: string): string {
 
 type StudentReportDetailsProps = {
   report: StudentReport;
-  onSendFeedback?: (message: string) => Promise<void>;
+  onSendFeedback?: (message: string) => Promise<StudentReportFeedbackMessage | void>;
+  feedbackMessages?: StudentReportFeedbackMessage[];
   sendingFeedback?: boolean;
   compact?: boolean;
 };
 
-export function StudentReportDetails({ report, onSendFeedback, sendingFeedback = false, compact = false }: StudentReportDetailsProps) {
+export function StudentReportDetails({ report, onSendFeedback, feedbackMessages = [], sendingFeedback = false, compact = false }: StudentReportDetailsProps) {
   const [message, setMessage] = useState("");
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [sessionMessages, setSessionMessages] = useState<StudentReportFeedbackMessage[]>([]);
   const isDraft = report.status === "DRAFT";
   const blocker = report.blockerDescription?.trim() ?? "";
+
+  useEffect(() => {
+    setSessionMessages([]);
+    setMessage("");
+    setFeedbackError(null);
+  }, [report.id]);
 
   const send = async () => {
     if (!onSendFeedback || sendingFeedback) return;
@@ -47,7 +55,10 @@ export function StudentReportDetails({ report, onSendFeedback, sendingFeedback =
     }
     setFeedbackError(null);
     try {
-      await onSendFeedback(trimmed);
+      const sentMessage = await onSendFeedback(trimmed);
+      if (sentMessage) {
+        setSessionMessages((current) => current.some((item) => item.id === sentMessage.id) ? current : [...current, sentMessage]);
+      }
       setMessage("");
     } catch (error) {
       setFeedbackError(error instanceof Error ? error.message : "Your message could not be sent. Try again.");
@@ -107,7 +118,28 @@ export function StudentReportDetails({ report, onSendFeedback, sendingFeedback =
             <h3 id={`${report.id}-feedback`} className="inline-flex items-center gap-2 text-sm font-bold text-[#101d49]"><MessageSquareText size={16} aria-hidden="true" /> Feedback</h3>
             <span className="text-xs text-[#8995aa]">{report.feedbackCount} message{report.feedbackCount === 1 ? "" : "s"} recorded</span>
           </div>
-          <p className="mt-1 text-xs leading-5 text-[#8995aa]">Send a note about this report. The conversation history is not available in this view yet.</p>
+          <p className="mt-1 text-xs leading-5 text-[#8995aa]">Message your assigned tutor about this report. Messages sent during this visit appear here; earlier conversation history is not available from the current service.</p>
+          {(feedbackMessages.length > 0 || sessionMessages.length > 0) ? (
+            <ol className="mt-4 space-y-3" aria-label="Feedback messages sent during this visit">
+              {[...feedbackMessages, ...sessionMessages].filter((item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index).map((item) => (
+                <li key={item.id} className="flex justify-end">
+                  <article className="max-w-[92%] rounded-2xl rounded-br-md bg-[#f1f4fa] px-4 py-3 sm:max-w-[80%]">
+                    <div className="flex items-center justify-between gap-4 text-[11px] text-[#718099]">
+                      <span className="font-semibold text-[#34415e]">{item.author.role === "STUDENT" ? "You" : statusLabel(item.author.role)}</span>
+                      <time dateTime={item.createdAt}>{formatTimestamp(item.createdAt)}</time>
+                    </div>
+                    <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-[#17233f]">{item.message}</p>
+                  </article>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <div className="mt-4 rounded-xl border border-dashed border-[#dce3ef] bg-[#fafbfd] px-4 py-5 text-center">
+              <MessageSquareText size={18} className="mx-auto text-[#8995aa]" aria-hidden="true" />
+              <p className="mt-2 text-sm font-semibold text-[#34415e]">No messages in this visit yet</p>
+              <p className="mt-1 text-xs leading-5 text-[#8995aa]">The service reports {report.feedbackCount} earlier message{report.feedbackCount === 1 ? "" : "s"}, but doesn&apos;t provide their contents here.</p>
+            </div>
+          )}
           <div className="mt-3 rounded-xl border border-[#dce3ef] bg-white transition-[border-color,box-shadow] focus-within:border-[#f5c542] focus-within:ring-2 focus-within:ring-[#f5c542]/20">
             <label htmlFor={`${report.id}-feedback-message`} className="sr-only">Feedback message</label>
             <textarea id={`${report.id}-feedback-message`} rows={3} maxLength={5000} value={message} onChange={(event) => { setMessage(event.target.value); setFeedbackError(null); }} onKeyDown={onKeyDown} placeholder="Write a message for your tutor…" className={cn(inputClass, "resize-y border-0 bg-transparent py-3 leading-6 focus:ring-0")} />

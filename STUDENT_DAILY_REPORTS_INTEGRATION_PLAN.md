@@ -1,10 +1,10 @@
-# Student Daily Reports API Integration Plan
+# Daily Reports API Integration Plan
 
 ## Goal and scope
 
-Integrate the authenticated student daily reports workspace at `/student/reports` with the reports API. The API becomes the source of truth for report records, drafts, dashboard metrics, submission state, and feedback writes. Keep the current Nugi Innovations visual language and reuse the existing report components where their data assumptions still fit.
+Integrate the authenticated student daily reports workspace at `/student/reports` with the reports API, and migrate the admin reports inbox at `/dashboard/reports` from its mock store to the admin reports APIs. The API is the source of truth for report records, dashboards, review state, and feedback writes. Keep the current Nugi Innovations visual language and reuse existing report components only where their data assumptions still fit.
 
-This plan covers the student route and its API integration. The admin reports route currently reads and writes mock data through the shared Zustand store. It needs a separate API migration before it can display server reports; do not imply that student API submissions will appear in that mock inbox automatically.
+The student implementation and its daily-check banner are already API-backed. This document retains that implementation guidance and adds the admin migration plan. The admin reports route currently reads and writes mock data through the shared Zustand store; its remaining work is described below. Do not imply that API-backed student submissions are synchronized into the admin inbox until the admin route is migrated to the same backend records.
 
 ## Existing project patterns to follow
 
@@ -203,3 +203,107 @@ When the student route moves to the server API, do not delete the shared store o
 - API status and null values map accurately to UI; no mock-only status semantics leak into production view.
 - Accessibility, loading, empty, error, retry, and reduced-motion conventions follow the existing project components.
 - TypeScript and the project build pass, and manual checks cover programme switching, draft refresh, autosave failure, submit success/double click, no history, pagination, and feedback restrictions.
+
+---
+
+## Admin reports API and UI migration plan
+
+### Scope and current state
+
+The admin route is `app/(admin)/dashboard/reports/page.tsx`. It currently reads the legacy `DailyReport` model from `lib/mock/admin-daily-reports.ts` and mutates `lib/store/daily-reports.ts` locally. Its filters, summary values, missing-report drawer, reminders, read/unread state, replies, review status, and problem resolution are therefore not authoritative server state. Migrate the route as a distinct admin experience using the admin endpoints below; do not adapt backend records into fake mock values just to preserve unsupported behaviors.
+
+Keep the two-pane inbox and report reader where practical, but replace each action/filter with one supported by the backend. Use `lib/interfaces/reports/index.ts`, `lib/api/reports/index.ts`, and `lib/hooks/reports/` as the shared integration locations. Keep admin-specific contracts, query keys, and hooks explicitly named and isolated from student report drafts/dashboard queries.
+
+### Admin API contract inventory
+
+#### 1. Fetch report summary for an inclusive date window
+
+`GET /reports/admin/summary?fromDate=YYYY-MM-DD&toDate=YYYY-MM-DD`
+
+Both dates are required, strict calendar dates, inclusive, and use programme-local report calendars. The response contains `period` and `summary` counts: `submittedReports`, `expectedReports`, `notSubmittedReports`, `openProblems`, and `awaitingReview`.
+
+Implement a typed `GetAdminReportSummaryParams` and `AdminReportSummary`/response envelope. Validate date-only values and reject `fromDate > toDate` before calling the shared HTTP client. Do not construct dates through UTC `toISOString()` from local midnight, which can shift the selected calendar day. Summary keys must include the normalized date pair. Treat these counts as server calculations; do not recompute them from the currently loaded cursor page or filtered list.
+
+#### 2. Fetch the admin submitted-report feed
+
+`GET /reports/admin`
+
+Supported query parameters from `GetAdminReportsQueryDto`:
+
+| Field | Contract and UI behavior |
+| --- | --- |
+| `programmeId` | Optional UUID v4; use the programme filter and send only a selected valid ID. |
+| `status` | Optional admin-visible status: `SUBMITTED`, `REVIEWED`, or `RETURNED`. `DRAFT` is excluded by the backend and must not be offered as an admin feed status. |
+| `problemStatus` | Optional `DailyReportProblemStatus`; `OPEN` includes `OPEN` and `IN_PROGRESS`, while `IN_PROGRESS` selects that state. Only offer values confirmed by the backend enum. |
+| `fromDate`, `toDate` | Optional inclusive report-date range. Present as a paired date-range control and send both or neither. |
+| `search` | Optional, trimmed, maximum 100 characters; searches names, programme/tutor, accomplishments, and blocker text on the server. Debounce before the request; do not filter only the loaded page. |
+| `limit` | Optional integer 1–50. Keep as a number in Axios `params`. |
+| `cursor` | Opaque cursor, maximum 512 characters. Forward exactly as returned; omit it for the first page. |
+
+The response is `{ items, nextCursor }`. Each item provides its ID, report date, status, accomplishments array, no-problem flag, blocker description and status, resolved/submitted/reviewed timestamps, feedback count, and student/programme/tutor summaries. The admin list record is not the full student dashboard and does not include `tutorId`, `createdAt`, or `updatedAt` in the example. Model the actual admin DTO separately (or as a carefully composed shared base with optional fields), keeping those omissions/nulls explicit. Validate required IDs, strings, arrays, dates, statuses, and nullable fields without requiring undocumented properties.
+
+Use an infinite query for the cursor feed. Include every normalized filter except the cursor in the query key. A filter change starts a fresh key/page sequence; pass only `pageParam` as the cursor. Deduplicate by report ID when flattening pages if needed. The current list’s count is “loaded reports,” not a total count; do not claim total feed size because the API does not return one.
+
+#### 3. Add a feedback message
+
+`POST /reports/admin/:reportId/feedback`, body `{ message: string }`.
+
+Trim and validate non-whitespace content and the 5,000-character maximum before sending. The response is a single message with author/recipient IDs, roles, timestamps, and report ID. Show success only after the server confirms it. The supplied APIs do not include a feedback-thread GET endpoint, so do not render invented conversation history or imply that this POST response restores the full thread. The student-facing report plan already flags the same authorization/path question; verify that “All users” includes the intended admin role and that admins may send feedback for any report in their scope.
+
+#### 4. Mark a report reviewed
+
+`PATCH /reports/admin/:reportId/review`, no body documented. The returned object is a partial report (`id`, `status`, `submittedAt`, `reviewedAt`, `updatedAt`), not the full list item. Validate that the returned ID matches the request and that status is `REVIEWED`. Since a partial payload cannot safely replace a full item, either merge only the known returned fields into the matching cached record or invalidate the affected admin list and summary queries. Do not mark reviewed optimistically before success; prevent duplicate actions while pending.
+
+#### 5. Mark a blocker resolved — one-way UI only
+
+The examples expose `problemStatus` and `resolvedAt`, but no resolve endpoint or request DTO was supplied in this API set. Confirm the backend route, method, response, and allowed source states before wiring a resolve mutation. Once the backend confirms a successful resolved state, update the report cache from that response or invalidate affected queries.
+
+Resolved is terminal for this UI. When `problemStatus` is resolved (or the backend’s confirmed equivalent), show a static “Resolved” status and resolution timestamp when available. Remove/omit the “Reopen” action entirely. Do not implement a toggle, optimistic reopen state, or call a nonexistent reopen endpoint. If the API later adds reopen, it requires a separate product decision and contract change; this implementation plan does not include it.
+
+### API and hook architecture
+
+Add admin-specific interfaces and methods to the shared reports integration modules:
+
+- `GetAdminReportsParams`, `AdminReport`, `AdminReportsPage`, `GetAdminReportSummaryParams`, `AdminReportSummary`, and typed feedback/review response envelopes in `lib/interfaces/reports/index.ts`.
+- `adminReportsApi.list`, `adminReportsApi.summary`, `adminReportsApi.sendFeedback`, and `adminReportsApi.markReviewed` in `lib/api/reports/index.ts`. Add `resolveProblem` only after a real backend endpoint is confirmed. Normalize optional query params centrally, validate dates/UUIDs/page size/search length, and unwrap only a successful envelope with valid `data`.
+- Admin query key namespace such as `adminReportsQueryKeys.all`, `.lists()`, `.list(filters)`, and `.summary(dateRange)`. Keep keys separate from `studentReportsQueryKeys`; shared invalidation should be explicit where a mutation affects both roles’ views.
+- `useAdminReports` as a cursor `useInfiniteQuery`; `useAdminReportSummary` as a date-keyed `useQuery`; and non-retrying feedback/review mutations with pending state and targeted invalidation. Mutations are non-idempotent or state-changing and should not be automatically retried. Use the project retry policy for reads (no retry on 4xx, bounded retries for transient errors).
+
+Keep search input state separate from the debounced query value. Cancel/debounce safely on unmount, and allow TanStack Query to isolate late responses by key. Avoid mirroring query result arrays into local Zustand state. Use the server response as source of truth and invalidate after successful writes.
+
+### Admin page integration and UX mapping
+
+1. Keep the existing admin access guard and route/layout integration. Remove `useDailyReportsStore`, `mockRoster`, demo people, and mock-only type imports from the API-backed route and its reader/list components. Preserve the Zustand store and fixtures only if other still-mock screens depend on them.
+2. Use a date-range selector for the requested summary period. Map the existing quick ranges to concrete `fromDate`/`toDate` calendar dates in the programme-local reporting policy only when that policy/timezone is known. Otherwise label the controls as explicit calendar-date ranges and avoid falsely calling them “today” based on browser time. The summary query requires a valid pair.
+3. Render the five summary values from the summary endpoint. Counts remain scoped to the summary date window and should not silently change when list-only status/search/programme filters change. Clarify with the backend whether summary itself needs a programme filter; no such field is present in the supplied DTO.
+4. Replace unsupported mock filters. The API supports programme, report status, blocker status, date range, and search. Remove reporter-type (intern), team, unread, and any other client-only filter unless another API supports it. Status chips must use the backend enums; no “Unread” state exists in the report contract.
+5. Bind the inbox list to server filters and cursor pages. A selected report should remain stable when more pages load; when filters change, clear selection/pin and choose a record only after the new query data is available. Do not auto-trigger review merely by opening a report.
+6. In the reader, display student, programme, tutor, report date, submitted/reviewed state, accomplishments as ordered bullets, blocker details, and feedback count. Do not synthesize email/team/type/replies from mock roster data. Copy/export actions may format only fields actually returned by the API.
+7. “Mark reviewed” calls the review mutation. A successful response transitions the UI to `REVIEWED`; errors leave current state intact and expose retry. Sending feedback uses a dedicated composer, validates locally, submits once, and reports confirmed success. Until a feedback GET API exists, show the sent result only as a transient confirmation or append it only if product accepts that it will disappear after refresh; never present it as a complete conversation.
+8. The current missing-report drawer cannot be populated with people from the supplied summary response: it gives only the `notSubmittedReports` count. No roster/reporting-eligibility endpoint or reminder endpoint was supplied. Keep the summary metric, but remove the member list and reminder actions, or leave them explicitly unavailable until those APIs exist. Never mark fabricated reminders as sent.
+9. Problem resolution is a one-way state in the UI. A resolved blocker shows “Resolved” with no button beneath or beside it. For an unresolved blocker, show “Mark resolved” only after the backend resolve API is confirmed and only while the report is eligible. Do not display “Reopen” after success.
+10. Preserve responsive inbox/read-pane behavior and keyboard navigation only over records currently loaded. Keep loading, empty, stale/refetch, next-page, error, and retry states distinct. Opening a record on mobile must not accidentally mutate server state.
+
+### Admin contract questions and dependencies
+
+1. Supply/confirm the blocker-resolution endpoint and DTO. The APIs listed here do not currently allow the UI to mark a blocker resolved.
+2. Confirm the complete `DailyReportStatus` and `DailyReportProblemStatus` enums and whether resolved uses `RESOLVED` or another exact value. The student plan’s current provisional union uses `RESOLVED`; align it with the backend enum before sharing it.
+3. Confirm whether the summary endpoint is global or can/should support programme scope. The list supports `programmeId`, the summary DTO does not.
+4. Confirm whether date filtering on the list must be supplied as a pair at runtime (the docs describe paired values, while DTO decorators mark each optional), and identify the report calendar timezone policy for quick ranges.
+5. Provide a way to list eligible students who have not submitted, if the individual missing-report drawer is still required. The summary count alone is insufficient.
+6. Provide a reminder endpoint if one-click reminders should remain. No such endpoint is in the supplied contract.
+7. Provide a feedback-thread GET endpoint if admins need to see prior messages after refresh/navigation. The supplied feedback endpoint only writes one message.
+8. Confirm the feedback endpoint authorization semantics and intended recipient routing for admin, tutor, and student authors.
+9. Confirm whether admin list items always include `feedbackCount`, `student`, `programme`, `tutor`, and nullable blocker/timestamp fields.
+
+### Admin migration acceptance checklist
+
+- The admin route has no mock store as its data source and never fabricates report, roster, reminder, or conversation records.
+- Summary date bounds are valid inclusive `YYYY-MM-DD` values, use a stable query key, and summary counts come only from the summary endpoint.
+- Search and supported filters are sent to `/reports/admin`; cursor pagination uses opaque backend cursors and is reset on filter changes.
+- The admin feed accepts only backend-visible statuses; no unread, intern, team, or locally filtered states are presented as server features.
+- Review and feedback actions call their endpoints, handle pending/errors, and reconcile/invalidate correct caches only after success.
+- Resolved blockers render as terminal and never show a reopen control. A resolve action is not wired until its API contract is available.
+- The missing-report count can display from summary, but person-level actions remain absent until roster/reminder APIs exist.
+- Admin and student report query keys and role-specific data remain isolated; no stale admin selection or mutation response can overwrite data for changed filters.
+- TypeScript/build and focused manual checks cover date changes, cursor reset/load-more, selection changes, review success/failure, feedback validation/success/failure, and terminal resolved rendering.

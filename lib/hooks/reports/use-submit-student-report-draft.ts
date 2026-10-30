@@ -27,6 +27,7 @@ export function useSubmitStudentReportDraft() {
       );
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: studentReportsQueryKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: studentReportsQueryKeys.dailyCheck() }),
         queryClient.invalidateQueries({
           queryKey: studentReportsQueryKeys.dashboard(variables.programmeId),
         }),

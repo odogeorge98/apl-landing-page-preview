@@ -5,7 +5,7 @@
 
 /** Backend enum values may expand; unknown non-empty values remain representable. */
 export type DailyReportStatus = "DRAFT" | "SUBMITTED" | (string & {});
-export type DailyReportProblemStatus = "OPEN" | "RESOLVED" | (string & {});
+export type DailyReportProblemStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | (string & {});
 
 export interface ReportPersonSummary {
   id: string;
@@ -73,20 +73,27 @@ export interface StudentReportDashboardOverview {
   feedbackReceived: number;
 }
 
-/**
- * The backend has not finalized reporting-policy or recent-day schemas yet.
- * Keep those opaque JSON objects typed as records rather than guessing fields.
- */
+export interface StudentReportingPolicy {
+  timezone: string;
+  /** JavaScript weekday numbers: Sunday=0 through Saturday=6. */
+  requiredWeekdays: number[];
+}
+
+export interface StudentRecentReportDay {
+  reportDate: string;
+  report: StudentReport | null;
+}
+
 export interface StudentReportDashboardData {
   programme: ReportProgrammeSummary;
   assignedTutors: ReportPersonSummary[];
-  reportingPolicy: Record<string, unknown> | null;
+  reportingPolicy: StudentReportingPolicy | null;
   overview: StudentReportDashboardOverview;
   today: {
     reportDate: string;
     report: StudentReport | null;
   };
-  recentDays: Array<Record<string, unknown>>;
+  recentDays: StudentRecentReportDay[];
 }
 
 export interface StudentReportDashboardApiResponse {
@@ -149,4 +156,101 @@ export interface StudentReportFeedbackApiResponse {
   statusCode: number;
   message: string;
   data: StudentReportFeedbackMessage;
+}
+
+/** GET /reports/student/daily-check envelope; `true` means a report is due today. */
+export interface StudentDailyReportCheckApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: boolean;
+}
+
+/** Statuses accepted by the admin report feed; drafts are intentionally excluded. */
+export type AdminVisibleReportStatus = "SUBMITTED" | "REVIEWED" | "RETURNED";
+
+export interface GetAdminReportsParams {
+  programmeId?: string;
+  status?: AdminVisibleReportStatus;
+  problemStatus?: DailyReportProblemStatus;
+  fromDate?: string;
+  toDate?: string;
+  search?: string;
+  limit?: number;
+  /** Opaque cursor returned by the previous admin reports page. */
+  cursor?: string | null;
+}
+
+export interface AdminReportPersonSummary {
+  id: string;
+  name: string;
+}
+
+/** Report shape returned by GET /reports/admin. */
+export interface AdminReport {
+  id: string;
+  reportDate: string;
+  status: AdminVisibleReportStatus;
+  accomplishments: string[];
+  noProblemsToday: boolean;
+  blockerDescription: string | null;
+  problemStatus: DailyReportProblemStatus | null;
+  resolvedAt: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  feedbackCount: number;
+  student: AdminReportPersonSummary;
+  programme: AdminReportPersonSummary;
+  tutor: AdminReportPersonSummary;
+}
+
+export interface AdminReportsPage {
+  items: AdminReport[];
+  nextCursor: string | null;
+}
+
+export interface AdminReportsApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: AdminReportsPage;
+}
+
+export interface GetAdminReportSummaryParams {
+  fromDate: string;
+  toDate: string;
+}
+
+export interface AdminReportSummary {
+  period: GetAdminReportSummaryParams;
+  summary: {
+    submittedReports: number;
+    expectedReports: number;
+    notSubmittedReports: number;
+    openProblems: number;
+    awaitingReview: number;
+  };
+}
+
+export interface AdminReportSummaryApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: AdminReportSummary;
+}
+
+/** The review endpoint returns a deliberately partial report resource. */
+export interface AdminReportReviewResult {
+  id: string;
+  status: "REVIEWED";
+  submittedAt: string | null;
+  reviewedAt: string;
+  updatedAt: string;
+}
+
+export interface AdminReportReviewApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: AdminReportReviewResult;
 }
