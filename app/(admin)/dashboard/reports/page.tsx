@@ -1,529 +1,333 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  AlertTriangle,
-  CheckCircle2,
-  FileText,
-  Inbox,
-  Loader2,
-  MessageSquareText,
-  RotateCw,
-  Search,
-  Sparkles,
-  UsersRound,
-  X,
+  AlertTriangle, ArrowRight, Check, CheckCircle2, FileText, Inbox, Loader2,
+  MessageSquare, Plus, RotateCcw, Search, Sparkles, Users, X,
 } from "lucide-react";
-
 import { MainLayout } from "@/components/layout/dashboard";
 import { AdminAccessGuard } from "@/components/admin/shared/AdminAccessGuard";
-import { Select, type SelectOption } from "@/components/admin/shared/Select";
-import {
-  cardClass,
-  getInitials,
-  inputClass,
-  secondaryButtonClass,
-} from "@/components/admin/shared/admin-ui";
-import { ReportReader } from "@/components/admin/reports/ReportReader";
-import { ReportStatusBadge } from "@/components/admin/reports/ReportStatusBadge";
+import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { toast } from "@/components/ui/Toaster";
-import { useAdminReportSummary } from "@/lib/hooks/reports/use-admin-report-summary";
-import { useAdminReports } from "@/lib/hooks/reports/use-admin-reports";
-import { useMarkAdminReportReviewed } from "@/lib/hooks/reports/use-mark-admin-report-reviewed";
-import { useSendAdminReportFeedback } from "@/lib/hooks/reports/use-admin-report-feedback";
+import { ReportReader } from "@/components/admin/reports/ReportReader";
+import { ReporterBadge } from "@/components/admin/reports/ReporterBadge";
+import { clockTime, dayLabel, longDate, preview } from "@/components/admin/reports/report-utils";
+import { cardClass, getInitials, inputClass, secondaryButtonClass } from "@/components/admin/shared/admin-ui";
+import { useAdminReport, useAdminReportFeedback, useAdminReports, useAdminReportSummary } from "@/lib/hooks/reports/use-admin-reports";
+import { useMarkAdminReportFeedbackRead, useMarkAdminReportReviewed, useSendAdminReportFeedback } from "@/lib/hooks/reports/use-admin-report-mutations";
+import { useCreateReportPolicies } from "@/lib/hooks/reports/use-create-report-policies";
+import { useReportPolicyProgrammes } from "@/lib/hooks/reports/use-report-policy-programmes";
 import { useProgrammes } from "@/lib/hooks/programmes/use-programmes";
-import type {
-  AdminReport,
-  AdminVisibleReportStatus,
-  DailyReportProblemStatus,
-} from "@/lib/interfaces/reports";
+import type { AdminDailyReport, AdminReportListItem, DailyReportProblemStatus, DailyReportStatus } from "@/lib/interfaces/reports";
+import type { CreateReportPoliciesDto } from "@/lib/interfaces/report-policies";
+import useAuthStore from "@/lib/store/auth";
 import { cn } from "@/lib/utils";
 
-type DatePreset = "today" | "last7" | "month" | "custom";
-type ReportStatusFilter = "" | AdminVisibleReportStatus;
-type ProblemStatusFilter = "" | DailyReportProblemStatus;
-
-const REPORT_STATUS_OPTIONS: readonly SelectOption<ReportStatusFilter>[] = [
-  { value: "", label: "All report statuses" },
-  { value: "SUBMITTED", label: "Submitted" },
-  { value: "REVIEWED", label: "Reviewed" },
-  { value: "RETURNED", label: "Returned" },
+type Range = "today" | "yesterday" | "week" | "all";
+const RANGE_OPTIONS = [
+  { value: "today", label: "Today" }, { value: "yesterday", label: "Yesterday" },
+  { value: "week", label: "Last 7 days" }, { value: "all", label: "All dates" },
+] as const;
+const STATUS_OPTIONS = [
+  { value: "", label: "All statuses" }, { value: "SUBMITTED", label: "Submitted" },
+  { value: "REVIEWED", label: "Reviewed" }, { value: "RETURNED", label: "Returned" },
 ];
-
-const PROBLEM_STATUS_OPTIONS: readonly SelectOption<ProblemStatusFilter>[] = [
-  { value: "", label: "All blocker states" },
-  { value: "OPEN", label: "Open blockers" },
-  { value: "IN_PROGRESS", label: "In progress" },
-  { value: "RESOLVED", label: "Resolved" },
+const PROBLEM_OPTIONS = [
+  { value: "", label: "All blockers" }, { value: "OPEN", label: "Open problems" },
+  { value: "IN_PROGRESS", label: "In progress" }, { value: "RESOLVED", label: "Resolved" },
 ];
-
-const DATE_PRESETS: { value: DatePreset; label: string }[] = [
-  { value: "today", label: "Today" },
-  { value: "last7", label: "Last 7 days" },
-  { value: "month", label: "This month" },
-  { value: "custom", label: "Custom range" },
+const WEEKDAYS = [
+  { value: 1, label: "Monday" }, { value: 2, label: "Tuesday" }, { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" }, { value: 5, label: "Friday" }, { value: 6, label: "Saturday" }, { value: 0, label: "Sunday" },
 ];
 
 function dateKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const year = date.getFullYear();
+  return `${year}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
-
-function getPresetRange(preset: Exclude<DatePreset, "custom">, now = new Date()) {
-  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const from = new Date(to);
-  if (preset === "last7") from.setDate(from.getDate() - 6);
-  if (preset === "month") from.setDate(1);
-  return { fromDate: dateKey(from), toDate: dateKey(to) };
+function dateRange(range: Range): { fromDate?: string; toDate?: string } {
+  if (range === "all") return {};
+  const end = new Date();
+  const start = new Date(end);
+  if (range === "yesterday") { start.setDate(start.getDate() - 1); end.setDate(end.getDate() - 1); }
+  else if (range === "week") start.setDate(start.getDate() - 6);
+  return { fromDate: dateKey(start), toDate: dateKey(end) };
 }
-
-function formatDateOnly(value: string, options: Intl.DateTimeFormatOptions = {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-}) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-NG", options).format(new Date(year, month - 1, day, 12));
+function yearToDate(): { fromDate: string; toDate: string } {
+  const now = new Date();
+  return { fromDate: `${now.getFullYear()}-01-01`, toDate: dateKey(now) };
 }
-
-function formatTimestamp(value: string | null) {
-  if (!value) return "Not available";
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "Not available";
-  return new Intl.DateTimeFormat("en-NG", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
+function rangeLabel(range: Range, fromDate?: string, toDate?: string): string {
+  if (range === "all") return "Year to date";
+  if (!fromDate || !toDate) return "Selected period";
+  return fromDate === toDate ? longDate(fromDate) : `${longDate(fromDate)} – ${longDate(toDate)}`;
 }
-
-function statusLabel(status: AdminVisibleReportStatus) {
-  return status.charAt(0) + status.slice(1).toLowerCase();
-}
-
-function reportAsText(report: AdminReport) {
+function reportCopy(report: AdminDailyReport): string {
   return [
-    `Daily report — ${report.student.name}`,
-    `Programme: ${report.programme.name}`,
-    `Tutor: ${report.tutor.name}`,
-    `${formatDateOnly(report.reportDate)} · submitted ${formatTimestamp(report.submittedAt)}`,
-    `Status: ${statusLabel(report.status)}`,
-    "",
-    "ACCOMPLISHMENTS",
-    report.accomplishments.length ? report.accomplishments.map((item) => `• ${item}`).join("\n") : "None provided.",
-    "",
-    "BLOCKER",
-    report.noProblemsToday ? "No problems reported." : report.blockerDescription?.trim() || "No blocker details provided.",
+    `Daily report — ${report.student.name} · ${report.programme.name}`,
+    `${longDate(report.reportDate)} · submitted ${clockTime(report.submittedAt)}`,
+    "", "ACCOMPLISHED TODAY", ...(report.accomplishments.length ? report.accomplishments : ["None provided."]),
+    "", "PROBLEMS & BLOCKERS", report.blockerDescription || "None reported.",
   ].join("\n");
 }
 
-function reportPreview(report: AdminReport) {
-  const text = report.accomplishments.filter(Boolean).join(" · ").replace(/\s+/g, " ");
-  if (!text) return report.noProblemsToday ? "No accomplishments listed" : report.blockerDescription || "Daily report";
-  return text.length > 145 ? `${text.slice(0, 142).trimEnd()}…` : text;
-}
-
 export default function AdminDailyReportsPage() {
-  return (
-    <MainLayout>
-      <AdminAccessGuard permission="manageUsers" areaLabel="Daily reports">
-        <ReportsWorkspace />
-      </AdminAccessGuard>
-    </MainLayout>
-  );
+  return <MainLayout><AdminAccessGuard permission="manageUsers" areaLabel="Daily reports"><ReportsWorkspace /></AdminAccessGuard></MainLayout>;
 }
 
 function ReportsWorkspace() {
-  const [datePreset, setDatePreset] = useState<DatePreset>("last7");
-  const [dateRange, setDateRange] = useState(() => getPresetRange("last7"));
+  const currentUserId = useAuthStore((state) => state.authUser?.id);
+  const [range, setRange] = useState<Range>("today");
+  const [status, setStatus] = useState("");
+  const [problemStatus, setProblemStatus] = useState("");
   const [programmeId, setProgrammeId] = useState("");
-  const [status, setStatus] = useState<ReportStatusFilter>("");
-  const [problemStatus, setProblemStatus] = useState<ProblemStatusFilter>("");
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selection, setSelection] = useState<{ id: string; filterKey: string } | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileReading, setMobileReading] = useState(false);
-  const listRef = useRef<HTMLDivElement>(null);
-
-  const programmesQuery = useProgrammes();
-  useEffect(() => {
-    if (programmesQuery.hasNextPage && !programmesQuery.isFetchingNextPage) {
-      void programmesQuery.fetchNextPage();
-    }
-  }, [programmesQuery.hasNextPage, programmesQuery.isFetchingNextPage, programmesQuery.fetchNextPage]);
+  const markRead = useMarkAdminReportFeedbackRead();
+  const markedIdsRef = useRef<Set<string>>(new Set());
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    const timer = window.setTimeout(() => setSearch(searchInput.trim()), 350);
     return () => window.clearTimeout(timer);
-  }, [search]);
+  }, [searchInput]);
 
-  const programmeOptions = useMemo(() => {
-    const items = programmesQuery.data?.pages.flatMap((page) => page.items) ?? [];
-    const unique = new Map(items.map((programme) => [programme.id, programme]));
-    return [
-      { value: "", label: "All programmes" },
-      ...[...unique.values()].map((programme) => ({ value: programme.id, label: programme.name })),
-    ] satisfies SelectOption<string>[];
-  }, [programmesQuery.data]);
-
-  const listFilters = useMemo(() => ({
-    fromDate: dateRange.fromDate,
-    toDate: dateRange.toDate,
-    programmeId: programmeId || undefined,
-    status: status || undefined,
-    problemStatus: problemStatus || undefined,
-    search: debouncedSearch || undefined,
-    limit: 20,
-  }), [dateRange.fromDate, dateRange.toDate, programmeId, status, problemStatus, debouncedSearch]);
-  const filterKey = JSON.stringify(listFilters);
-
-  const summaryQuery = useAdminReportSummary(dateRange);
-  const reportsQuery = useAdminReports(listFilters);
-  const markReviewed = useMarkAdminReportReviewed();
-  const sendFeedback = useSendAdminReportFeedback();
-
-  const reports = useMemo(() => {
-    const pages = reportsQuery.data?.pages ?? [];
-    const unique = new Map<string, AdminReport>();
-    pages.forEach((page) => page.items.forEach((report) => unique.set(report.id, report)));
-    return [...unique.values()];
-  }, [reportsQuery.data]);
-
-  const groups = useMemo(() => {
-    const byDate = new Map<string, AdminReport[]>();
-    reports.forEach((report) => {
-      const dayReports = byDate.get(report.reportDate) ?? [];
-      dayReports.push(report);
-      byDate.set(report.reportDate, dayReports);
-    });
-    return [...byDate.entries()];
+  const dates = useMemo(() => dateRange(range), [range]);
+  const listParams = useMemo(() => ({
+    ...(programmeId ? { programmeId } : {}),
+    ...(status ? { status: status as Exclude<DailyReportStatus, "DRAFT"> } : {}),
+    ...(problemStatus ? { problemStatus: problemStatus as DailyReportProblemStatus } : {}),
+    ...(dates.fromDate && dates.toDate ? dates : {}),
+    ...(search ? { search } : {}), limit: 20,
+  }), [programmeId, status, problemStatus, dates, search]);
+  const reportsQuery = useAdminReports(listParams);
+  const reports = useMemo(() => reportsQuery.data?.pages.flatMap((page) => page.items) ?? [], [reportsQuery.data]);
+  const reportGroups = useMemo(() => {
+    const grouped = new Map<string, AdminReportListItem[]>();
+    reports.forEach((report) => grouped.set(report.reportDate, [...(grouped.get(report.reportDate) ?? []), report]));
+    return [...grouped.entries()];
   }, [reports]);
+  const activeSummaryDates = useMemo(() => dates.fromDate && dates.toDate ? dates : yearToDate(), [dates]);
+  const summaryQuery = useAdminReportSummary({ fromDate: activeSummaryDates.fromDate!, toDate: activeSummaryDates.toDate! });
 
-  const activeSelectionId = selection?.filterKey === filterKey ? selection.id : null;
-  const selected = reports.find((report) => report.id === activeSelectionId) ?? reports[0] ?? null;
+  const programmeQuery = useProgrammes();
+  const catalogueProgrammes = useMemo(() => programmeQuery.data?.pages.flatMap((page) => page.items) ?? [], [programmeQuery.data]);
+  const filterProgrammeOptions = useMemo(() => [
+    { value: "", label: "All programmes" },
+    ...catalogueProgrammes.map((programme) => ({ value: programme.id, label: programme.name })),
+  ], [catalogueProgrammes]);
+
+  const selected = reports.find((report) => report.id === selectedId) ?? reports[0] ?? null;
   const selectedIndex = selected ? reports.findIndex((report) => report.id === selected.id) : -1;
+  useEffect(() => {
+    if (!selectedId && reports.length) setSelectedId(reports[0].id);
+    else if (selectedId && reports.length && !reports.some((report) => report.id === selectedId)) setSelectedId(reports[0].id);
+  }, [reports, selectedId]);
+  useEffect(() => { markedIdsRef.current.clear(); }, [selected?.id]);
+
+  const detailQuery = useAdminReport(selected?.id);
+  const feedbackQuery = useAdminReportFeedback(selected?.id);
+  const messages = useMemo(() => (feedbackQuery.data?.pages.flatMap((page) => page.items) ?? [])
+    .slice().sort((a, b) => a.createdAt.localeCompare(b.createdAt)), [feedbackQuery.data]);
+  const sendFeedback = useSendAdminReportFeedback();
+  const reviewReport = useMarkAdminReportReviewed();
 
   useEffect(() => {
-    if (selection && selection.filterKey !== filterKey) {
-      setSelection(null);
-      setMobileReading(false);
+    if (!selected || !currentUserId || !mobileReading && typeof window !== "undefined" && !window.matchMedia("(min-width: 1024px)").matches) return;
+    if (!feedbackQuery.isSuccess) return;
+    const unreadIncoming = messages.filter((message) => message.recipientUserId === currentUserId && !message.readAt && !markedIdsRef.current.has(message.id));
+    unreadIncoming.forEach((message) => {
+      markedIdsRef.current.add(message.id);
+      markRead.mutate({ reportId: selected.id, feedbackId: message.id }, {
+        onError: () => { markedIdsRef.current.delete(message.id); },
+      });
+    });
+  }, [selected?.id, currentUserId, messages, feedbackQuery.isSuccess, mobileReading]);
+
+  const [policyOpen, setPolicyOpen] = useState(false);
+  const [policyProgrammes, setPolicyProgrammes] = useState<string[]>([]);
+  const [timezone, setTimezone] = useState("Africa/Lagos");
+  const [weekdays, setWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [effectiveFrom, setEffectiveFrom] = useState(() => dateKey(new Date()));
+  const [effectiveTo, setEffectiveTo] = useState("");
+  const [policyError, setPolicyError] = useState<string | null>(null);
+  const createPolicies = useCreateReportPolicies();
+  const policyProgrammeQuery = useReportPolicyProgrammes();
+  const policyProgrammePages = useMemo(() => policyProgrammeQuery.data?.pages.flatMap((page) => page.items) ?? [], [policyProgrammeQuery.data]);
+  const eligiblePolicies = useMemo(() => policyProgrammePages.filter((item) => !item.hasActiveReportingPolicy), [policyProgrammePages]);
+
+  const submitPolicies = async () => {
+    if (!policyProgrammes.length || !weekdays.length || !effectiveFrom || (effectiveTo && effectiveTo < effectiveFrom)) {
+      setPolicyError("Choose at least one programme, one reporting day, and a valid effective date range."); return;
     }
-  }, [filterKey, selection]);
-
-  const selectReport = (id: string, focus = false) => {
-    setSelection({ id, filterKey });
-    setMobileReading(true);
-    if (focus) listRef.current?.querySelector<HTMLButtonElement>(`[data-report-id="${id}"]`)?.focus();
-  };
-
-  const moveSelection = (step: number) => {
-    const next = reports[selectedIndex + step];
-    if (next) selectReport(next.id, true);
-  };
-
-  const handleListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (["ArrowDown", "j"].includes(event.key)) {
-      event.preventDefault();
-      moveSelection(1);
-    } else if (["ArrowUp", "k"].includes(event.key)) {
-      event.preventDefault();
-      moveSelection(-1);
-    }
-  };
-
-  const choosePreset = (preset: DatePreset) => {
-    setDatePreset(preset);
-    if (preset !== "custom") setDateRange(getPresetRange(preset));
-  };
-
-  const changeFromDate = (fromDate: string) => {
-    setDatePreset("custom");
-    setDateRange((current) => ({
-      fromDate,
-      toDate: current.toDate && current.toDate >= fromDate ? current.toDate : fromDate,
-    }));
-  };
-
-  const changeToDate = (toDate: string) => {
-    setDatePreset("custom");
-    setDateRange((current) => ({ ...current, toDate }));
-  };
-
-  const refresh = async () => {
-    const outcomes = await Promise.all([reportsQuery.refetch(), summaryQuery.refetch()]);
-    if (outcomes.some((outcome) => outcome.isError)) {
-      toast.error("Some report data could not be refreshed.");
-    }
-  };
-
-  const handleMarkReviewed = async (report: AdminReport) => {
+    const payload: CreateReportPoliciesDto = { policies: policyProgrammes.map((id) => ({ programmeId: id, timezone, requiredWeekdays: [...weekdays].sort((a, b) => a - b), effectiveFrom, effectiveTo: effectiveTo || null })) };
+    setPolicyError(null);
     try {
-      await markReviewed.mutateAsync({ reportId: report.id });
-      toast.success("Report marked as reviewed", { description: `${report.student.name} · ${formatDateOnly(report.reportDate, { day: "numeric", month: "short" })}.` });
+      await createPolicies.mutateAsync(payload);
+      toast.success("Reporting policies created", { description: `${payload.policies.length} programme${payload.policies.length === 1 ? "" : "s"} configured.` });
+      setPolicyOpen(false);
+      void policyProgrammeQuery.refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not mark this report as reviewed.");
+      const message = error instanceof Error ? error.message : "Could not create reporting policies.";
+      setPolicyError(message); toast.error("Could not create reporting policies", { description: message });
     }
   };
 
-  const handleSendFeedback = async (report: AdminReport, message: string) => {
-    try {
-      await sendFeedback.mutateAsync({ reportId: report.id, payload: { message } });
-      toast.success("Feedback sent", { description: `Your message was sent for ${report.student.name}'s report.` });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not send feedback.");
-      throw error;
+  const resetFilters = () => { setRange("all"); setProgrammeId(""); setStatus(""); setProblemStatus(""); setSearchInput(""); };
+  const hasFilters = Boolean(programmeId || status || problemStatus || searchInput || range !== "all");
+  const selectReport = (report: AdminReportListItem) => { setSelectedId(report.id); setMobileReading(true); };
+  const move = async (step: number) => {
+    const nextIndex = selectedIndex + step;
+    if (nextIndex >= 0 && nextIndex < reports.length) { setSelectedId(reports[nextIndex].id); return; }
+    if (step > 0 && reportsQuery.hasNextPage && !reportsQuery.isFetchingNextPage) {
+      const result = await reportsQuery.fetchNextPage();
+      const expanded = result.data?.pages.flatMap((page) => page.items) ?? [];
+      if (expanded[reports.length]) setSelectedId(expanded[reports.length].id);
     }
   };
-
-  const copyReport = async (report: AdminReport) => {
-    try {
-      await navigator.clipboard.writeText(reportAsText(report));
-      toast.success("Report copied");
-    } catch {
-      toast.error("Could not copy this report.");
-    }
+  const onReply = async (body: string) => {
+    if (!selected) return;
+    await sendFeedback.mutateAsync({ reportId: selected.id, payload: { message: body } });
+    toast.success("Feedback sent", { description: `Your message was added to ${selected.student.name.split(" ")[0]}'s report conversation.` });
+  };
+  const onReview = async () => {
+    if (!selected) return;
+    try { await reviewReport.mutateAsync(selected.id); toast.success("Report marked as reviewed"); }
+    catch (error) { toast.error("Could not mark report as reviewed", { description: error instanceof Error ? error.message : "Please try again." }); }
+  };
+  const copySelected = async () => {
+    const report = detailQuery.data;
+    if (!report) return;
+    try { await navigator.clipboard.writeText(reportCopy(report)); toast.success("Report copied as text"); }
+    catch { toast.error("Couldn't copy the report"); }
   };
 
-  const clearFilters = () => {
-    setProgrammeId("");
-    setStatus("");
-    setProblemStatus("");
-    setSearch("");
-    setDebouncedSearch("");
-    setDatePreset("last7");
-    setDateRange(getPresetRange("last7"));
-  };
-
-  const hasActiveFilters = Boolean(programmeId || status || problemStatus || search);
   const summary = summaryQuery.data?.summary;
-  const isRefreshing = reportsQuery.isFetching || summaryQuery.isFetching;
-  const fetchNextReportsPage = () => reportsQuery.fetchNextPage();
+  const rangeSummaryLabel = rangeLabel(range, activeSummaryDates.fromDate, activeSummaryDates.toDate);
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-6 pb-10">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-3xl">
-          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#64718a]">
-            <Sparkles size={15} className="text-[#c59400]" aria-hidden="true" /> Insights · Administration
-          </p>
+        <div className="max-w-2xl">
+          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#64718a]"><Sparkles size={15} className="text-[#c59400]" aria-hidden="true" /> Insights · Administration</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#101d49] sm:text-4xl">Daily reports</h1>
-          <p className="mt-3 text-sm leading-6 text-[#64718a] sm:text-base">
-            Review student updates, follow blockers, and keep feedback moving.
-          </p>
+          <p className="mt-3 text-sm leading-6 text-[#64718a] sm:text-base">Review student updates, follow up on blockers, and keep reporting on track.</p>
         </div>
-        <button type="button" onClick={() => void refresh()} disabled={isRefreshing} className={cn(secondaryButtonClass, "min-h-10 self-start lg:self-auto")}>
-          <RotateCw size={15} aria-hidden="true" className={isRefreshing ? "animate-spin" : undefined} />
-          {isRefreshing ? "Refreshing…" : "Refresh reports"}
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          <button type="button" onClick={() => { setPolicyProgrammes([]); setPolicyError(null); setPolicyOpen(true); }} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#101d49] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#192c65] focus:outline-none focus:ring-4 focus:ring-[#101d49]/15"><Plus size={16} aria-hidden="true" />Create policy</button>
+          <div role="radiogroup" aria-label="Quick date range" className="inline-flex rounded-xl border border-[#e4e9f2] bg-white p-1">
+            {RANGE_OPTIONS.map((option) => <button key={option.value} type="button" role="radio" aria-checked={range === option.value} onClick={() => setRange(option.value)} className={cn("rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors", range === option.value ? "bg-[#101d49] text-white shadow-sm" : "text-[#64718a] hover:bg-[#f1f4fa] hover:text-[#101d49]")}>{option.label}</button>)}
+          </div>
+        </div>
       </header>
 
-      <section aria-labelledby="summary-heading" className="space-y-3">
-        <div>
-          <h2 id="summary-heading" className="text-base font-bold text-[#101d49]">Reports for the selected period</h2>
-          <p className="mt-1 text-sm text-[#64718a]">Server summary · {formatDateOnly(dateRange.fromDate, { day: "numeric", month: "short", year: "numeric" })} – {formatDateOnly(dateRange.toDate, { day: "numeric", month: "short", year: "numeric" })}</p>
-        </div>
-        {summaryQuery.isError ? (
-          <div className={cn(cardClass, "flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between")}>
-            <div className="flex items-start gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600"><AlertTriangle size={18} aria-hidden="true" /></span>
-              <div><p className="font-semibold text-[#101d49]">Could not load the report summary</p><p className="mt-1 text-sm text-[#64718a]">{summaryQuery.error instanceof Error ? summaryQuery.error.message : "Please try again."}</p></div>
-            </div>
-            <button type="button" onClick={() => void summaryQuery.refetch()} className={cn(secondaryButtonClass, "min-h-9")}>Try again</button>
-          </div>
-        ) : (
-          <div className={cn(cardClass, "grid divide-y divide-[#edf0f6] sm:grid-cols-2 sm:divide-y-0 xl:grid-cols-4 xl:divide-x")}>
-            <SummaryMetric
-              label="Submitted reports"
-              value={summary?.submittedReports}
-              detail={summary ? `of ${summary.expectedReports} expected` : "Reports received in this period"}
-              icon={FileText}
-              loading={summaryQuery.isPending}
-              progress={summary ? summary.expectedReports > 0 ? Math.min(100, summary.submittedReports / summary.expectedReports * 100) : 0 : undefined}
-            />
-            <SummaryMetric label="Not submitted" value={summary?.notSubmittedReports} detail="Expected reports not received" icon={UsersRound} tone="red" loading={summaryQuery.isPending} />
-            <SummaryMetric label="Open blockers" value={summary?.openProblems} detail="Reports needing follow-up" icon={AlertTriangle} tone="amber" loading={summaryQuery.isPending} />
-            <SummaryMetric label="Awaiting review" value={summary?.awaitingReview} detail="Submitted reports to review" icon={Inbox} loading={summaryQuery.isPending} />
-          </div>
-        )}
+      <section aria-label="Report summary" className={cn(cardClass, "grid divide-y divide-[#edf0f6] sm:grid-cols-2 sm:divide-y-0 xl:grid-cols-4 xl:divide-x")}>
+        <SummaryMetric label="Submitted reports" value={summary?.submittedReports} suffix={summary ? ` / ${summary.expectedReports} expected` : undefined} hint={rangeSummaryLabel} icon={FileText} loading={summaryQuery.isLoading} error={summaryQuery.isError} onRetry={() => void summaryQuery.refetch()} />
+        <SummaryMetric label="Open problems" value={summary?.openProblems} hint="Need follow-up" icon={AlertTriangle} tone="amber" loading={summaryQuery.isLoading} error={summaryQuery.isError} onRetry={() => void summaryQuery.refetch()} onClick={() => setProblemStatus("OPEN")} />
+        <SummaryMetric label="Awaiting review" value={summary?.awaitingReview} hint="Submitted and not reviewed" icon={Inbox} loading={summaryQuery.isLoading} error={summaryQuery.isError} onRetry={() => void summaryQuery.refetch()} onClick={() => setStatus("SUBMITTED")} />
+        <SummaryMetric label="Not submitted" value={summary?.notSubmittedReports} hint={`Expected in ${rangeSummaryLabel.toLowerCase()}`} icon={Users} tone="red" loading={summaryQuery.isLoading} error={summaryQuery.isError} onRetry={() => void summaryQuery.refetch()} />
       </section>
 
-      <section className={cn(cardClass, "overflow-hidden")} aria-label="Admin report inbox">
-        <div className="flex flex-col gap-4 border-b border-[#edf0f6] p-4 sm:p-5">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <h2 className="font-bold text-[#101d49]">Report inbox</h2>
-              <p className="mt-1 text-sm text-[#64718a]">Search and filter server reports. Draft reports are not included in this inbox.</p>
-            </div>
-            <div className="flex flex-wrap gap-1 rounded-xl border border-[#e4e9f2] bg-[#f8f9fc] p-1" role="group" aria-label="Summary date presets">
-              {DATE_PRESETS.map((preset) => (
-                <button key={preset.value} type="button" aria-pressed={datePreset === preset.value} onClick={() => choosePreset(preset.value)} className={cn("rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors", datePreset === preset.value ? "bg-[#101d49] text-white shadow-sm" : "text-[#64718a] hover:bg-white hover:text-[#101d49]")}>{preset.label}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1.5fr)_minmax(170px,1fr)_minmax(170px,1fr)_minmax(170px,1fr)]">
-            <label className="relative block min-w-0">
-              <span className="sr-only">Search reports</span>
-              <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8995aa]" aria-hidden="true" />
-              <input type="text" value={search} maxLength={100} onChange={(event) => setSearch(event.target.value)} placeholder="Search student, tutor, programme, report…" className={cn(inputClass, "h-10 pr-10 pl-10 hover:border-[#b9c5da]")} />
-              {search && <button type="button" aria-label="Clear report search" onClick={() => setSearch("")} className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-[#8995aa] hover:bg-[#f1f4fa] hover:text-[#101d49]"><X size={15} aria-hidden="true" /></button>}
+      <section className={cn(cardClass, "grid overflow-hidden lg:h-[calc(100dvh-250px)] lg:min-h-[640px] lg:grid-cols-[minmax(340px,400px)_1fr]")}>
+        <div className={cn("min-h-0 flex-col border-[#edf0f6] lg:flex lg:border-r", mobileReading ? "hidden" : "flex")}>
+          <div className="space-y-3 border-b border-[#edf0f6] p-4">
+            <label className="relative block">
+              <span className="sr-only">Search reports</span><Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8995aa]" aria-hidden="true" />
+              <input type="search" maxLength={100} value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search students, programmes or report text…" className={cn(inputClass, "h-10 pl-10 hover:border-[#b9c5da]")} />
             </label>
-            <Select ariaLabel="Filter reports by programme" value={programmeId} onChange={setProgrammeId} options={programmeOptions} />
-            <Select<ReportStatusFilter> ariaLabel="Filter reports by status" value={status} onChange={setStatus} options={REPORT_STATUS_OPTIONS} />
-            <Select<ProblemStatusFilter> ariaLabel="Filter reports by blocker status" value={problemStatus} onChange={setProblemStatus} options={PROBLEM_STATUS_OPTIONS} />
+            <div className="grid grid-cols-2 gap-2">
+              <AnimatedSelect ariaLabel="Filter by report status" value={status} onChange={setStatus} options={STATUS_OPTIONS} fullWidth className="w-full" />
+              <AnimatedSelect ariaLabel="Filter by programme" value={programmeId} onChange={setProgrammeId} options={filterProgrammeOptions} fullWidth className="w-full" menuMinWidth={220} />
+            </div>
+            <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+              <AnimatedSelect ariaLabel="Filter by blocker status" value={problemStatus} onChange={setProblemStatus} options={PROBLEM_OPTIONS} fullWidth className="w-full" />
+              {programmeQuery.hasNextPage && <button type="button" onClick={() => void programmeQuery.fetchNextPage()} disabled={programmeQuery.isFetchingNextPage} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-[#34415e] hover:bg-[#f4f6fa] disabled:opacity-50">{programmeQuery.isFetchingNextPage ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}More programmes</button>}
+            </div>
+            <p className="text-xs text-[#718099]">{range === "all" ? "All report dates" : `${dates.fromDate ? longDate(dates.fromDate) : ""}${dates.toDate && dates.toDate !== dates.fromDate ? ` – ${longDate(dates.toDate)}` : ""}`} · filters are applied by the reports service</p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="min-w-0">
-              <label className="mb-1.5 block text-xs font-semibold text-[#64718a]">Report date from</label>
-              <DatePicker value={dateRange.fromDate} onChange={changeFromDate} ariaLabel="Report date from" className="w-full" clearable={false} />
-            </div>
-            <div className="min-w-0">
-              <label className="mb-1.5 block text-xs font-semibold text-[#64718a]">Report date to</label>
-              <DatePicker value={dateRange.toDate} onChange={changeToDate} minDate={dateRange.fromDate} ariaLabel="Report date to" className="w-full" clearable={false} />
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#8995aa]">
-            <p>Dates are inclusive and follow the report calendar returned by the service.</p>
-            {hasActiveFilters && <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1.5 font-semibold text-[#34415e] hover:text-[#101d49]"><RotateCw size={13} aria-hidden="true" /> Clear search and filters</button>}
+          <div className="min-h-0 flex-1 overflow-y-auto" aria-label="Reports" role="region">
+            {reportsQuery.isLoading ? <ReportListLoading /> : reportsQuery.isError ? <InlineError title="Could not load reports" message={reportsQuery.error instanceof Error ? reportsQuery.error.message : "Please try again."} onRetry={() => void reportsQuery.refetch()} /> : reports.length === 0 ? (
+              <div className="flex flex-col items-center px-6 py-16 text-center"><span className="flex size-12 items-center justify-center rounded-2xl bg-[#eaf0ff] text-[#101d49]"><FileText size={22} aria-hidden="true" /></span><p className="mt-4 font-semibold text-[#101d49]">No reports found</p><p className="mt-1 max-w-xs text-sm leading-6 text-[#64718a]">Try another date range or clear the active filters.</p>{hasFilters && <button type="button" onClick={resetFilters} className={cn(secondaryButtonClass, "mt-4")}><RotateCcw size={15} aria-hidden="true" />Clear filters</button>}</div>
+            ) : <>
+              {reportGroups.map(([day, dayReports]) => <div key={day}>
+                <h2 className="sticky top-0 z-10 flex items-center justify-between border-b border-[#edf0f6] bg-[#fafbfd]/95 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[#8995aa] backdrop-blur">{dayLabel(day)}<span className="font-semibold normal-case tracking-normal">{dayReports.length} report{dayReports.length === 1 ? "" : "s"}</span></h2>
+                {dayReports.map((report) => <ReportRow key={report.id} report={report} active={selected?.id === report.id} onClick={() => selectReport(report)} />)}
+              </div>)}
+              {reportsQuery.hasNextPage && <div className="border-t border-[#edf0f6] p-3"><button type="button" onClick={() => void reportsQuery.fetchNextPage()} disabled={reportsQuery.isFetchingNextPage} className={cn(secondaryButtonClass, "w-full justify-center disabled:opacity-60")}>{reportsQuery.isFetchingNextPage && <Loader2 size={15} className="animate-spin" aria-hidden="true" />}{reportsQuery.isFetchingNextPage ? "Loading more reports…" : "Load more reports"}<ArrowRight size={14} aria-hidden="true" /></button></div>}
+              {!reportsQuery.hasNextPage && <p className="px-4 py-3 text-center text-xs text-[#718099]">All matching reports are loaded.</p>}
+            </>}
           </div>
         </div>
 
-        <div className="grid min-h-[560px] lg:h-[calc(100dvh-355px)] lg:min-h-[620px] lg:grid-cols-[minmax(320px,390px)_minmax(0,1fr)]">
-          <div className={cn("min-h-0 flex-col border-[#edf0f6] lg:flex lg:border-r", mobileReading ? "hidden" : "flex")}>
-            <div className="flex items-center justify-between border-b border-[#edf0f6] px-4 py-3 text-xs text-[#8995aa]">
-              <span>{reports.length} report{reports.length === 1 ? "" : "s"} loaded</span>
-              {reportsQuery.isFetching && !reportsQuery.isFetchingNextPage && <span className="inline-flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" aria-hidden="true" /> Updating</span>}
-            </div>
-            <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto" onKeyDown={handleListKeyDown} aria-label="Reports" role="region" tabIndex={0}>
-              {reportsQuery.isPending ? (
-                <ReportListSkeleton />
-              ) : reportsQuery.isError ? (
-                <InlineError title="Could not load reports" message={reportsQuery.error instanceof Error ? reportsQuery.error.message : "Please try again."} onRetry={() => void reportsQuery.refetch()} />
-              ) : groups.length === 0 ? (
-                <div className="flex flex-col items-center px-6 py-16 text-center">
-                  <span className="flex size-12 items-center justify-center rounded-2xl bg-[#eaf0ff] text-[#101d49]"><FileText size={22} aria-hidden="true" /></span>
-                  <p className="mt-4 font-semibold text-[#101d49]">No reports found</p>
-                  <p className="mt-1 max-w-xs text-sm leading-6 text-[#64718a]">Try a different search or adjust the selected filters.</p>
-                  {hasActiveFilters && <button type="button" onClick={clearFilters} className={cn(secondaryButtonClass, "mt-4 min-h-9")}>Clear filters</button>}
-                </div>
-              ) : (
-                <>
-                  {groups.map(([day, items]) => (
-                    <div key={day}>
-                      <h3 className="sticky top-0 z-10 flex items-center justify-between border-b border-[#edf0f6] bg-[#fafbfd]/95 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[#8995aa] backdrop-blur">
-                        {formatDateOnly(day, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
-                        <span className="font-semibold normal-case tracking-normal">{items.length} report{items.length === 1 ? "" : "s"}</span>
-                      </h3>
-                      <ul>{items.map((report) => <li key={report.id} className="border-b border-[#f0f2f7]"><ReportListItem report={report} active={selected?.id === report.id} onSelect={() => selectReport(report.id)} /></li>)}</ul>
-                    </div>
-                  ))}
-                  {reportsQuery.hasNextPage && <div className="border-t border-[#edf0f6] p-3"><button type="button" disabled={reportsQuery.isFetchingNextPage} onClick={() => void fetchNextReportsPage()} className={cn(secondaryButtonClass, "min-h-9 w-full justify-center")}>{reportsQuery.isFetchingNextPage ? <><Loader2 size={14} className="animate-spin" aria-hidden="true" /> Loading more…</> : "Load more reports"}</button></div>}
-                  {reportsQuery.isFetchNextPageError && <div className="px-4 pb-4 text-center"><p className="mb-2 text-xs text-red-600">Could not load the next page.</p><button type="button" onClick={() => void fetchNextReportsPage()} className="text-xs font-semibold text-[#101d49] underline">Try again</button></div>}
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className={cn("min-h-[60vh] flex-col lg:flex lg:min-h-0", mobileReading ? "flex" : "hidden")}>
-            {selected ? (
-              <ReportReader
-                key={selected.id}
-                report={selected}
-                position={selectedIndex + 1}
-                total={reports.length}
-                onPrevious={() => moveSelection(-1)}
-                onNext={() => moveSelection(1)}
-                onBack={() => setMobileReading(false)}
-                onMarkReviewed={() => void handleMarkReviewed(selected)}
-                isMarkingReviewed={markReviewed.isPending}
-                onSendFeedback={(message) => handleSendFeedback(selected, message)}
-                isSendingFeedback={sendFeedback.isPending}
-                onCopy={() => void copyReport(selected)}
-              />
-            ) : (
-              <div className="flex flex-1 flex-col items-center justify-center p-10 text-center">
-                <span className="flex size-12 items-center justify-center rounded-2xl bg-[#eaf0ff] text-[#101d49]"><Inbox size={23} aria-hidden="true" /></span>
-                <p className="mt-4 font-semibold text-[#101d49]">Select a report to review</p>
-                <p className="mt-1 max-w-xs text-sm leading-6 text-[#64718a]">Choose an item from the inbox to read its details and send feedback.</p>
-              </div>
-            )}
-          </div>
+        <div className={cn("min-h-[70vh] flex-col lg:flex lg:min-h-0", mobileReading ? "flex" : "hidden")}>
+          {!selected ? <div className="flex flex-1 flex-col items-center justify-center p-10 text-center text-sm text-[#718099]"><Inbox size={28} className="text-[#c3cad8]" aria-hidden="true" /><p className="mt-3">Select a report to read it.</p></div> : detailQuery.isLoading ? <div className="flex flex-1 items-center justify-center gap-2 text-sm text-[#64718a]"><Loader2 size={17} className="animate-spin" />Loading report…</div> : detailQuery.isError ? <InlineError title="Could not load report details" message={detailQuery.error instanceof Error ? detailQuery.error.message : "Please try again."} onRetry={() => void detailQuery.refetch()} /> : detailQuery.data && (
+            <ReportReader
+              report={detailQuery.data}
+              messages={messages}
+              currentUserId={currentUserId}
+              position={selectedIndex + 1}
+              total={reports.length}
+              hasOlderMessages={Boolean(feedbackQuery.hasNextPage)}
+              loadingMessages={feedbackQuery.isLoading}
+              loadingOlderMessages={feedbackQuery.isFetchingNextPage}
+              sending={sendFeedback.isPending}
+              reviewing={reviewReport.isPending}
+              onLoadOlderMessages={() => { if (feedbackQuery.hasNextPage && !feedbackQuery.isFetchingNextPage) void feedbackQuery.fetchNextPage(); }}
+              onPrevious={() => void move(-1)}
+              onNext={() => void move(1)}
+              onBack={() => setMobileReading(false)}
+              onMarkReviewed={() => void onReview()}
+              onReply={onReply}
+              onCopy={() => void copySelected()}
+            />
+          )}
+          {selected && feedbackQuery.isError && <div role="alert" className="border-t border-red-100 bg-red-50 px-5 py-3 text-sm text-red-700">Could not load the conversation. <button type="button" onClick={() => void feedbackQuery.refetch()} className="font-semibold underline">Try again</button></div>}
         </div>
       </section>
+
+      <p className="text-xs text-[#718099]">Summary period: {rangeSummaryLabel}. The report feed and summary are loaded from the reporting service.</p>
+
+      <AnimatePresence>
+        {policyOpen && <motion.div key="report-policy-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.22 }} className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#071027]/55 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget && !createPolicies.isPending) setPolicyOpen(false); }}>
+          <motion.section initial={prefersReducedMotion ? false : { opacity: 0, y: 18, scale: 0.975 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={prefersReducedMotion ? undefined : { opacity: 0, y: 10, scale: 0.99 }} transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }} role="dialog" aria-modal="true" aria-labelledby="policy-title" className="my-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_24px_80px_rgba(7,16,39,0.25)]">
+            <div className="flex items-start justify-between gap-4 border-b border-[#edf0f6] px-5 py-5 sm:px-6"><div><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#8995aa]">Daily reporting setup</p><h2 id="policy-title" className="mt-1 text-lg font-bold text-[#101d49]">Create report policies</h2><p className="mt-1 text-sm text-[#64718a]">Apply one reporting schedule to one or more programmes.</p></div><button type="button" onClick={() => setPolicyOpen(false)} disabled={createPolicies.isPending} aria-label="Close policy dialog" className="rounded-lg p-2 text-[#718099] hover:bg-[#f3f5f9] disabled:opacity-50"><X size={18} /></button></div>
+            <div className="max-h-[calc(100dvh-12rem)] space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+              {policyError && <div role="alert" className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{policyError}</div>}
+              <div><label className="text-sm font-semibold text-[#34415e]">Programmes</label><p className="mt-0.5 text-xs text-[#718099]">Select every programme to receive this policy.</p>
+                {policyProgrammeQuery.isLoading ? <p className="mt-2 text-sm text-[#64718a]">Loading programmes…</p> : policyProgrammeQuery.isError ? <InlineError title="Programme options unavailable" message="Retry loading programme options." onRetry={() => void policyProgrammeQuery.refetch()} /> : <div className="mt-2 max-h-44 space-y-1 overflow-y-auto rounded-xl border border-[#e4e9f2] p-2">{eligiblePolicies.map((item) => <label key={item.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#34415e] hover:bg-[#f6f8fc]"><input type="checkbox" checked={policyProgrammes.includes(item.id)} onChange={(event) => setPolicyProgrammes((current) => event.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id))} className="size-4 accent-[#101d49]" />{item.name}</label>)}{policyProgrammeQuery.hasNextPage && <button type="button" onClick={() => void policyProgrammeQuery.fetchNextPage()} disabled={policyProgrammeQuery.isFetchingNextPage} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[#34415e] hover:bg-[#f6f8fc]">{policyProgrammeQuery.isFetchingNextPage ? "Loading…" : "Load more programmes"}</button>}{!eligiblePolicies.length && !policyProgrammeQuery.hasNextPage && <p className="px-3 py-2 text-sm text-[#64718a]">Every programme has an active reporting policy.</p>}</div>}
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2"><Field label="Timezone"><AnimatedSelect ariaLabel="Reporting timezone" value={timezone} onChange={setTimezone} options={["Africa/Lagos", "UTC", "America/New_York", "Europe/London"].map((value) => ({ value, label: value }))} menuMinWidth={250} /></Field><Field label="Effective from"><DatePicker ariaLabel="Effective from" value={effectiveFrom} onChange={setEffectiveFrom} /></Field><Field label="Effective to" hint="Optional"><DatePicker ariaLabel="Effective to" value={effectiveTo} onChange={setEffectiveTo} minDate={effectiveFrom || undefined} /></Field></div>
+              <div><p className="text-sm font-semibold text-[#34415e]">Required weekdays</p><div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">{WEEKDAYS.map((day) => { const active = weekdays.includes(day.value); return <button key={day.value} type="button" aria-pressed={active} onClick={() => setWeekdays((current) => active ? current.filter((value) => value !== day.value) : [...current, day.value])} className={cn("rounded-xl border px-3 py-2 text-xs font-semibold transition-colors", active ? "border-[#101d49] bg-[#101d49] text-white" : "border-[#e4e9f2] text-[#64718a] hover:bg-[#f6f8fc]")}>{day.label}</button>; })}</div></div>
+            </div>
+            <div className="flex flex-col-reverse gap-2 border-t border-[#edf0f6] bg-[#fbfcfe] px-5 py-4 sm:flex-row sm:justify-end sm:px-6"><button type="button" onClick={() => setPolicyOpen(false)} disabled={createPolicies.isPending} className={secondaryButtonClass}>Cancel</button><button type="button" onClick={() => void submitPolicies()} disabled={createPolicies.isPending || !policyProgrammes.length} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#101d49] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#192c65] disabled:cursor-not-allowed disabled:opacity-50">{createPolicies.isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}{createPolicies.isPending ? "Saving…" : `Save ${policyProgrammes.length || ""} polic${policyProgrammes.length === 1 ? "y" : "ies"}`}</button></div>
+          </motion.section>
+        </motion.div>}
+      </AnimatePresence>
     </div>
   );
 }
 
-function SummaryMetric({
-  label,
-  value,
-  detail,
-  icon: Icon,
-  tone = "navy",
-  loading,
-  progress,
-}: {
-  label: string;
-  value?: number;
-  detail: string;
-  icon: typeof Inbox;
-  tone?: "navy" | "amber" | "red";
-  loading: boolean;
-  progress?: number;
-}) {
-  const tones = {
-    navy: { border: "border-t-[#101d49]", icon: "bg-[#eaf0ff] text-[#101d49]" },
-    amber: { border: "border-t-[#f5c542]", icon: "bg-[#fff5d6] text-[#9a6700]" },
-    red: { border: "border-t-[#dc6464]", icon: "bg-red-50 text-red-600" },
-  } as const;
-  return (
-    <div className={cn("border-t-[3px] px-5 py-4", tones[tone].border)}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold text-[#64718a]">{label}</p>
-          {loading ? <div className="mt-2 h-8 w-12 animate-pulse rounded-md bg-[#f1f3f8]" /> : <p className="mt-1 text-2xl font-bold tabular-nums text-[#101d49]">{value ?? "—"}</p>}
-        </div>
-        <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", tones[tone].icon)}><Icon size={19} aria-hidden="true" /></span>
-      </div>
-      <p className="mt-2 text-xs text-[#8995aa]">{detail}</p>
-      {progress !== undefined && !loading && <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#edf0f6]" aria-label={`${Math.round(progress)} percent of expected reports submitted`}><div className="h-full rounded-full bg-[#101d49] transition-[width] duration-500" style={{ width: `${progress}%` }} /></div>}
-    </div>
-  );
+function ReportRow({ report, active, onClick }: { report: AdminReportListItem; active: boolean; onClick: () => void }) {
+  const hasBlocker = Boolean(report.blockerDescription?.trim());
+  const resolved = report.problemStatus === "RESOLVED" || Boolean(report.resolvedAt);
+  return <button type="button" onClick={onClick} aria-current={active ? "true" : undefined} className={cn("group relative flex w-full gap-3 border-b border-[#f0f2f7] px-4 py-3.5 text-left outline-none transition-colors focus-visible:bg-[#f4f7ff]", active ? "bg-[#f4f7ff]" : "hover:bg-[#f8faff]")}>
+    <span className={cn("absolute inset-y-0 left-0 w-[3px] rounded-r-full", active ? "bg-[#101d49]" : "bg-transparent group-hover:bg-[#f5c542]")} aria-hidden="true" />
+    <span className="relative mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#eaf0ff] text-xs font-bold text-[#101d49]">{getInitials(report.student.name)}{report.status === "SUBMITTED" && <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-white bg-[#f5c542]"><span className="sr-only">Awaiting review</span></span>}</span>
+    <span className="min-w-0 flex-1"><span className="flex items-baseline gap-2"><span className="truncate text-sm font-semibold text-[#101d49]">{report.student.name}</span><ReporterBadge type="Student" className="shrink-0"/><time dateTime={report.submittedAt ?? report.reportDate} className="ml-auto shrink-0 text-xs tabular-nums text-[#718099]">{clockTime(report.submittedAt)}</time></span><span className="mt-0.5 block truncate text-xs font-semibold text-[#64718a]">{report.programme.name}</span><span className="mt-1.5 line-clamp-2 text-[13px] leading-5 text-[#34415e]">{preview(report.accomplishments.join(" · ")) || "No accomplishments provided."}</span><span className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-semibold">{hasBlocker && <span className={cn("inline-flex items-center gap-1", resolved ? "text-emerald-700" : "text-[#9a6700]")}>{resolved ? <CheckCircle2 size={12}/> : <AlertTriangle size={12}/>} {resolved ? "Problem resolved" : "Problem raised"}</span>}{report.feedbackCount > 0 && <span className="inline-flex items-center gap-1 text-[#64718a]"><MessageSquare size={12}/>{report.feedbackCount}</span>}{report.status === "REVIEWED" && <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 size={12}/>Reviewed</span>}</span></span>
+  </button>;
 }
 
-function ReportListItem({ report, active, onSelect }: { report: AdminReport; active: boolean; onSelect: () => void }) {
-  const hasBlocker = !report.noProblemsToday && (Boolean(report.blockerDescription?.trim()) || Boolean(report.problemStatus));
-  const isResolved = report.problemStatus === "RESOLVED" || Boolean(report.resolvedAt);
-  return (
-    <button type="button" data-report-id={report.id} onClick={onSelect} aria-current={active ? "true" : undefined} className={cn("group/item relative flex w-full gap-3 px-4 py-3.5 text-left outline-none transition-colors duration-150 focus-visible:bg-[#f4f7ff]", active ? "bg-[#f4f7ff]" : "hover:bg-[#f8faff]")}>
-      <span aria-hidden="true" className={cn("absolute inset-y-0 left-0 w-[3px] origin-center rounded-r-full transition-transform duration-200 motion-reduce:transition-none", active ? "scale-y-100 bg-[#101d49]" : "scale-y-0 bg-[#f5c542] group-hover/item:scale-y-100")} />
-      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#eaf0ff] text-xs font-bold text-[#101d49]">{getInitials(report.student.name)}</span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-baseline gap-2">
-          <span className="truncate text-sm font-bold text-[#101d49]">{report.student.name}</span>
-          <span className="ml-auto shrink-0 text-[11px] tabular-nums text-[#8995aa]">{formatDateOnly(report.reportDate, { day: "numeric", month: "short" })}</span>
-        </span>
-        <span className="mt-0.5 block truncate text-xs font-semibold text-[#52627f]">{report.programme.name}</span>
-        <span className="mt-1.5 block line-clamp-2 text-[13px] leading-5 text-[#64718a]">{reportPreview(report)}</span>
-        <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold">
-          <ReportStatusBadge status={report.status} />
-          {hasBlocker && <span className={cn("inline-flex items-center gap-1", isResolved ? "text-emerald-700" : "text-[#9a6700]")}>{isResolved ? <CheckCircle2 size={12} aria-hidden="true" /> : <AlertTriangle size={12} aria-hidden="true" />}{isResolved ? "Resolved" : report.problemStatus === "IN_PROGRESS" ? "In progress" : "Open blocker"}</span>}
-          <span className="ml-auto inline-flex items-center gap-1 text-[#8995aa]"><MessageSquareText size={12} aria-hidden="true" />{report.feedbackCount}</span>
-        </span>
-      </span>
-    </button>
-  );
+function SummaryMetric({ label, value, suffix, hint, icon: Icon, tone = "navy", loading, error, onRetry, onClick }: { label: string; value?: number; suffix?: string; hint: string; icon: typeof FileText; tone?: "navy" | "amber" | "red"; loading: boolean; error: boolean; onRetry: () => void; onClick?: () => void }) {
+  const toneClass = tone === "amber" ? "bg-[#fff1c7] text-[#9a6700]" : tone === "red" ? "bg-red-50 text-[#bd3434]" : "bg-[#eaf0ff] text-[#101d49]";
+  const contents = <><span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", toneClass)}><Icon size={19} aria-hidden="true"/></span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-[#8995aa]">{label}</span><span className="mt-1 block text-2xl font-bold text-[#101d49]">{loading ? <span className="inline-block h-7 w-12 animate-pulse rounded bg-[#edf0f6]"/> : error ? "—" : <>{value ?? 0}{suffix && <span className="ml-1 text-sm font-semibold text-[#8995aa]">{suffix}</span>}</>}</span><span className="mt-1 block truncate text-xs text-[#64718a]">{hint}</span></span></>;
+  return <div className={cn("flex items-center gap-4 px-5 py-4", onClick && "cursor-pointer hover:bg-[#f8faff]")} onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={onClick ? (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onClick(); } } : undefined}>{contents}{error && <button type="button" onClick={(event) => { event.stopPropagation(); onRetry(); }} aria-label={`Retry ${label}`} className="rounded-lg p-2 text-[#64718a] hover:bg-[#f1f4fa]"><RotateCcw size={15}/></button>}</div>;
 }
 
-function ReportListSkeleton() {
-  return <div className="space-y-0" aria-label="Loading reports">{Array.from({ length: 6 }, (_, index) => <div key={index} className="flex gap-3 border-b border-[#f0f2f7] px-4 py-4"><span className="size-9 animate-pulse rounded-full bg-[#f1f3f8]" /><div className="flex-1 space-y-2"><div className="h-3 w-2/3 animate-pulse rounded bg-[#f1f3f8]" /><div className="h-3 w-1/2 animate-pulse rounded bg-[#f1f3f8]" /><div className="h-3 w-full animate-pulse rounded bg-[#f1f3f8]" /></div></div>)}</div>;
-}
-
-function InlineError({ title, message, onRetry }: { title: string; message: string; onRetry: () => void }) {
-  return <div className="flex flex-col items-center px-6 py-16 text-center"><span className="flex size-12 items-center justify-center rounded-2xl bg-red-50 text-red-600"><AlertTriangle size={22} aria-hidden="true" /></span><p className="mt-4 font-semibold text-[#101d49]">{title}</p><p className="mt-1 max-w-xs text-sm text-[#64718a]">{message}</p><button type="button" onClick={onRetry} className={cn(secondaryButtonClass, "mt-4 min-h-9")}>Try again</button></div>;
-}
+function ReportListLoading() { return <div className="space-y-5 p-5" aria-label="Loading reports">{Array.from({ length: 5 }, (_, index) => <div key={index} className="flex gap-3"><span className="size-9 animate-pulse rounded-full bg-[#edf0f6]"/><span className="flex-1 space-y-2"><span className="block h-3 w-1/2 animate-pulse rounded bg-[#edf0f6]"/><span className="block h-3 w-2/3 animate-pulse rounded bg-[#edf0f6]"/><span className="block h-8 w-full animate-pulse rounded bg-[#f3f5f9]"/></span></div>)}</div>; }
+function InlineError({ title, message, onRetry }: { title: string; message: string; onRetry: () => void }) { return <div className="flex flex-1 flex-col items-center justify-center p-8 text-center"><span className="flex size-12 items-center justify-center rounded-2xl bg-red-50 text-red-600"><AlertTriangle size={22}/></span><p className="mt-3 font-semibold text-[#101d49]">{title}</p><p className="mt-1 max-w-sm text-sm text-[#64718a]">{message}</p><button type="button" onClick={onRetry} className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg bg-[#101d49] px-3.5 text-sm font-semibold text-white hover:bg-[#192c65]"><RotateCcw size={14}/>Try again</button></div>; }
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) { return <div className="min-w-0 space-y-1.5"><div><p className="text-sm font-semibold text-[#34415e]">{label}</p>{hint && <p className="mt-0.5 text-xs text-[#718099]">{hint}</p>}</div>{children}</div>; }
