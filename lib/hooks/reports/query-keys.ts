@@ -12,6 +12,8 @@ export const studentReportsQueryKeys = {
   dashboards: () => [...studentReportsQueryKeys.all, "dashboard"] as const,
   dashboard: (programmeId: string) =>
     [...studentReportsQueryKeys.dashboards(), programmeId] as const,
+  feedbacks: () => [...studentReportsQueryKeys.all, "feedback"] as const,
+  feedback: (reportId: string) => [...studentReportsQueryKeys.feedbacks(), reportId] as const,
   dailyCheck: () => [...studentReportsQueryKeys.all, "daily-check"] as const,
 };
 

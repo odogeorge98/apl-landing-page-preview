@@ -9,6 +9,7 @@ import type {
   AdminReportsPage,
   AdminVisibleReportStatus,
   CreateStudentReportFeedbackDto,
+  GetReportFeedbackParams,
   GetAdminReportSummaryParams,
   GetAdminReportsParams,
   GetStudentReportDashboardParams,
@@ -21,6 +22,10 @@ import type {
   StudentDailyReportCheckApiResponse,
   StudentReportFeedbackApiResponse,
   StudentReportFeedbackMessage,
+  ReportFeedbackListApiResponse,
+  ReportFeedbackPage,
+  ReportFeedbackReadApiResponse,
+  ReportFeedbackReadResult,
   StudentReportsApiResponse,
   StudentReportsPage,
   UpdateStudentReportDraftDto,
@@ -191,6 +196,22 @@ function isFeedbackMessage(value: unknown): value is StudentReportFeedbackMessag
     isTimestamp(value.createdAt) && isTimestamp(value.updatedAt) &&
     isFeedbackPerson(value.author) && isFeedbackPerson(value.recipient)
   );
+}
+
+function isReportFeedbackPage(value: unknown): value is ReportFeedbackPage {
+  return isRecord(value) &&
+    typeof value.reportId === "string" && UUID_V4_PATTERN.test(value.reportId) &&
+    Array.isArray(value.items) && value.items.every((item) =>
+      isFeedbackMessage(item) && item.reportId === value.reportId,
+    ) &&
+    (value.nextCursor === null || (typeof value.nextCursor === "string" && value.nextCursor.length <= 512));
+}
+
+function isReportFeedbackReadResult(value: unknown): value is ReportFeedbackReadResult {
+  return isRecord(value) &&
+    typeof value.id === "string" && UUID_V4_PATTERN.test(value.id) &&
+    typeof value.reportId === "string" && UUID_V4_PATTERN.test(value.reportId) &&
+    isTimestamp(value.readAt);
 }
 
 function validateDraftContent<T extends StudentReportDraftContentPayload>(payload: T): T {
@@ -411,6 +432,44 @@ export const studentReportsApi = {
     const feedback = unwrap(response, isFeedbackMessage, "Unable to send report feedback.");
     if (feedback.reportId !== normalizedReportId) throw new Error("Feedback was returned for a different report.");
     return feedback;
+  },
+};
+
+/** Shared feedback conversation endpoints used by every authenticated report participant. */
+export const reportFeedbackApi = {
+  /** GET /reports/:reportId/feedback — cursor-paginated chronological messages. */
+  list: async (
+    reportId: string,
+    params: GetReportFeedbackParams = {},
+    signal?: AbortSignal,
+  ): Promise<ReportFeedbackPage> => {
+    const normalizedReportId = assertUuid(reportId, "Report ID");
+    if (params.cursor != null && (typeof params.cursor !== "string" || params.cursor.length > 512)) {
+      throw new RangeError("Feedback cursor must be a string of 512 characters or fewer.");
+    }
+    const query: Record<string, string> = {};
+    if (params.cursor) query.cursor = params.cursor;
+    const response = await http.get<ReportFeedbackListApiResponse>(
+      `/reports/${encodeURIComponent(normalizedReportId)}/feedback`,
+      { params: query, signal },
+    );
+    const page = unwrap(response, isReportFeedbackPage, "Unable to retrieve report feedback.");
+    if (page.reportId !== normalizedReportId) throw new Error("Feedback was returned for a different report.");
+    return page;
+  },
+
+  /** PATCH /reports/:reportId/feedback/:feedbackId/read — set the recipient read receipt. */
+  markAsRead: async (reportId: string, feedbackId: string): Promise<ReportFeedbackReadResult> => {
+    const normalizedReportId = assertUuid(reportId, "Report ID");
+    const normalizedFeedbackId = assertUuid(feedbackId, "Feedback ID");
+    const response = await http.patch<ReportFeedbackReadApiResponse>(
+      `/reports/${encodeURIComponent(normalizedReportId)}/feedback/${encodeURIComponent(normalizedFeedbackId)}/read`,
+    );
+    const result = unwrap(response, isReportFeedbackReadResult, "Unable to mark feedback as read.");
+    if (result.reportId !== normalizedReportId || result.id !== normalizedFeedbackId) {
+      throw new Error("The read receipt response did not match the requested feedback message.");
+    }
+    return result;
   },
 };
 

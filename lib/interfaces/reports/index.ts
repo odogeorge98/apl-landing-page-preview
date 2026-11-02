@@ -133,7 +133,7 @@ export interface ReportFeedbackPerson {
   role: string;
 }
 
-/** One feedback message returned by POST; this is not a conversation history. */
+/** A report feedback message returned by both the list and create endpoints. */
 export interface StudentReportFeedbackMessage {
   id: string;
   reportId: string;
@@ -147,6 +147,24 @@ export interface StudentReportFeedbackMessage {
   recipient: ReportFeedbackPerson;
 }
 
+export interface ReportFeedbackPage {
+  reportId: string;
+  items: StudentReportFeedbackMessage[];
+  nextCursor: string | null;
+}
+
+export interface GetReportFeedbackParams {
+  /** Opaque cursor returned by the preceding feedback page. */
+  cursor?: string | null;
+}
+
+export interface ReportFeedbackListApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: ReportFeedbackPage;
+}
+
 export interface CreateStudentReportFeedbackDto {
   message: string;
 }
@@ -156,6 +174,19 @@ export interface StudentReportFeedbackApiResponse {
   statusCode: number;
   message: string;
   data: StudentReportFeedbackMessage;
+}
+
+export interface ReportFeedbackReadResult {
+  id: string;
+  reportId: string;
+  readAt: string;
+}
+
+export interface ReportFeedbackReadApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: ReportFeedbackReadResult;
 }
 
 /** GET /reports/student/daily-check envelope; `true` means a report is due today. */

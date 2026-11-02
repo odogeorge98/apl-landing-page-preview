@@ -20,7 +20,7 @@ import { useStudentReportDashboard } from "@/lib/hooks/reports/use-student-repor
 import { useStudentReports } from "@/lib/hooks/reports/use-student-reports";
 import { useSubmitStudentReportDraft } from "@/lib/hooks/reports/use-submit-student-report-draft";
 import { useUpdateStudentReportDraft } from "@/lib/hooks/reports/use-update-student-report-draft";
-import type { StudentRecentReportDay, StudentReport, StudentReportFeedbackMessage } from "@/lib/interfaces/reports";
+import type { StudentRecentReportDay, StudentReport } from "@/lib/interfaces/reports";
 import type { StudentProgrammeEnrolment } from "@/lib/interfaces/student-programmes";
 import { UserType } from "@/lib/types/users";
 import { cn } from "@/lib/utils";
@@ -94,13 +94,14 @@ function DailyReportWorkspace() {
   const feedbackMutation = useSendStudentReportFeedback();
 
   const [historyId, setHistoryId] = useState<string | null>(null);
-  const [feedbackMessagesByReport, setFeedbackMessagesByReport] = useState<Record<string, StudentReportFeedbackMessage[]>>({});
+  const [localDraftsByProgramme, setLocalDraftsByProgramme] = useState<Record<string, ReportFormValues>>({});
   const [saveStatus, setSaveStatus] = useState<"idle" | "dirty" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | undefined>();
   const [selectedTutorId, setSelectedTutorId] = useState("");
   const selectedTutorIdRef = useRef("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSwitchingProgramme, setIsSwitchingProgramme] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const todayReport = dashboardQuery.data?.today.report ?? null;
@@ -176,6 +177,12 @@ function DailyReportWorkspace() {
         savedRevisionRef.current = revision;
         setSavedAt(report.updatedAt);
       }
+      setLocalDraftsByProgramme((current) => {
+        if (!(programmeId in current)) return current;
+        const next = { ...current };
+        delete next[programmeId];
+        return next;
+      });
       setSaveStatus("saved");
       return reportId;
     })();
@@ -217,27 +224,53 @@ function DailyReportWorkspace() {
 
   const switchProgramme = (nextId: string) => {
     setProgrammeId(nextId);
-    formValuesRef.current = EMPTY_FORM;
-    revisionRef.current = 0;
+    const localDraft = localDraftsByProgramme[nextId];
+    formValuesRef.current = localDraft ?? EMPTY_FORM;
+    revisionRef.current = localDraft ? 1 : 0;
     savedRevisionRef.current = 0;
     draftIdRef.current = null;
     setSelectedTutorId("");
     selectedTutorIdRef.current = "";
-    setSaveStatus("idle");
-    setSaveError(null);
+    setSaveStatus(localDraft ? "error" : "idle");
+    setSaveError(localDraft ? "This draft is kept in this page session and has not synced to the server." : null);
     setSubmitError(null);
   };
 
   const handleProgrammeChange = (nextId: string) => {
-    if (nextId === programmeId || isSubmitting) return;
+    if (nextId === programmeId || isSubmitting || isSwitchingProgramme) return;
     clearAutosaveTimer();
-    if (revisionRef.current > savedRevisionRef.current && dashboardQuery.data) {
-      void persistLatestDraft().then(() => switchProgramme(nextId)).catch((error) => {
-        toast.error("Draft not saved", { description: errorMessage(error, "Save your report before changing programmes.") });
-      });
+    const hasUnsavedChanges = revisionRef.current > savedRevisionRef.current;
+    if (!hasUnsavedChanges || !dashboardQuery.data) {
+      switchProgramme(nextId);
       return;
     }
-    switchProgramme(nextId);
+
+    const keepDraftLocally = () => {
+      setLocalDraftsByProgramme((current) => ({ ...current, [programmeId]: formValuesRef.current }));
+    };
+
+    const reportWeekday = new Date(`${dashboardQuery.data.today.reportDate}T00:00:00.000Z`).getUTCDay();
+    const canSaveForToday = dashboardQuery.data.reportingPolicy?.requiredWeekdays.includes(reportWeekday) ?? false;
+
+    // A missing policy or a non-reporting day is a known server-side save
+    // limitation. Keep the work for this page session and switch immediately.
+    if (!canSaveForToday && !saveRunnerRef.current) {
+      keepDraftLocally();
+      switchProgramme(nextId);
+      toast.info("Programme changed", { description: "This programme has no active reporting policy for today. Your unsynced report stays available while this page is open." });
+      return;
+    }
+
+    setIsSwitchingProgramme(true);
+    void persistLatestDraft()
+      .catch((error) => {
+        keepDraftLocally();
+        toast.error("Draft could not be synced", { description: `${errorMessage(error, "The report service could not save this draft.")} You can still change programmes; this text will remain available during this page session.` });
+      })
+      .finally(() => {
+        switchProgramme(nextId);
+        setIsSwitchingProgramme(false);
+      });
   };
 
   const submitToday = async (values: ReportFormValues) => {
@@ -276,16 +309,9 @@ function DailyReportWorkspace() {
     }
   };
 
-  const sendFeedback = async (report: StudentReport, message: string): Promise<StudentReportFeedbackMessage> => {
-    const feedback = await feedbackMutation.mutateAsync({ reportId: report.id, programmeId: report.programmeId, payload: { message } });
-    setFeedbackMessagesByReport((current) => {
-      const messages = current[report.id] ?? [];
-      return messages.some((item) => item.id === feedback.id)
-        ? current
-        : { ...current, [report.id]: [...messages, feedback] };
-    });
+  const sendFeedback = async (report: StudentReport, message: string): Promise<void> => {
+    await feedbackMutation.mutateAsync({ reportId: report.id, programmeId: report.programmeId, payload: { message } });
     toast.success("Message sent", { description: "Your tutor will see your feedback." });
-    return feedback;
   };
 
   const content = (() => {
@@ -317,7 +343,7 @@ function DailyReportWorkspace() {
           </div>
           <div className="w-full max-w-sm">
             <label className="mb-1.5 block text-xs font-semibold text-[#64718a]" htmlFor="report-programme">Programme</label>
-            <AnimatedSelect id="report-programme" value={programmeId} options={programmeOptions} onChange={handleProgrammeChange} ariaLabel="Select programme for daily report" fullWidth disabled={isSubmitting} />
+            <AnimatedSelect id="report-programme" value={programmeId} options={programmeOptions} onChange={handleProgrammeChange} ariaLabel="Select programme for daily report" fullWidth disabled={isSubmitting || isSwitchingProgramme} />
           </div>
         </header>
 
@@ -351,7 +377,6 @@ function DailyReportWorkspace() {
                   <StudentReportDetails
                     report={report}
                     onSendFeedback={(message) => sendFeedback(report, message)}
-                    feedbackMessages={feedbackMessagesByReport[report.id]}
                     sendingFeedback={feedbackMutation.isPending}
                   />
                 </div>
@@ -377,14 +402,14 @@ function DailyReportWorkspace() {
                   <ReportComposer
                     key={`${programmeId}:${dashboard.today.reportDate}`}
                     mode="new"
-                    initial={formFromReport(report)}
+                    initial={localDraftsByProgramme[programmeId] ?? formFromReport(report)}
                     supervisor={tutorLabel}
                     onChange={handleFormChange}
                     draftSavedAt={savedAt ?? report?.updatedAt}
                     draftSaveStatus={saveStatus}
                     draftSaveError={saveError}
                     submitting={isSubmitting || saveDraftMutation.isPending || updateDraftMutation.isPending || submitDraftMutation.isPending}
-                    submitDisabled={dashboard.assignedTutors.length > 1 && !selectedTutorId}
+                    submitDisabled={isSwitchingProgramme || (dashboard.assignedTutors.length > 1 && !selectedTutorId)}
                     onSubmit={(values) => void submitToday(values)}
                   />
                 </>
@@ -413,7 +438,7 @@ function DailyReportWorkspace() {
         </div>
 
         <AdminModal open={Boolean(historyId)} onClose={() => setHistoryId(null)} variant="drawer" eyebrow="Report details" title={selectedHistoryReport ? formatDate(selectedHistoryReport.reportDate) : "Previous report"} description={selectedHistoryReport?.programme?.name ?? dashboard.programme.name}>
-          {selectedHistoryReport && <StudentReportDetails report={selectedHistoryReport} onSendFeedback={(message) => sendFeedback(selectedHistoryReport, message)} feedbackMessages={feedbackMessagesByReport[selectedHistoryReport.id]} sendingFeedback={feedbackMutation.isPending} compact />}
+          {selectedHistoryReport && <StudentReportDetails report={selectedHistoryReport} onSendFeedback={(message) => sendFeedback(selectedHistoryReport, message)} sendingFeedback={feedbackMutation.isPending} compact />}
         </AdminModal>
       </div>
     );

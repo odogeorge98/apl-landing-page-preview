@@ -22,6 +22,7 @@ export function useSendStudentReportFeedback() {
     onSuccess: async (_feedback, variables) => {
       const invalidations = [
         queryClient.invalidateQueries({ queryKey: studentReportsQueryKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: studentReportsQueryKeys.feedback(variables.reportId) }),
       ];
       if (variables.programmeId) {
         invalidations.push(
