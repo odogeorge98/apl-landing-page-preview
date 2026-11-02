@@ -20,6 +20,8 @@ type AnimatedSelectProps = {
   ariaDescribedBy?: string;
   className?: string;
   menuClassName?: string;
+  /** Minimum popover width in pixels, useful when option labels are longer than the trigger. */
+  menuMinWidth?: number;
   disabled?: boolean;
   ariaInvalid?: boolean;
   /** Allow the selected option to wrap when its label is long. */
@@ -38,6 +40,7 @@ export function AnimatedSelect({
   ariaDescribedBy,
   className,
   menuClassName,
+  menuMinWidth = 84,
   disabled = false,
   ariaInvalid,
   wrapSelectedLabel = false,
@@ -90,7 +93,10 @@ export function AnimatedSelect({
       const roomBelow = window.innerHeight - anchor.bottom - 8;
       const roomAbove = anchor.top - 8;
       const opensDown = roomBelow >= estimatedHeight || roomBelow >= roomAbove;
-      const width = Math.max(anchor.width, 84);
+      const width = Math.min(
+        Math.max(anchor.width, menuMinWidth),
+        window.innerWidth - viewportPadding * 2,
+      );
       const left = Math.max(
         viewportPadding,
         Math.min(anchor.right - width, window.innerWidth - width - viewportPadding),
@@ -115,7 +121,7 @@ export function AnimatedSelect({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [disabled, open, options.length]);
+  }, [disabled, menuMinWidth, open, options.length]);
 
   const menu = typeof document === "undefined" ? null : createPortal(
     <AnimatePresence>

@@ -25,7 +25,10 @@ export function longDate(reportDate: string): string {
 }
 
 /** Clock time, e.g. "5:42 pm". */
-export function clockTime(iso: string): string {
+export function clockTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("en-NG", { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 }
 
