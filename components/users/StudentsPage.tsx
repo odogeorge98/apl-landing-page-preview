@@ -8,6 +8,7 @@ import dayjs from "dayjs";
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   CheckCircle2,
   CircleAlert,
   GraduationCap,
@@ -664,8 +665,8 @@ export default function StudentsPage() {
                             }
                             className="inline-flex items-center gap-2 rounded-lg border border-[#e4e9f2] bg-white px-3 py-2 text-xs font-semibold text-[#101d49] transition hover:border-[#101d49] hover:bg-[#f6f8fc] focus:outline-none focus:ring-4 focus:ring-[#101d49]/10"
                           >
-                            <Eye size={15} />
                             View
+                            <ArrowUpRight size={14} />
                           </button>
                         </td>
                       </tr>

@@ -63,8 +63,8 @@ function StatCard({
 }
 
 export default function StudentDetailsPage() {
-  const params = useParams<{ studentId: string }>();
-  const studentId = params.studentId;
+  const params = useParams<{ id: string }>();
+  const studentId = params.id;
 
   const {
     data: response,
@@ -101,7 +101,7 @@ export default function StudentDetailsPage() {
     return (
       <div className="mx-auto max-w-[1500px]">
         <Link
-          href="/admin/students"
+          href="/dashboard/users/students"
           className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-[#52617b] hover:text-[#101d49]"
         >
           <ArrowLeft size={17} />
@@ -133,7 +133,7 @@ export default function StudentDetailsPage() {
     <div className="mx-auto max-w-[1500px] space-y-7">
       <header>
         <Link
-          href="/admin/students"
+          href="/dashboard/users/students"
           className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-[#64718a] transition hover:text-[#101d49]"
         >
           <ArrowLeft size={17} />

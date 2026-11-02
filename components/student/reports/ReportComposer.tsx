@@ -9,11 +9,14 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "@/components/admin/shared/admin-ui";
-import type { ReportDraft } from "@/lib/store/daily-reports";
 import { cn } from "@/lib/utils";
 import { clockTime } from "@/components/admin/reports/report-utils";
 
-export type ReportFormValues = Omit<ReportDraft, "savedAt">;
+export interface ReportFormValues {
+  accomplishments: string;
+  problems: string;
+  noProblems: boolean;
+}
 
 type ReportComposerProps = {
   /** Starting values (a saved draft, or the report being edited). */
@@ -24,8 +27,11 @@ type ReportComposerProps = {
   /** Called (debounced by the parent) as the learner types, for autosave. */
   onChange?: (values: ReportFormValues) => void;
   draftSavedAt?: string;
+  draftSaveStatus?: "idle" | "dirty" | "saving" | "saved" | "error";
+  draftSaveError?: string | null;
   submitting: boolean;
-  onSubmit: (values: { accomplishments: string; problems: string }) => void;
+  submitDisabled?: boolean;
+  onSubmit: (values: ReportFormValues) => void;
   onCancel?: () => void;
 };
 
@@ -49,7 +55,10 @@ export function ReportComposer({
   supervisor,
   onChange,
   draftSavedAt,
+  draftSaveStatus = "idle",
+  draftSaveError,
   submitting,
+  submitDisabled = false,
   onSubmit,
   onCancel,
 }: ReportComposerProps) {
@@ -92,6 +101,7 @@ export function ReportComposer({
   };
 
   const submit = () => {
+    if (submitDisabled) return;
     const accomplishments = values.accomplishments.trim();
     const problems = values.noProblems ? "" : values.problems.trim();
     const nextErrors: typeof errors = {};
@@ -107,7 +117,7 @@ export function ReportComposer({
       (nextErrors.accomplishments ? accomplishmentsRef.current : document.getElementById(ids.p))?.focus();
       return;
     }
-    onSubmit({ accomplishments, problems });
+    onSubmit({ accomplishments, problems, noProblems: values.noProblems });
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -226,13 +236,17 @@ export function ReportComposer({
       {/* ---- Actions ------------------------------------------------------- */}
       <div className="flex flex-col-reverse gap-3 border-t border-[#edf0f6] pt-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-[#8995aa]" aria-live="polite">
-          {mode === "new" && draftSavedAt ? (
-            <span className="inline-flex items-center gap-1.5">
-              <CheckCircle2 size={13} className="text-emerald-600" aria-hidden="true" /> Draft saved at {clockTime(draftSavedAt)}
-            </span>
+          {draftSaveStatus === "saving" ? (
+            <span className="inline-flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" aria-hidden="true" /> Saving draft…</span>
+          ) : draftSaveStatus === "dirty" ? (
+            <span>Unsaved changes</span>
+          ) : draftSaveStatus === "error" ? (
+            <span className="text-red-700">Draft not saved{draftSaveError ? `: ${draftSaveError}` : ". Your text is still here."}</span>
+          ) : draftSaveStatus === "saved" && draftSavedAt ? (
+            <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald-600" aria-hidden="true" /> Draft saved at {clockTime(draftSavedAt)}</span>
           ) : (
             <span className="hidden sm:inline">
-              Tip: <kbd className="font-sans">Ctrl</kbd>+<kbd className="font-sans">Enter</kbd> to {mode === "new" ? "submit" : "save"}
+              Tip: <kbd className="font-sans">Ctrl</kbd>+<kbd className="font-sans">Enter</kbd> to submit
             </span>
           )}
         </p>
@@ -243,7 +257,7 @@ export function ReportComposer({
             </button>
           )}
           {/* Not `disabled` while submitting (that would dim it); repeat clicks are ignored upstream. */}
-          <button type="submit" aria-busy={submitting} className={cn(primaryButtonClass, "min-w-44")}>
+          <button type="submit" aria-busy={submitting} disabled={submitting || submitDisabled} className={cn(primaryButtonClass, "min-w-44")}>
             {submitting ? (
               <Loader2 size={16} aria-hidden="true" className="animate-spin" />
             ) : (
