@@ -19,12 +19,11 @@
  * `useDelayedAction`. All dropdowns use the animated <Select />, and rows,
  * cards and buttons share one hover language with the Assignments page.
  *
- * FRONT-END ONLY: data comes from `lib/mock/admin-certificates.ts` and all
- * changes live in React state. Look for `TODO(api)` where a real request
- * belongs.
+ * Dashboard and issued-register data are loaded from the admin certificates API.
+ * Eligibility, templates and certificate mutations remain local until their APIs exist.
  */
 
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   Award,
   BadgeCheck,
@@ -58,7 +57,7 @@ import { ActionMenu } from "@/components/admin/shared/ActionMenu";
 import { AdminModal } from "@/components/admin/shared/AdminModal";
 import { ConfirmDialog } from "@/components/admin/shared/ConfirmDialog";
 import { RowAccent } from "@/components/admin/shared/RowAccent";
-import { Select } from "@/components/admin/shared/Select";
+import { Select, type SelectOption } from "@/components/admin/shared/Select";
 import { useDelayedAction, useLastDefined } from "@/components/admin/shared/motion";
 import {
   cardClass,
@@ -85,7 +84,6 @@ import {
 import {
   CERTIFICATE_TITLES,
   CERTIFICATE_TYPES,
-  PROGRAMME_OPTIONS,
   REVOKE_REASONS,
   mockCertificates,
   mockEligibleLearners,
@@ -97,6 +95,8 @@ import {
   type IssuedCertificate,
 } from "@/lib/mock/admin-certificates";
 import { cn } from "@/lib/utils";
+import { http } from "@/lib/utils/http";
+import { useProgrammes } from "@/lib/hooks/programmes/use-programmes";
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -126,6 +126,89 @@ const typeStyles: Record<CertificateType, string> = {
   Professional: "bg-emerald-50 text-emerald-700",
 };
 
+type ApiEnvelope<T> = {
+  status: string;
+  statusCode: number;
+  message: string;
+  data: T;
+};
+
+type CertificateDashboardData = {
+  activeCertificates: number;
+  revokedCertificates: number;
+  awaitingIssuance: number;
+  programmesRepresented: number;
+  recordedVerifications: number;
+};
+
+type AdminCertificateRecord = {
+  id: string;
+  certificateNumber: string;
+  studentId: string;
+  programmeId: string;
+  templateId: string;
+  type: string;
+  status: string;
+  issuedAt: string;
+  expiresAt: string | null;
+  scorePercent: string | null;
+  documentUrl: string | null;
+  issuedByUserId: string;
+  revokedAt: string | null;
+  revocationReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  student: { id: string; name: string; user: { id: string; email: string } };
+  programme: { id: string; name: string };
+  issuedBy: { id: string; email: string; role: string };
+};
+
+type AdminCertificatesData = {
+  items: AdminCertificateRecord[];
+  nextCursor: string | null;
+};
+
+type AdminCertificatesQuery = {
+  search?: string;
+  programmeId?: string;
+  type?: string;
+  status?: string;
+  issueDateFrom?: string;
+  issueDateTo?: string;
+  limit?: number;
+  cursor?: string;
+};
+
+function mapApiCertificate(item: AdminCertificateRecord): IssuedCertificate {
+  const typeMap: Record<string, CertificateType> = {
+    COMPLETION: "Completion",
+    ACHIEVEMENT: "Achievement",
+    PROFESSIONAL: "Professional",
+    Completion: "Completion",
+    Achievement: "Achievement",
+    Professional: "Professional",
+  };
+
+  return {
+    id: item.id,
+    certificateNumber: item.certificateNumber,
+    recipientName: item.student?.name ?? "Unknown learner",
+    recipientEmail: item.student?.user?.email ?? "",
+    programme: item.programme?.name ?? "Unknown programme",
+    cohort: "—",
+    type: typeMap[item.type] ?? "Completion",
+    templateId: item.templateId ?? "",
+    issuedDate: item.issuedAt,
+    issuedBy: item.issuedBy?.email ?? "—",
+    finalScore: Number(item.scorePercent ?? 0),
+    status: item.status?.toUpperCase() === "REVOKED" ? "Revoked" : "Active",
+    verificationCount: 0,
+    revokedAt: item.revokedAt ?? undefined,
+    revokedReason: item.revocationReason ?? undefined,
+    documentUrl: item.documentUrl ?? undefined,
+  } as IssuedCertificate;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Page                                                                       */
 /* -------------------------------------------------------------------------- */
@@ -143,17 +226,46 @@ export default function AdminCertificatesPage() {
 }
 
 function CertificatesWorkspace() {
-  // ---- Data (local state stands in for server state) ----------------------
-  // TODO(api): replace with useAdminCertificates / useCertificateEligibility /
-  // useCertificateTemplates hooks.
-  const [certificates, setCertificates] = useState<IssuedCertificate[]>(mockCertificates);
+  // ---- Data --------------------------------------------------------------
+  const [certificates, setCertificates] = useState<IssuedCertificate[]>([]);
   const [eligible, setEligible] = useState<EligibleLearner[]>(mockEligibleLearners);
   const [templates, setTemplates] = useState<CertificateTemplate[]>(mockTemplates);
+  const [dashboard, setDashboard] = useState<CertificateDashboardData | null>(null);
+  const [loadingCertificates, setLoadingCertificates] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [certificatesError, setCertificatesError] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   // ---- View state --------------------------------------------------------
   const [tab, setTab] = useState<Tab>("issued");
   const [search, setSearch] = useState("");
-  const [programmeFilter, setProgrammeFilter] = useState("All programmes");
+  const [programmeFilter, setProgrammeFilter] = useState("");
+
+  // Keep programme loading and option construction identical to Daily Reports.
+  const programmesQuery = useProgrammes();
+
+  useEffect(() => {
+    if (programmesQuery.hasNextPage && !programmesQuery.isFetchingNextPage) {
+      void programmesQuery.fetchNextPage();
+    }
+  }, [
+    programmesQuery.hasNextPage,
+    programmesQuery.isFetchingNextPage,
+    programmesQuery.fetchNextPage,
+  ]);
+
+  const programmeOptions = useMemo(() => {
+    const items = programmesQuery.data?.pages.flatMap((page) => page.items) ?? [];
+    const unique = new Map(items.map((programme) => [programme.id, programme]));
+
+    return [
+      { value: "", label: "All programmes" },
+      ...[...unique.values()].map((programme) => ({
+        value: programme.id,
+        label: programme.name,
+      })),
+    ] satisfies SelectOption<string>[];
+  }, [programmesQuery.data]);
   const [typeFilter, setTypeFilter] = useState<"All types" | CertificateType>("All types");
   const [statusFilter, setStatusFilter] = useState<"All" | CertificateStatus>("All");
   const [selectedEligible, setSelectedEligible] = useState<Set<string>>(new Set());
@@ -172,40 +284,85 @@ function CertificatesWorkspace() {
 
   /* ---------------------------- Derived data ----------------------------- */
 
-  const filteredCertificates = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return certificates
-      .filter((item) => {
-        const matchesQuery =
-          !query ||
-          `${item.certificateNumber} ${item.recipientName} ${item.recipientEmail} ${item.programme}`
-            .toLowerCase()
-            .includes(query);
-        const matchesProgramme = programmeFilter === "All programmes" || item.programme === programmeFilter;
-        const matchesType = typeFilter === "All types" || item.type === typeFilter;
-        const matchesStatus = statusFilter === "All" || item.status === statusFilter;
-        return matchesQuery && matchesProgramme && matchesType && matchesStatus;
-      })
-      // Newest first.
-      .sort((a, b) => b.issuedDate.localeCompare(a.issuedDate) || b.certificateNumber.localeCompare(a.certificateNumber));
-  }, [certificates, search, programmeFilter, typeFilter, statusFilter]);
+  // All register filters, including programme, are applied by the API.
+  const filteredCertificates = certificates;
 
-  const metrics = useMemo(() => {
-    const active = certificates.filter((item) => item.status === "Active");
-    return {
-      active: active.length,
-      revoked: certificates.length - active.length,
-      programmes: new Set(active.map((item) => item.programme)).size,
-      verifications: certificates.reduce((sum, item) => sum + item.verificationCount, 0),
-      awaiting: eligible.length,
-    };
-  }, [certificates, eligible]);
+  const metrics = {
+    active: dashboard?.activeCertificates ?? 0,
+    revoked: dashboard?.revokedCertificates ?? 0,
+    programmes: dashboard?.programmesRepresented ?? 0,
+    verifications: dashboard?.recordedVerifications ?? 0,
+    awaiting: dashboard?.awaitingIssuance ?? 0,
+  };
 
   const hasActiveFilters =
-    Boolean(search) || programmeFilter !== "All programmes" || typeFilter !== "All types" || statusFilter !== "All";
+    Boolean(search) || Boolean(programmeFilter) || typeFilter !== "All types" || statusFilter !== "All";
 
   const previewCertificate = previewId ? certificates.find((item) => item.id === previewId) ?? null : null;
   const allEligibleSelected = eligible.length > 0 && eligible.every((item) => selectedEligible.has(item.id));
+
+  const buildRegisterQuery = (cursor?: string): AdminCertificatesQuery => ({
+    limit: 20,
+    search: search.trim() || undefined,
+    programmeId: programmeFilter || undefined,
+    type: typeFilter !== "All types" ? typeFilter.toUpperCase() : undefined,
+    status: statusFilter !== "All" ? statusFilter.toUpperCase() : undefined,
+    cursor,
+  });
+
+  const fetchDashboard = async () => {
+    try {
+      const response = await http.get<ApiEnvelope<CertificateDashboardData>>(
+        "/certificates/admin/dashboard"
+      );
+      setDashboard(response.data.data);
+    } catch (error) {
+      console.error("Failed to load certificate dashboard:", error);
+      toast.error("Unable to load certificate dashboard");
+    }
+  };
+
+  const fetchCertificates = async (query: AdminCertificatesQuery = { limit: 20 }, append = false) => {
+    try {
+      if (append) setLoadingMore(true);
+      else {
+        setLoadingCertificates(true);
+        setCertificatesError(null);
+      }
+
+      const params = new URLSearchParams();
+      Object.entries(query).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
+      });
+      const endpoint = `/certificates/admin${params.toString() ? `?${params.toString()}` : ""}`;
+      const response = await http.get<ApiEnvelope<AdminCertificatesData>>(endpoint);
+      const result = response.data.data;
+      const mapped = (result.items ?? []).map(mapApiCertificate);
+
+      setCertificates((previous) => append ? [...previous, ...mapped] : mapped);
+      setNextCursor(result.nextCursor ?? null);
+    } catch (error) {
+      console.error("Failed to load certificate register:", error);
+      if (!append) setCertificatesError("Unable to load certificates. Please try again.");
+      else toast.error("Unable to load more certificates");
+    } finally {
+      setLoadingCertificates(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchDashboard();
+    void fetchCertificates({ limit: 20 });
+  }, []);
+
+  const applyFilters = () => {
+    void fetchCertificates(buildRegisterQuery());
+  };
+
+  const loadMoreCertificates = () => {
+    if (nextCursor) void fetchCertificates(buildRegisterQuery(nextCursor), true);
+  };
 
   /* ------------------------------ Mutations ------------------------------ */
 
@@ -328,9 +485,13 @@ function CertificatesWorkspace() {
   };
 
   const download = (certificate: IssuedCertificate) => {
-    // TODO(api): GET /certificates/:id/pdf → signed URL, then window.open(url).
-    toast.info(`Preparing ${certificate.certificateNumber}.pdf`, {
-      description: "PDF download will be available once the certificate service is connected.",
+    const documentUrl = (certificate as IssuedCertificate & { documentUrl?: string }).documentUrl;
+    if (documentUrl) {
+      window.open(documentUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    toast.info(`PDF unavailable for ${certificate.certificateNumber}`, {
+      description: "This certificate does not have a document URL yet.",
     });
   };
 
@@ -347,9 +508,10 @@ function CertificatesWorkspace() {
 
   const resetFilters = () => {
     setSearch("");
-    setProgrammeFilter("All programmes");
+    setProgrammeFilter("");
     setTypeFilter("All types");
     setStatusFilter("All");
+    void fetchCertificates({ limit: 20 });
   };
 
   // Short "opening…" pause before dialogs appear (spinner on the trigger).
@@ -455,7 +617,7 @@ function CertificatesWorkspace() {
           <div className="flex flex-col gap-4 border-b border-[#edf0f6] px-4 py-4 sm:px-5">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <h2 id="register-title" className="font-bold text-[#101d49]">Certificate register</h2>
-              <p className="text-xs text-[#8995aa]">Showing {filteredCertificates.length} of {certificates.length} · newest first</p>
+              <p className="text-xs text-[#8995aa]">Showing {filteredCertificates.length} loaded certificate(s) · newest first</p>
             </div>
             <div className="grid gap-3 md:grid-cols-[1fr_200px_170px_150px_auto]">
               <label className="relative block min-w-0">
@@ -473,7 +635,7 @@ function CertificatesWorkspace() {
                 ariaLabel="Filter by programme"
                 value={programmeFilter}
                 onChange={setProgrammeFilter}
-                options={["All programmes", ...PROGRAMME_OPTIONS]}
+                options={programmeOptions}
               />
               <Select<"All types" | CertificateType>
                 ariaLabel="Filter by type"
@@ -491,6 +653,10 @@ function CertificatesWorkspace() {
                   { value: "Revoked", label: "Revoked" },
                 ]}
               />
+              <button type="button" onClick={applyFilters} disabled={loadingCertificates} className={cn(darkButtonClass, "h-10")}>
+                {loadingCertificates ? <Loader2 size={15} className="animate-spin" /> : null}
+                Apply
+              </button>
               {hasActiveFilters && (
                 <button type="button" onClick={resetFilters} className={secondaryButtonClass}>
                   <RotateCcw size={15} aria-hidden="true" className="transition-transform duration-300 group-hover:-rotate-180 motion-reduce:transition-none" /> Reset
@@ -499,7 +665,11 @@ function CertificatesWorkspace() {
             </div>
           </div>
 
-          {filteredCertificates.length === 0 ? (
+          {loadingCertificates && certificates.length === 0 ? (
+            <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#101d49]" size={28} /></div>
+          ) : certificatesError ? (
+            <EmptyState title="Couldn't load certificates" message={certificatesError} action={{ label: "Try again", onClick: () => void fetchCertificates(buildRegisterQuery()) }} />
+          ) : filteredCertificates.length === 0 ? (
             <EmptyState
               title="No certificates found"
               message="Try a different search term or filter."
@@ -594,6 +764,13 @@ function CertificatesWorkspace() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+          {nextCursor && !loadingCertificates && (
+            <div className="flex justify-center border-t border-[#edf0f6] p-5">
+              <button type="button" onClick={loadMoreCertificates} disabled={loadingMore} className={secondaryButtonClass}>
+                {loadingMore ? <><Loader2 size={15} className="animate-spin" /> Loading...</> : "Load more certificates"}
+              </button>
             </div>
           )}
         </section>
