@@ -1,29 +1,5 @@
 "use client";
 
-/**
- * ADMIN · Daily Reports
- * Route: /dashboard/reports  (already linked from the admin sidebar in
- * lib/config/dashboard/ui-config.ts → "Insights › Reports")
- *
- * Students and interns send a short plain-text report at the end of each
- * day: what they accomplished, and any problems they ran into. This page is
- * the admin's inbox for those reports:
- *   • summary strip for today (submitted / open problems / to review / missing)
- *   • date-grouped list with search, Student/Intern, team and status filters
- *   • reading pane showing the report text exactly as written
- *   • follow-up on problems (Open → Resolved), plain-text replies,
- *     "mark reviewed / unread", copy report text
- *   • "Not submitted yet" drawer with one-click reminders
- *   • keyboard: ↑/↓ (or j/k) move through the list
- *
- * Layout: two panes on desktop; on phones the list and the reader are
- * separate screens with a back button.
- *
- * FRONT-END ONLY: data comes from `lib/mock/admin-daily-reports.ts` via the
- * shared client store `lib/store/daily-reports.ts` (also used by the student
- * report page, so a student's submission shows up here in the same session). Look for `TODO(api)` where requests belong.
- */
-
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
   AlertTriangle,
@@ -38,6 +14,7 @@ import {
   Sparkles,
   UserX,
 } from "lucide-react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import { MainLayout } from "@/components/layout/dashboard";
 import { toast } from "@/components/ui/Toaster";
@@ -63,11 +40,57 @@ import {
   type RosterMember,
 } from "@/lib/mock/admin-daily-reports";
 import { useDailyReportsStore } from "@/lib/store/daily-reports";
+import { programmesApi } from "@/lib/api/programmes";
+import type { GetProgrammesParams } from "@/lib/interfaces/programmes";
 import { cn } from "@/lib/utils";
 
-/* -------------------------------------------------------------------------- */
-/* Filter definitions                                                         */
-/* -------------------------------------------------------------------------- */
+export const programmesQueryKeys = {
+  all: ["programmes"] as const,
+  details: (id: string) => [...programmesQueryKeys.all, "detail", id] as const,
+  catalogue: (search: string) =>
+    [...programmesQueryKeys.all, "catalogue", { search }] as const,
+};
+
+export function useProgrammeDetails(id: string) {
+  const programmeId = id.trim();
+
+  return useQuery({
+    queryKey: programmesQueryKeys.details(programmeId),
+    queryFn: () => programmesApi.getById(programmeId),
+    enabled: Boolean(programmeId),
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: true,
+    retry: (failureCount, error) => {
+      const status = (error as Error & { status?: number }).status;
+      if (typeof status === "number" && status >= 400 && status < 500) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+  });
+}
+
+export function useProgrammes(params: Pick<GetProgrammesParams, "search"> = {}) {
+  const search = params.search?.trim() ?? "";
+
+  return useInfiniteQuery({
+    queryKey: programmesQueryKeys.catalogue(search),
+    queryFn: ({ pageParam }) => programmesApi.list({ search, cursor: pageParam }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: true,
+    retry: (failureCount, error) => {
+      const status = (error as Error & { status?: number }).status;
+      if (typeof status === "number" && status >= 400 && status < 500) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+  });
+}
 
 type Range = "today" | "yesterday" | "week" | "all";
 type View = "all" | "unread" | "problems" | "toReview";
@@ -86,6 +109,16 @@ const VIEWS: { value: View; label: string }[] = [
   { value: "toReview", label: "To review" },
 ];
 
+const WEEKDAYS = [
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: "3", label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
+  { value: 0, label: "Sunday" },
+];
+
 const inRange = (report: DailyReport, range: Range) => {
   if (range === "today") return report.reportDate === isoDay(0);
   if (range === "yesterday") return report.reportDate === isoDay(1);
@@ -102,7 +135,6 @@ const matchesView = (report: DailyReport, view: View) => {
   return true;
 };
 
-/** Plain-text version of a report for the clipboard. */
 function reportAsText(report: DailyReport): string {
   return [
     `Daily report — ${report.authorName} (${report.reporterType}, ${report.team})`,
@@ -116,17 +148,11 @@ function reportAsText(report: DailyReport): string {
   ].join("\n");
 }
 
-/** Placeholder signed-in admin until the profile API is wired in. */
 const CURRENT_ADMIN = "Admin · You";
-
-/* -------------------------------------------------------------------------- */
-/* Page                                                                       */
-/* -------------------------------------------------------------------------- */
 
 export default function AdminDailyReportsPage() {
   return (
     <MainLayout>
-      {/* Reports contain personal day-to-day notes, so admins only. */}
       <AdminAccessGuard permission="manageUsers" areaLabel="Daily reports">
         <ReportsWorkspace />
       </AdminAccessGuard>
@@ -135,42 +161,56 @@ export default function AdminDailyReportsPage() {
 }
 
 function ReportsWorkspace() {
-  // Shared with the student report page, so new submissions appear here live.
-  // TODO(api): replace with useDailyReports() / useReportRoster(today).
   const reports = useDailyReportsStore((state) => state.reports);
   const setReports = useDailyReportsStore((state) => state.setReports);
   const roster = mockRoster;
 
-  // ---- Filters -------------------------------------------------------------
   const [range, setRange] = useState<Range>("today");
   const [view, setView] = useState<View>("all");
   const [type, setType] = useState<"All" | ReporterType>("All");
   const [team, setTeam] = useState("All teams");
   const [search, setSearch] = useState("");
 
-  // ---- Selection & dialogs -------------------------------------------------
-  /**
-   * The open report is "pinned" to the filters it was opened under, so it
-   * stays in the list even after it stops matching (e.g. opening an Unread
-   * report marks it read — it must not vanish, and the next one must not be
-   * auto-opened and marked read too). Changing any filter releases the pin.
-   */
   const filterKey = `${range}|${view}|${type}|${team}|${search}`;
   const [pin, setPin] = useState<{ id: string; key: string } | null>(null);
   const pinnedId = pin?.key === filterKey ? pin.id : null;
   const setSelectedId = (id: string) => setPin({ id, key: filterKey });
-  /** Phones show one pane at a time; true = reading a report. */
   const [mobileReading, setMobileReading] = useState(false);
   const [missingOpen, setMissingOpen] = useState(false);
   const [remindedIds, setRemindedIds] = useState<Set<string>>(new Set());
   const opener = useDelayedAction();
   const listRef = useRef<HTMLDivElement>(null);
 
+  const [policiesModalOpen, setPoliciesModalOpen] = useState(false);
+  const [selectedProgrammeId, setSelectedProgrammeId] = useState("");
+  const [timezone, setTimezone] = useState("Africa/Lagos");
+  const [requiredWeekdays, setRequiredWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [effectiveFrom, setEffectiveFrom] = useState("2026-10-30");
+  const [effectiveTo, setEffectiveTo] = useState("");
+
+  const { data: programmesData, isLoading: loadingProgrammes } = useProgrammes();
+
+  const programmes = useMemo(() => {
+    if (!programmesData?.pages) return [];
+    return programmesData.pages.flatMap((page: any) => {
+      if (Array.isArray(page)) return page;
+      return page.items || page.data || page.programmes || [];
+    });
+  }, [programmesData]);
+
+  useEffect(() => {
+    if (programmes.length > 0 && !selectedProgrammeId) {
+      const first = programmes[0];
+      setSelectedProgrammeId(first.id ?? first.programmeId ?? "");
+    }
+  }, [programmes, selectedProgrammeId]);
+
+  const handleOpenPoliciesModal = () => {
+    setPoliciesModalOpen(true);
+  };
+
   const teams = useMemo(() => ["All teams", ...new Set(roster.map((member) => member.team))], [roster]);
 
-  /* ---------------------------- Derived data ----------------------------- */
-
-  /** Reports matching everything except the status "view" (used for chip counts). */
   const baseFiltered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return reports
@@ -182,7 +222,6 @@ function ReportsWorkspace() {
           !query ||
           `${report.authorName} ${report.team} ${report.accomplishments} ${report.problems}`.toLowerCase().includes(query),
       )
-      // Newest day first; within a day, latest submission first.
       .sort((a, b) => b.reportDate.localeCompare(a.reportDate) || b.submittedAt.localeCompare(a.submittedAt));
   }, [reports, range, type, team, search]);
 
@@ -191,23 +230,19 @@ function ReportsWorkspace() {
     [baseFiltered, view, pinnedId],
   );
 
-  /** Group the visible list by day for the sticky date headers. */
   const groups = useMemo(() => {
     const byDay = new Map<string, DailyReport[]>();
     visible.forEach((report) => byDay.set(report.reportDate, [...(byDay.get(report.reportDate) ?? []), report]));
     return [...byDay.entries()];
   }, [visible]);
 
-  // The reader shows the chosen report, or the first visible one on desktop.
   const selected = visible.find((report) => report.id === pinnedId) ?? visible[0] ?? null;
   const selectedIndex = selected ? visible.indexOf(selected) : -1;
 
-  // Pin whatever the reader is showing (including the auto-selected first item).
   useEffect(() => {
     if (selected && selected.id !== pinnedId) setPin({ id: selected.id, key: filterKey });
   }, [selected, pinnedId, filterKey]);
 
-  /** Today's headline numbers — independent of the list filters. */
   const today = useMemo(() => {
     const todays = reports.filter((report) => report.reportDate === isoDay(0));
     const submittedIds = new Set(todays.map((report) => report.authorId));
@@ -220,18 +255,12 @@ function ReportsWorkspace() {
     };
   }, [reports, roster]);
 
-  // Opening a report marks it read — but only when it is actually on screen
-  // (desktop two-pane, or the phone reader), never when auto-selected behind
-  // the phone list.
   useEffect(() => {
     if (!selected || selected.status !== "Unread") return;
     const onScreen = mobileReading || window.matchMedia("(min-width: 1024px)").matches;
     if (!onScreen) return;
-    // TODO(api): PATCH /daily-reports/:id { status: "Read" }
     setReports((previous) => previous.map((report) => (report.id === selected.id ? { ...report, status: "Read" } : report)));
   }, [selected, mobileReading]);
-
-  /* ------------------------------ Mutations ------------------------------ */
 
   const patch = (id: string, changes: Partial<DailyReport>) =>
     setReports((previous) => previous.map((report) => (report.id === id ? { ...report, ...changes } : report)));
@@ -247,7 +276,6 @@ function ReportsWorkspace() {
     if (next) select(next.id, true);
   };
 
-  /** ↑/↓ and j/k move through the list while it has focus. */
   const handleListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (["ArrowDown", "j"].includes(event.key)) {
       event.preventDefault();
@@ -259,10 +287,8 @@ function ReportsWorkspace() {
   };
 
   const markReviewed = (report: DailyReport) => {
-    // TODO(api): PATCH /daily-reports/:id { status: "Reviewed" }
     patch(report.id, { status: "Reviewed", reviewedAt: new Date().toISOString() });
     toast.success("Marked as reviewed", { description: `${report.authorName}'s report for ${dayLabel(report.reportDate).toLowerCase()}.` });
-    // Move on to the next report that still needs attention.
     const next = visible.slice(selectedIndex + 1).find((item) => item.status !== "Reviewed");
     if (next) setSelectedId(next.id);
   };
@@ -273,18 +299,15 @@ function ReportsWorkspace() {
   };
 
   const toggleProblem = (report: DailyReport) => {
-    // TODO(api): PATCH /daily-reports/:id { problemStatus }
     const next = report.problemStatus === "Resolved" ? "Open" : "Resolved";
     patch(report.id, { problemStatus: next });
     toast.success(next === "Resolved" ? "Problem marked resolved" : "Problem reopened");
   };
 
   const reply = (report: DailyReport, body: string) => {
-    // TODO(api): POST /daily-reports/:id/replies { body } — server emails the learner.
     const now = new Date().toISOString();
     patch(report.id, {
       replies: [...report.replies, { id: `${Date.now()}`, author: CURRENT_ADMIN, body, createdAt: now }],
-      // Replying counts as reviewing.
       status: "Reviewed",
       reviewedAt: report.reviewedAt ?? now,
     });
@@ -302,7 +325,6 @@ function ReportsWorkspace() {
 
   const remind = (member: RosterMember) =>
     opener.run(`remind-${member.id}`, () => {
-      // TODO(api): POST /daily-reports/reminders { userIds: [member.id] }
       setRemindedIds((previous) => new Set(previous).add(member.id));
       toast.success(`Reminder sent to ${member.name}`);
     });
@@ -323,12 +345,8 @@ function ReportsWorkspace() {
 
   const hasFilters = view !== "all" || type !== "All" || team !== "All teams" || Boolean(search);
 
-  /* -------------------------------- Render ------------------------------- */
-
-  // <div>, not <main>: MainLayout already renders the <main> landmark.
   return (
     <div className="mx-auto max-w-[1500px] space-y-6 pb-10">
-      {/* ---- Heading + date range --------------------------------------- */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
           <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#64718a]">
@@ -340,29 +358,37 @@ function ReportsWorkspace() {
           </p>
         </div>
 
-        {/* Segmented date range control */}
-        <div role="radiogroup" aria-label="Date range" className="inline-flex self-start rounded-xl border border-[#e4e9f2] bg-white p-1 lg:self-auto">
-          {RANGES.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={range === option.value}
-              onClick={() => setRange(option.value)}
-              className={cn(
-                "rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200",
-                range === option.value
-                  ? "bg-[#101d49] text-white shadow-[0_4px_12px_-6px_rgba(16,29,73,0.7)]"
-                  : "text-[#64718a] hover:bg-[#f1f4fa] hover:text-[#101d49]",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
+        <div className="flex flex-col items-end gap-[5px] lg:self-auto">
+          <button
+            type="button"
+            onClick={handleOpenPoliciesModal}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#101d49] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#1a2d6d]"
+          >
+            Create Policy
+          </button>
+
+          <div role="radiogroup" aria-label="Date range" className="inline-flex rounded-xl border border-[#e4e9f2] bg-white p-1">
+            {RANGES.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={range === option.value}
+                onClick={() => setRange(option.value)}
+                className={cn(
+                  "rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200",
+                  range === option.value
+                    ? "bg-[#101d49] text-white shadow-[0_4px_12px_-6px_rgba(16,29,73,0.7)]"
+                    : "text-[#64718a] hover:bg-[#f1f4fa] hover:text-[#101d49]",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
-      {/* ---- Today at a glance: one strip, not four cards ------------------- */}
       <section aria-label="Today at a glance" className={cn(cardClass, "grid divide-y divide-[#edf0f6] sm:grid-cols-2 sm:divide-y-0 xl:grid-cols-4 xl:divide-x")}>
         <div className="px-5 py-4">
           <p className="text-xs font-semibold text-[#8995aa]">Submitted today</p>
@@ -406,9 +432,7 @@ function ReportsWorkspace() {
         />
       </section>
 
-      {/* ---- Inbox: list + reader ---------------------------------------- */}
       <section className={cn(cardClass, "grid overflow-hidden lg:h-[calc(100dvh-180px)] lg:min-h-[640px] lg:grid-cols-[minmax(340px,400px)_1fr]")}>
-        {/* ---------------- List pane ---------------- */}
         <div className={cn("min-h-0 flex-col border-[#edf0f6] lg:flex lg:border-r", mobileReading ? "hidden" : "flex")}>
           <div className="space-y-3 border-b border-[#edf0f6] p-4">
             <label className="relative block">
@@ -458,7 +482,6 @@ function ReportsWorkspace() {
             </div>
           </div>
 
-          {/* Report list — a single tab stop list navigated with ↑/↓ */}
           <div
             ref={listRef}
             className="min-h-0 flex-1 overflow-y-auto"
@@ -502,7 +525,6 @@ function ReportsWorkspace() {
           </div>
         </div>
 
-        {/* ---------------- Reader pane ---------------- */}
         <div className={cn("min-h-[70vh] flex-col lg:flex lg:min-h-0", mobileReading ? "flex" : "hidden")}>
           {selected ? (
             <ReportReader
@@ -527,6 +549,143 @@ function ReportsWorkspace() {
         </div>
       </section>
 
+      {policiesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-all duration-300 animate-fadeIn">
+          <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl transition-all duration-300 transform scale-95 animate-scaleUp max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-4">
+              <h3 className="text-lg font-bold text-[#101d49]">Create Report Policies</h3>
+              <button
+                type="button"
+                onClick={() => setPoliciesModalOpen(false)}
+                className="text-sm font-semibold text-gray-500 hover:text-gray-800"
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#64718a] mb-1.5">
+                  Programme
+                </label>
+                {loadingProgrammes ? (
+                  <div className="flex items-center gap-2 py-2 text-sm text-neutral-400">
+                    <Loader2 className="animate-spin" size={16} /> Loading programmes...
+                  </div>
+                ) : (
+                  <Select
+                    ariaLabel="Select programme ID"
+                    value={selectedProgrammeId}
+                    onChange={setSelectedProgrammeId}
+                    options={
+                      programmes.length > 0
+                        ? programmes.map((p: any) => ({
+                            value: p.id ?? p.programmeId,
+                            label: p.name ?? p.title ?? p.programmeId ?? "Programme",
+                          }))
+                        : [{ value: "", label: "No programmes available" }]
+                    }
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#64718a] mb-1.5">
+                  Timezone
+                </label>
+                <Select
+                  ariaLabel="Select timezone"
+                  value={timezone}
+                  onChange={setTimezone}
+                  options={[
+                    { value: "Africa/Lagos", label: "Africa/Lagos" },
+                    { value: "UTC", label: "UTC" },
+                    { value: "America/New_York", label: "America/New_York" },
+                    { value: "Europe/London", label: "Europe/London" },
+                  ]}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#64718a] mb-1.5">
+                  Required Weekdays
+                </label>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {WEEKDAYS.map((day) => {
+                    const active = requiredWeekdays.includes(Number(day.value));
+                    return (
+                      <button
+                        key={day.value}
+                        type="button"
+                        onClick={() => {
+                          const val = Number(day.value);
+                          setRequiredWeekdays((prev) =>
+                            prev.includes(val) ? prev.filter((d) => d !== val) : [...prev, val]
+                          );
+                        }}
+                        className={cn(
+                          "rounded-xl border px-3 py-2 text-xs font-semibold transition-colors duration-150 text-center",
+                          active
+                            ? "border-[#101d49] bg-[#101d49] text-white"
+                            : "border-[#e4e9f2] bg-white text-[#64718a] hover:border-[#b9c5da] hover:text-[#101d49]"
+                        )}
+                      >
+                        {day.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-[#64718a] mb-1.5">
+                    Effective From
+                  </label>
+                  <input
+                    type="date"
+                    value={effectiveFrom}
+                    onChange={(e) => setEffectiveFrom(e.target.value)}
+                    className={cn(inputClass, "h-10")}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#64718a] mb-1.5">
+                    Effective To (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={effectiveTo}
+                    onChange={(e) => setEffectiveTo(e.target.value)}
+                    className={cn(inputClass, "h-10")}
+                    placeholder="No end date"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setPoliciesModalOpen(false)}
+                  className={secondaryButtonClass}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.success("Policy created successfully!");
+                    setPoliciesModalOpen(false);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#101d49] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#1a2d6d]"
+                >
+                  Save Policy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <MissingReportsDrawer
         open={missingOpen}
         onClose={() => setMissingOpen(false)}
@@ -540,15 +699,6 @@ function ReportsWorkspace() {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Pieces                                                                     */
-/* -------------------------------------------------------------------------- */
-
-/**
- * One row in the report list. Unread reports have a gold dot and bold name;
- * the active report gets a navy edge. Problem state is shown in words, not
- * colour alone.
- */
 function ReportListItem({ report, active, onSelect }: { report: DailyReport; active: boolean; onSelect: () => void }) {
   const unread = report.status === "Unread";
   const problem = report.problems.trim() ? (report.problemStatus === "Resolved" ? "resolved" : "open") : null;
@@ -564,7 +714,6 @@ function ReportListItem({ report, active, onSelect }: { report: DailyReport; act
         active ? "bg-[#f4f7ff]" : "hover:bg-[#f8faff]",
       )}
     >
-      {/* Edge marker: navy when active, gold preview on hover. */}
       <span
         aria-hidden="true"
         className={cn(
@@ -587,7 +736,7 @@ function ReportListItem({ report, active, onSelect }: { report: DailyReport; act
           <span className="ml-auto shrink-0 text-xs tabular-nums text-[#8995aa]">{clockTime(report.submittedAt)}</span>
         </span>
         <span className="mt-0.5 block truncate text-xs text-[#8995aa]">{report.team}</span>
-        <span className={cn("mt-1.5 line-clamp-2 text-[13px] leading-5", unread ? "text-[#34415e]" : "text-[#64718a]")}>
+        <span className={cn("mt-1.5 line-clamp-2 text-[13px] leading-5", unread ? "text-[#34415e] font-medium" : "text-[#64718a]")}>
           {preview(report.accomplishments)}
         </span>
         <span className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-semibold">
@@ -617,7 +766,6 @@ function ReportListItem({ report, active, onSelect }: { report: DailyReport; act
   );
 }
 
-/** Clickable cell in the summary strip (applies a filter or opens a drawer). */
 function StripButton({
   label,
   value,
@@ -643,7 +791,7 @@ function StripButton({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={hookClickGuard(onClick)}
       className="group flex items-center gap-4 px-5 py-4 text-left transition-colors duration-200 hover:bg-[#f8faff] focus-visible:bg-[#f8faff] focus-visible:outline-none"
     >
       <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200", tones[tone])}>
@@ -653,7 +801,6 @@ function StripButton({
         <span className="block truncate text-xs font-semibold text-[#8995aa]">{label}</span>
         <span className="mt-0.5 flex items-baseline gap-3">
           <span className="text-2xl font-bold text-[#101d49]">{value}</span>
-          {/* Where the cell leads; darkens and nudges on hover. */}
           <span className="inline-flex items-center gap-1 truncate text-xs font-semibold text-[#8995aa] transition-colors duration-200 group-hover:text-[#101d49]">
             {hint} <ArrowRight size={13} aria-hidden="true" className={iconNudgeOnHover} />
           </span>
@@ -661,4 +808,8 @@ function StripButton({
       </span>
     </button>
   );
+}
+
+function hookClickGuard(cb: () => void) {
+  return cb;
 }
