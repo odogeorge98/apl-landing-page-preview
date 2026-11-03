@@ -46,7 +46,7 @@ function formFromReport(report: StudentReport | null): ReportFormValues {
   return {
     accomplishments: report.accomplishments.join("\n"),
     problems: report.blockerDescription ?? "",
-    noProblems: report.noProblemsToday,
+    noProblems: report.noProblemsToday ?? false,
   };
 }
 

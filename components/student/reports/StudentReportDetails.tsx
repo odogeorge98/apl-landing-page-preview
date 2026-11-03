@@ -139,7 +139,7 @@ export function StudentReportDetails({ report, onSendFeedback, sendingFeedback =
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           {!compact && <p className="text-sm font-semibold text-[#101d49]">{formatReportDate(report.reportDate)}</p>}
-          <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-[#8995aa]"><Clock3 size={13} aria-hidden="true" /> {isDraft ? "Last saved" : "Submitted"} {formatTimestamp(isDraft ? report.updatedAt : report.submittedAt)}</p>
+          <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-[#8995aa]"><Clock3 size={13} aria-hidden="true" /> {isDraft ? "Last saved" : "Submitted"} {formatTimestamp(isDraft ? report.updatedAt ?? null : report.submittedAt)}</p>
         </div>
         <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${isDraft ? "bg-[#fff6d8] text-[#8a6500]" : report.status === "REVIEWED" ? "bg-emerald-50 text-emerald-700" : "bg-[#edf1f8] text-[#53627b]"}`}>
           {statusLabel(report.status)}

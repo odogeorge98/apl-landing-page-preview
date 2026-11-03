@@ -148,15 +148,17 @@ export function ReportReader({
                   {messages.map((message) => {
                     const own = currentUserId ? message.authorUserId === currentUserId : message.author.role.toUpperCase() === "ADMIN";
                     return <li key={message.id} className={cn("flex", own ? "justify-end" : "justify-start")}>
-                      <div className={cn("max-w-[88%] min-w-[160px] rounded-2xl px-3.5 py-2.5 shadow-sm sm:max-w-[80%]", own ? "rounded-br-md bg-[#e8eefc] text-[#17233f]" : "rounded-bl-md border border-[#e2e8f2] bg-white text-[#17233f]")}>
-                        <div className="flex items-center justify-between gap-5 text-[11px]">
-                          <span className="font-bold text-[#34415e]">{own ? "You" : roleLabel(message.author.role)}</span>
-                          <time dateTime={message.createdAt} className="shrink-0 text-[#64718a]">{stampLabel(message.createdAt)}</time>
+                      <div className={cn("flex max-w-[88%] min-w-0 flex-col sm:max-w-[80%]", own ? "items-end" : "items-start")}>
+                        <div className={cn("w-fit max-w-full rounded-2xl px-3.5 py-2.5 text-left shadow-sm", own ? "rounded-br-md bg-[#e8eefc] text-[#17233f]" : "rounded-bl-md border border-[#e2e8f2] bg-white text-[#17233f]")}>
+                          <div className="flex items-center justify-between gap-5 text-[11px]">
+                            <span className="font-bold text-[#34415e]">{own ? "You" : roleLabel(message.author.role)}</span>
+                            <time dateTime={message.createdAt} className="shrink-0 text-[#64718a]">{stampLabel(message.createdAt)}</time>
+                          </div>
+                          <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">{message.message}</p>
                         </div>
-                        <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">{message.message}</p>
-                        {own && <div className="mt-1 flex h-4 items-center justify-end gap-1 text-[10px] font-medium text-[#52627f]" aria-label={message.readAt ? `Seen ${stampLabel(message.readAt)}` : "Sent"}>
-                          {message.readAt ? <CheckCheck size={13} className="shrink-0 text-[#16845b]" aria-hidden="true" /> : <Check size={13} className="shrink-0" aria-hidden="true" />}
-                          <span className="min-w-[78px] text-right">{message.readAt ? `Seen · ${clockTime(message.readAt)}` : "Sent"}</span>
+                        {own && <div className="mt-1 flex h-4 w-36 max-w-full shrink-0 items-center justify-end gap-1.5 overflow-hidden whitespace-nowrap text-[11px] leading-none text-[#52627f] dark:text-slate-300" aria-label={message.readAt ? `Seen ${stampLabel(message.readAt)}` : "Sent; not yet read"}>
+                          {message.readAt ? <CheckCheck size={12} className="shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden="true" /> : <Check size={12} className="shrink-0 text-[#52627f] dark:text-slate-300" aria-hidden="true" />}
+                          <span className="truncate">{message.readAt ? `Seen · ${clockTime(message.readAt)}` : "Sent"}</span>
                         </div>}
                       </div>
                     </li>;

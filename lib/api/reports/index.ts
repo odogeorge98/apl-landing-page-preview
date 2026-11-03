@@ -18,6 +18,18 @@ import type {
   ReportFeedbackAuthor,
   ReportFeedbackData,
   ReportFeedbackMessage,
+  CreateStudentReportFeedbackDto,
+  GetStudentReportDashboardParams,
+  GetStudentReportsParams,
+  SaveStudentReportDraftDto,
+  StudentDailyReportCheckApiResponse,
+  StudentReport,
+  StudentReportApiResponse,
+  StudentReportDashboardApiResponse,
+  StudentReportDashboardData,
+  StudentReportsApiResponse,
+  StudentReportsPage,
+  UpdateStudentReportDraftDto,
   ReviewAdminReportApiResponse,
   ReviewAdminReportResult,
 } from "@/lib/interfaces/reports";
@@ -155,6 +167,62 @@ function isAdminReportSummary(value: unknown): value is AdminReportSummary {
   );
 }
 
+function isStudentReport(value: unknown): value is StudentReport {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === "string" &&
+    typeof value.programmeId === "string" &&
+    (typeof value.tutorId === "string" || value.tutorId === null) &&
+    isCalendarDate(String(value.reportDate)) &&
+    typeof value.status === "string" &&
+    REPORT_STATUSES.has(value.status as DailyReportStatus) &&
+    Array.isArray(value.accomplishments) &&
+    value.accomplishments.every((item) => typeof item === "string") &&
+    (typeof value.noProblemsToday === "boolean" || value.noProblemsToday === null) &&
+    (typeof value.blockerDescription === "string" || value.blockerDescription === null) &&
+    (typeof value.problemStatus === "string" || value.problemStatus === null) &&
+    (value.problemStatus === null || PROBLEM_STATUSES.has(value.problemStatus as DailyReportProblemStatus)) &&
+    (typeof value.resolvedAt === "string" || value.resolvedAt === null) &&
+    (value.submittedAt === null || typeof value.submittedAt === "string") &&
+    (value.reviewedAt === null || typeof value.reviewedAt === "string") &&
+    typeof value.feedbackCount === "number" && Number.isFinite(value.feedbackCount) &&
+    (!('programme' in value) || value.programme === null || isPerson(value.programme)) &&
+    (!('tutor' in value) || value.tutor === null || isPerson(value.tutor))
+  );
+}
+
+function isStudentDashboard(value: unknown): value is StudentReportDashboardData {
+  if (!isRecord(value) || !isPerson(value.programme) || !Array.isArray(value.assignedTutors) ||
+      !value.assignedTutors.every(isPerson) || !isRecord(value.overview) ||
+      !isRecord(value.overview.thisWeek) || !isRecord(value.today) || !Array.isArray(value.recentDays)) return false;
+  const { thisWeek, streakDays, openProblems, feedbackReceived } = value.overview;
+  const policyValid = value.reportingPolicy === null || (
+    isRecord(value.reportingPolicy) && typeof value.reportingPolicy.timezone === "string" &&
+    Array.isArray(value.reportingPolicy.requiredWeekdays) &&
+    value.reportingPolicy.requiredWeekdays.every((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+  );
+  return policyValid &&
+    typeof thisWeek.reportedDays === "number" && Number.isFinite(thisWeek.reportedDays) &&
+    (typeof thisWeek.requiredDays === "number" || thisWeek.requiredDays === null) &&
+    (typeof streakDays === "number" || streakDays === null) &&
+    typeof openProblems === "number" && Number.isFinite(openProblems) &&
+    typeof feedbackReceived === "number" && Number.isFinite(feedbackReceived) &&
+    typeof value.today.reportDate === "string" && isCalendarDate(value.today.reportDate) &&
+    (value.today.report === null || isStudentReport(value.today.report)) &&
+    value.recentDays.every((entry) => isRecord(entry) && typeof entry.reportDate === "string" &&
+      isCalendarDate(entry.reportDate) && (entry.report === null || isStudentReport(entry.report)));
+}
+
+function validateStudentReportParams(params: GetStudentReportsParams): void {
+  if (params.status && !REPORT_STATUSES.has(params.status)) throw new Error("Choose a valid report status.");
+  validateDateRange(params.fromDate, params.toDate);
+  if (params.search && params.search.length > 100) throw new Error("Search must be 100 characters or fewer.");
+  if (params.limit !== undefined && (!Number.isInteger(params.limit) || params.limit < 1 || params.limit > 50)) {
+    throw new Error("Page size must be an integer between 1 and 50.");
+  }
+  if (params.cursor && params.cursor.length > 512) throw new Error("The pagination cursor is invalid.");
+}
+
 function assertSuccess(result: { status: string; message: string }, fallback: string): void {
   if (result.status !== "success") throw new Error(result.message || fallback);
 }
@@ -186,7 +254,7 @@ function validateId(id: string, label: string): string {
 
 export const reportsApi = {
   /** GET /reports/admin — cursor-paginated reports visible to administrators. */
-  listAdmin: async (params: GetAdminReportsParams = {}): Promise<{ items: AdminReportListItem[]; nextCursor: string | null }> => {
+  listAdmin: async (params: GetAdminReportsParams = {}, signal?: AbortSignal): Promise<{ items: AdminReportListItem[]; nextCursor: string | null }> => {
     validateReportListParams(params);
     const queryParams: Record<string, string | number> = {};
     if (params.programmeId?.trim()) queryParams.programmeId = params.programmeId.trim();
@@ -198,7 +266,7 @@ export const reportsApi = {
     if (params.limit !== undefined) queryParams.limit = params.limit;
     if (params.cursor?.trim()) queryParams.cursor = params.cursor.trim();
 
-    const response = await http.get<AdminReportsApiResponse>("/reports/admin", { params: queryParams });
+    const response = await http.get<AdminReportsApiResponse>("/reports/admin", { params: queryParams, signal });
     const result = response.data;
     assertSuccess(result, "Unable to retrieve admin reports.");
     if (
@@ -213,13 +281,14 @@ export const reportsApi = {
   },
 
   /** GET /reports/admin/summary — reporting metrics for an inclusive date range. */
-  getAdminSummary: async (params: GetAdminReportSummaryParams): Promise<AdminReportSummary> => {
+  getAdminSummary: async (params: GetAdminReportSummaryParams, signal?: AbortSignal): Promise<AdminReportSummary> => {
     validateDateRange(params.fromDate, params.toDate);
     if (!params.fromDate || !params.toDate) {
       throw new Error("Choose a start date and end date for the report summary.");
     }
     const response = await http.get<AdminReportSummaryApiResponse>("/reports/admin/summary", {
       params: { fromDate: params.fromDate, toDate: params.toDate },
+      signal,
     });
     const result = response.data;
     assertSuccess(result, "Unable to retrieve the admin report summary.");
@@ -230,9 +299,9 @@ export const reportsApi = {
   },
 
   /** GET /reports/admin/:id — retrieve a complete report for the reader pane. */
-  getAdminById: async (reportId: string): Promise<AdminDailyReport> => {
+  getAdminById: async (reportId: string, signal?: AbortSignal): Promise<AdminDailyReport> => {
     const encodedId = validateId(reportId, "Report ID");
-    const response = await http.get<AdminReportApiResponse>(`/reports/admin/${encodedId}`);
+    const response = await http.get<AdminReportApiResponse>(`/reports/admin/${encodedId}`, { signal });
     const result = response.data;
     assertSuccess(result, "Unable to retrieve this report.");
     if (!isAdminReport(result.data)) {
@@ -321,4 +390,172 @@ export const reportsApi = {
     }
     return result.data;
   },
+};
+
+function assertStudentSuccess(result: { status: string; message: string }, fallback: string): void {
+  if (result.status !== "success") throw new Error(result.message || fallback);
+}
+
+function validateStudentContent(payload: UpdateStudentReportDraftDto): void {
+  if (payload.accomplishments !== undefined && payload.accomplishments !== null) {
+    if (!Array.isArray(payload.accomplishments) || payload.accomplishments.length > 50 ||
+        payload.accomplishments.some((line) => typeof line !== "string" || line.length > 2000) ||
+        payload.accomplishments.reduce((total, line) => total + line.length, 0) > 2000) {
+      throw new Error("Accomplishments must contain at most 50 items and 2,000 characters in total.");
+    }
+  }
+  if (payload.noProblemsToday !== undefined && payload.noProblemsToday !== null && typeof payload.noProblemsToday !== "boolean") {
+    throw new Error("Choose whether you had any problems today.");
+  }
+  if (payload.blockerDescription !== undefined && payload.blockerDescription !== null &&
+      (typeof payload.blockerDescription !== "string" || payload.blockerDescription.length > 2000)) {
+    throw new Error("Blocker details must be 2,000 characters or fewer.");
+  }
+}
+
+/** Student report endpoints. Query keys and cache behavior remain in the React Query hooks. */
+export const studentReportsApi = {
+  /** GET /reports/student — cursor-paginated reports for the signed-in student. */
+  list: async (params: GetStudentReportsParams = {}, signal?: AbortSignal): Promise<StudentReportsPage> => {
+    validateStudentReportParams(params);
+    const queryParams: Record<string, string | number> = {};
+    if (params.programmeId?.trim()) queryParams.programmeId = params.programmeId.trim();
+    if (params.status) queryParams.status = params.status;
+    if (params.search?.trim()) queryParams.search = params.search.trim();
+    if (params.fromDate) queryParams.fromDate = params.fromDate;
+    if (params.toDate) queryParams.toDate = params.toDate;
+    if (params.limit !== undefined) queryParams.limit = params.limit;
+    // Cursors are opaque. Forward the server value unchanged.
+    if (params.cursor) queryParams.cursor = params.cursor;
+
+    const response = await http.get<StudentReportsApiResponse>("/reports/student", { params: queryParams, signal });
+    const result = response.data;
+    assertStudentSuccess(result, "Unable to retrieve your reports.");
+    if (!isRecord(result.data) || !Array.isArray(result.data.items) ||
+        !(result.data.nextCursor === null || typeof result.data.nextCursor === "string") ||
+        !result.data.items.every(isStudentReport)) {
+      throw new Error("The student reports response was incomplete or invalid.");
+    }
+    return result.data;
+  },
+
+  /** GET /reports/student/dashboard?programmeId=… */
+  dashboard: async (params: GetStudentReportDashboardParams, signal?: AbortSignal): Promise<StudentReportDashboardData> => {
+    const programmeId = params.programmeId.trim();
+    if (!programmeId) throw new Error("Choose an enrolled programme to load its report dashboard.");
+    const response = await http.get<StudentReportDashboardApiResponse>("/reports/student/dashboard", {
+      params: { programmeId }, signal,
+    });
+    const result = response.data;
+    assertStudentSuccess(result, "Unable to retrieve your report dashboard.");
+    if (!isStudentDashboard(result.data)) throw new Error("The student report dashboard response was incomplete or invalid.");
+    return result.data;
+  },
+
+  /** GET /reports/student/daily-check — data is a boolean requirement flag. */
+  dailyCheck: async (signal?: AbortSignal): Promise<boolean> => {
+    const response = await http.get<StudentDailyReportCheckApiResponse>("/reports/student/daily-check", { signal });
+    const result = response.data;
+    assertStudentSuccess(result, "Unable to check today's report requirement.");
+    if (typeof result.data !== "boolean") throw new Error("The daily report check response was invalid.");
+    return result.data;
+  },
+
+  /** POST /reports/student/drafts — creates the day's draft (non-idempotent; don't retry automatically). */
+  saveDraft: async (payload: SaveStudentReportDraftDto): Promise<StudentReport> => {
+    const programmeId = payload.programmeId.trim();
+    if (!programmeId) throw new Error("A programme is required to save a report.");
+    validateStudentContent(payload);
+    if (payload.tutorId !== undefined && !payload.tutorId.trim()) throw new Error("Choose a valid tutor.");
+    const response = await http.post<StudentReportApiResponse>("/reports/student/drafts", {
+      ...payload,
+      programmeId,
+      ...(payload.tutorId ? { tutorId: payload.tutorId.trim() } : {}),
+    });
+    const result = response.data;
+    assertStudentSuccess(result, "Unable to save your report draft.");
+    if (!isStudentReport(result.data)) throw new Error("The saved report response was incomplete or invalid.");
+    return result.data;
+  },
+
+  /** PATCH /reports/student/:id/draft — updates the existing draft. */
+  updateDraft: async (reportId: string, payload: UpdateStudentReportDraftDto): Promise<StudentReport> => {
+    const encodedId = validateId(reportId, "Report ID");
+    validateStudentContent(payload);
+    const response = await http.patch<StudentReportApiResponse>(`/reports/student/${encodedId}/draft`, payload);
+    const result = response.data;
+    assertStudentSuccess(result, "Unable to update your report draft.");
+    if (!isStudentReport(result.data)) throw new Error("The updated report response was incomplete or invalid.");
+    return result.data;
+  },
+
+  /** POST /reports/student/:id/submit — finalizes the saved draft. */
+  submitDraft: async (reportId: string): Promise<StudentReport> => {
+    const encodedId = validateId(reportId, "Report ID");
+    const response = await http.post<StudentReportApiResponse>(`/reports/student/${encodedId}/submit`);
+    const result = response.data;
+    assertStudentSuccess(result, "Unable to submit your report.");
+    if (!isStudentReport(result.data)) throw new Error("The submitted report response was incomplete or invalid.");
+    return result.data;
+  },
+
+  /** POST /reports/admin/:id/feedback — shared feedback endpoint used by the student report thread. */
+  sendFeedback: async (reportId: string, payload: CreateStudentReportFeedbackDto): Promise<ReportFeedbackMessage> => {
+    const encodedId = validateId(reportId, "Report ID");
+    const message = payload.message.trim();
+    if (!message || message.length > 5000) throw new Error("Feedback must contain 1–5000 non-whitespace characters.");
+    const response = await http.post<CreateReportFeedbackApiResponse>(`/reports/admin/${encodedId}/feedback`, { message });
+    const result = response.data;
+    assertStudentSuccess(result, "Unable to send report feedback.");
+    if (!isFeedbackMessage(result.data)) throw new Error("The feedback response was incomplete or invalid.");
+    return result.data;
+  },
+};
+
+/** Shared report feedback endpoints, consumed by both student and admin threads. */
+export const reportFeedbackApi = {
+  list: async (reportId: string, params: { cursor?: string | null } = {}, signal?: AbortSignal): Promise<ReportFeedbackData> => {
+    const encodedId = validateId(reportId, "Report ID");
+    const cursor = params.cursor ?? undefined;
+    if (cursor && cursor.length > 512) throw new Error("The pagination cursor is invalid.");
+    const response = await http.get<ReportFeedbackApiResponse>(`/reports/${encodedId}/feedback`, {
+      params: cursor ? { cursor } : {}, signal,
+    });
+    const result = response.data;
+    assertStudentSuccess(result, "Unable to retrieve report feedback.");
+    if (!isRecord(result.data) || result.data.reportId !== reportId.trim() ||
+        !Array.isArray(result.data.items) ||
+        !(result.data.nextCursor === null || typeof result.data.nextCursor === "string") ||
+        !result.data.items.every(isFeedbackMessage)) {
+      throw new Error("The report feedback response was incomplete or invalid.");
+    }
+    return result.data;
+  },
+
+  markAsRead: async (reportId: string, feedbackId: string): Promise<MarkReportFeedbackReadResult> => {
+    const encodedReportId = validateId(reportId, "Report ID");
+    const encodedFeedbackId = validateId(feedbackId, "Feedback ID");
+    const response = await http.patch<MarkReportFeedbackReadApiResponse>(
+      `/reports/${encodedReportId}/feedback/${encodedFeedbackId}/read`,
+    );
+    const result = response.data;
+    assertStudentSuccess(result, "Unable to mark this feedback as read.");
+    if (!isRecord(result.data) || result.data.id !== feedbackId.trim() ||
+        result.data.reportId !== reportId.trim() || typeof result.data.readAt !== "string") {
+      throw new Error("The feedback read receipt response was incomplete or invalid.");
+    }
+    return result.data;
+  },
+};
+
+/** Backward-compatible names used by the admin-specific query/mutation hooks. */
+export const adminReportsApi = {
+  list: (params: GetAdminReportsParams = {}, signal?: AbortSignal) =>
+    reportsApi.listAdmin(params, signal),
+  summary: (params: GetAdminReportSummaryParams, signal?: AbortSignal) =>
+    reportsApi.getAdminSummary(params, signal),
+  getById: (reportId: string, signal?: AbortSignal) => reportsApi.getAdminById(reportId, signal),
+  sendFeedback: (reportId: string, payload: CreateReportFeedbackDto) =>
+    reportsApi.sendAdminFeedback(reportId, payload),
+  markReviewed: (reportId: string) => reportsApi.markAdminReportReviewed(reportId),
 };

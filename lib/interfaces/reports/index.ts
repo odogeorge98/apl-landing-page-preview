@@ -1,4 +1,5 @@
 export type DailyReportStatus = "DRAFT" | "SUBMITTED" | "REVIEWED" | "RETURNED";
+export type AdminVisibleReportStatus = Exclude<DailyReportStatus, "DRAFT">;
 export type DailyReportProblemStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED";
 
 export interface ReportPersonSummary {
@@ -42,6 +43,9 @@ export interface AdminReportsData {
   items: AdminReportListItem[];
   nextCursor: string | null;
 }
+
+/** Backward-compatible page name used by the admin reports query cache. */
+export type AdminReportsPage = AdminReportsData;
 
 export interface AdminReportsApiResponse {
   status: "success" | "error";
@@ -162,4 +166,111 @@ export interface MarkReportFeedbackReadApiResponse {
   statusCode: number;
   message: string;
   data: MarkReportFeedbackReadResult;
+}
+
+/** Student-facing report contracts. Keep the student's own report distinct from the admin inbox row. */
+export type StudentReport = Omit<AdminDailyReport, "studentId" | "student" | "programme" | "tutor"> & {
+  studentId?: string;
+  programmeId: string;
+  tutorId: string | null;
+  programme?: ReportPersonSummary | null;
+  tutor?: ReportPersonSummary | null;
+};
+
+export interface StudentRecentReportDay {
+  reportDate: string;
+  report: StudentReport | null;
+}
+
+export interface StudentReportDashboardData {
+  programme: ReportPersonSummary;
+  assignedTutors: ReportPersonSummary[];
+  reportingPolicy: {
+    timezone: string;
+    requiredWeekdays: number[];
+  } | null;
+  overview: {
+    thisWeek: {
+      reportedDays: number;
+      requiredDays: number | null;
+    };
+    streakDays: number | null;
+    openProblems: number;
+    feedbackReceived: number;
+  };
+  today: {
+    reportDate: string;
+    report: StudentReport | null;
+  };
+  recentDays: StudentRecentReportDay[];
+}
+
+export interface GetStudentReportDashboardParams {
+  programmeId: string;
+}
+
+export interface GetStudentReportsParams {
+  programmeId?: string;
+  status?: DailyReportStatus;
+  search?: string;
+  fromDate?: string;
+  toDate?: string;
+  limit?: number;
+  cursor?: string | null;
+}
+
+export interface StudentReportsPage {
+  items: StudentReport[];
+  nextCursor: string | null;
+}
+
+export type ReportFeedbackPage = ReportFeedbackData;
+export type StudentReportFeedbackMessage = ReportFeedbackMessage;
+
+export interface SaveStudentReportDraftDto {
+  programmeId: string;
+  tutorId?: string;
+  accomplishments?: string[] | null;
+  noProblemsToday?: boolean | null;
+  blockerDescription?: string | null;
+}
+
+export interface UpdateStudentReportDraftDto {
+  accomplishments?: string[] | null;
+  noProblemsToday?: boolean | null;
+  blockerDescription?: string | null;
+}
+
+export interface CreateStudentReportFeedbackDto {
+  message: string;
+}
+
+export type CreateStudentReportFeedbackResult = ReportFeedbackMessage;
+
+export interface StudentReportsApiResponse {
+  status: "success" | "error";
+  statusCode: number;
+  message: string;
+  data: StudentReportsPage;
+}
+
+export interface StudentReportApiResponse {
+  status: "success" | "error";
+  statusCode: number;
+  message: string;
+  data: StudentReport;
+}
+
+export interface StudentReportDashboardApiResponse {
+  status: "success" | "error";
+  statusCode: number;
+  message: string;
+  data: StudentReportDashboardData;
+}
+
+export interface StudentDailyReportCheckApiResponse {
+  status: "success" | "error";
+  statusCode: number;
+  message: string;
+  data: boolean;
 }

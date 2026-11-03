@@ -8,7 +8,7 @@ import type { GetStudentReportsParams } from "@/lib/interfaces/reports";
 function normalizeParams(params: Omit<GetStudentReportsParams, "cursor">): Omit<GetStudentReportsParams, "cursor"> {
   return {
     programmeId: params.programmeId?.trim() || undefined,
-    status: params.status?.trim() || undefined,
+    status: params.status || undefined,
     search: params.search?.trim() || undefined,
     fromDate: params.fromDate || undefined,
     toDate: params.toDate || undefined,
