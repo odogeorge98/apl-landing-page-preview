@@ -144,6 +144,50 @@ export interface StudentAssignmentSubmissionApiResponse {
   data: StudentAssignmentSubmissionRecord;
 }
 
+export type ReviewAssignmentSubmissionStatus = "RETURNED" | "REVIEWED";
+
+/** Request body for PATCH /assignments/submissions/:id/review. */
+export interface ReviewAssignmentSubmissionDto {
+  status: ReviewAssignmentSubmissionStatus;
+  score?: number | null;
+  feedback?: string | null;
+}
+
+export interface ReviewedAssignmentSummary {
+  id: string;
+  title: string;
+  programmeId: string;
+  maxScore: string | number;
+  programme?: AssignmentProgrammeSummary | null;
+}
+
+/** Submission fields returned after a tutor records a review. */
+export interface ReviewedAssignmentSubmissionRecord {
+  id: string;
+  assignmentId: string;
+  tutorId: string;
+  programmeId: string;
+  studentId: string;
+  attemptNumber: number;
+  status: ReviewAssignmentSubmissionStatus;
+  answerText: string;
+  fileUrl: string | null;
+  submittedAt: string;
+  score: string | number | null;
+  feedback: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignment?: ReviewedAssignmentSummary | null;
+}
+
+export interface ReviewAssignmentSubmissionApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: ReviewedAssignmentSubmissionRecord;
+}
+
 export interface StudentAssignmentsData {
   items: StudentAssignment[];
   nextCursor: string | null;

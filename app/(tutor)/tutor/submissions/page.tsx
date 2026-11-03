@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   AlertCircle,
   BookOpen,
@@ -13,6 +13,7 @@ import {
   ExternalLink,
   FileText,
   GraduationCap,
+  LoaderCircle,
   RotateCcw,
   Search,
   X,
@@ -20,6 +21,8 @@ import {
 
 import MainLayout from "@/components/layout/dashboard/MainLayout";
 import { AnimatedSelect } from "@/components/ui/AnimatedSelect";
+import { useReviewAssignmentSubmission } from "@/lib/hooks/assignments/use-review-assignment-submission";
+import type { ReviewAssignmentSubmissionStatus } from "@/lib/interfaces/assignments";
 import { http } from "@/lib/utils/http";
 
 type SubmissionStatus =
@@ -243,6 +246,13 @@ export default function TutorSubmissionsPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selectedSubmission, setSelectedSubmission] =
     useState<Submission | null>(null);
+  const [reviewStatus, setReviewStatus] =
+    useState<ReviewAssignmentSubmissionStatus>("REVIEWED");
+  const [reviewScore, setReviewScore] = useState("");
+  const [reviewFeedback, setReviewFeedback] = useState("");
+  const [reviewFormError, setReviewFormError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const reviewSubmission = useReviewAssignmentSubmission();
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -256,6 +266,17 @@ export default function TutorSubmissionsPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!selectedSubmission) return;
+    setReviewStatus("REVIEWED");
+    setReviewScore(selectedSubmission.score == null ? "" : String(selectedSubmission.score));
+    setReviewFeedback(selectedSubmission.feedback ?? "");
+    setReviewFormError("");
+    reviewSubmission.reset();
+  // Reset the form only when a different submission is opened.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSubmission?.id]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -320,6 +341,7 @@ export default function TutorSubmissionsPage() {
     programmeId,
     lessonId,
     cursor,
+    refreshKey,
   ]);
 
   const programmeOptions = useMemo(() => {
@@ -408,6 +430,66 @@ export default function TutorSubmissionsPage() {
 
     setCursorHistory((history) => history.slice(0, -1));
     setCursor(previousCursor);
+  }
+
+  async function handleReviewSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedSubmission || reviewSubmission.isPending) return;
+
+    const maxScore = selectedSubmission.assignment?.maxScore;
+    const numericMaxScore = maxScore == null ? null : Number(maxScore);
+    const normalizedScore = reviewScore.trim() === "" ? undefined : Number(reviewScore);
+
+    if (normalizedScore !== undefined) {
+      if (!Number.isFinite(normalizedScore) || normalizedScore < 0) {
+        setReviewFormError("Enter a valid score of zero or higher.");
+        return;
+      }
+      if (numericMaxScore !== null && normalizedScore > numericMaxScore) {
+        setReviewFormError(`Score cannot exceed the maximum of ${maxScore}.`);
+        return;
+      }
+      if (Math.round(normalizedScore * 100) !== normalizedScore * 100) {
+        setReviewFormError("Score can have no more than two decimal places.");
+        return;
+      }
+    }
+    if (reviewFeedback.length > 20000) {
+      setReviewFormError("Feedback must be 20,000 characters or fewer.");
+      return;
+    }
+    setReviewFormError("");
+
+    const submissionId = selectedSubmission.id;
+    try {
+      const reviewed = await reviewSubmission.mutateAsync({
+        submissionId,
+        payload: {
+          status: reviewStatus,
+          ...(normalizedScore !== undefined ? { score: normalizedScore } : {}),
+          feedback: reviewFeedback.trim() ? reviewFeedback.trim() : null,
+        },
+      });
+
+      setSubmissions((current) =>
+        current.map((item) =>
+          item.id === submissionId
+            ? {
+                ...item,
+                ...reviewed,
+                score: reviewed.score == null ? null : Number(reviewed.score),
+                assignment: item.assignment,
+                student: item.student,
+                programme: item.programme,
+              }
+            : item,
+        ),
+      );
+      setSelectedSubmission(null);
+      setRefreshKey((key) => key + 1);
+    } catch {
+      // Mutation error is rendered in the review form; keep the entered values intact.
+    }
   }
 
   return (
@@ -864,7 +946,7 @@ export default function TutorSubmissionsPage() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#101d49]/50 p-3 backdrop-blur-[2px] sm:p-6"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
+            if (event.target === event.currentTarget && !reviewSubmission.isPending) {
               setSelectedSubmission(null);
             }
           }}
@@ -899,13 +981,15 @@ export default function TutorSubmissionsPage() {
               <button
                 type="button"
                 onClick={() => setSelectedSubmission(null)}
+                disabled={reviewSubmission.isPending}
                 aria-label="Close review"
-                className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-[#101d49]"
+                className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-[#101d49] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
+            <form onSubmit={handleReviewSubmit} className="flex min-h-0 flex-1 flex-col">
             {/* Scrollable review content: scrollbar hidden */}
             <div
               className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6 ${hiddenScrollbar}`}
@@ -1051,70 +1135,121 @@ export default function TutorSubmissionsPage() {
                   )}
                 </div>
 
-                {/* Score and feedback */}
+                {/* Review decision and score */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="rounded-xl border border-[#e4e9f2] p-4">
-                    <p className="text-sm text-gray-500">Score</p>
-
-                    <p className="mt-2 text-2xl font-bold text-[#101d49]">
-                      {selectedSubmission.score == null
-                        ? "Not graded"
-                        : `${selectedSubmission.score}${
-                            selectedSubmission.assignment?.maxScore != null
-                              ? ` / ${selectedSubmission.assignment.maxScore}`
-                              : ""
-                          }`}
+                    <label htmlFor="review-decision" className="text-sm font-medium text-gray-500">Review decision</label>
+                    <div className="mt-2">
+                      <AnimatedSelect
+                        id="review-decision"
+                        value={reviewStatus}
+                        options={[
+                          { value: "REVIEWED", label: "Reviewed · Final" },
+                          { value: "RETURNED", label: "Return for another attempt" },
+                        ]}
+                        onChange={(value) => setReviewStatus(value as ReviewAssignmentSubmissionStatus)}
+                        ariaLabel="Review decision"
+                        disabled={reviewSubmission.isPending}
+                        fullWidth
+                      />
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-gray-500">
+                      {reviewStatus === "RETURNED" ? "The student can submit another attempt after this decision." : "Mark the submission reviewed when your assessment is final."}
                     </p>
-
-                    {selectedSubmission.assignment?.maxScore != null && (
-                      <p className="mt-1 text-xs text-gray-500">
-                        Maximum score:{" "}
-                        {selectedSubmission.assignment.maxScore}
-                      </p>
-                    )}
                   </div>
-
                   <div className="rounded-xl border border-[#e4e9f2] p-4">
-                    <p className="text-sm text-gray-500">Review date</p>
-
-                    <p className="mt-2 text-sm font-semibold text-[#101d49]">
-                      {formatDateTime(selectedSubmission.reviewedAt)}
-                    </p>
+                    <label htmlFor="review-score" className="text-sm font-medium text-gray-500">Score <span className="font-normal">(optional)</span></label>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        id="review-score"
+                        type="number"
+                        min="0"
+                        max={selectedSubmission.assignment?.maxScore ?? 999999.99}
+                        step="0.01"
+                        inputMode="decimal"
+                        value={reviewScore}
+                        onChange={(event) => { setReviewScore(event.target.value); setReviewFormError(""); }}
+                        disabled={reviewSubmission.isPending}
+                        aria-describedby="review-score-help"
+                        className="w-full rounded-xl border border-[#e4e9f2] px-3 py-2.5 text-sm text-[#101d49] outline-none transition focus:border-[#f5c542] focus:ring-2 focus:ring-[#f5c542]/20 disabled:bg-gray-50"
+                        placeholder="Enter score"
+                      />
+                      {selectedSubmission.assignment?.maxScore != null && <span className="shrink-0 text-sm text-gray-500">/ {selectedSubmission.assignment.maxScore}</span>}
+                    </div>
+                    <p id="review-score-help" className="mt-2 text-xs text-gray-500">Leave blank if this review does not include a score.</p>
                   </div>
+                </div>
+
+                <div className="rounded-xl border border-[#e4e9f2] p-4">
+                  <p className="text-sm text-gray-500">Previous review</p>
+
+                  <p className="mt-2 text-sm font-semibold text-[#101d49]">
+                    {formatDateTime(selectedSubmission.reviewedAt)}
+                  </p>
+                  {selectedSubmission.feedback?.trim() && (
+                    <p className="mt-2 text-sm leading-6 text-gray-600">
+                      Existing feedback: {selectedSubmission.feedback}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <h3 className="mb-3 font-semibold text-[#101d49]">
-                    Tutor feedback
-                  </h3>
-
-                  <div className="rounded-xl border border-[#e4e9f2] bg-[#fafbfe] p-4 text-sm leading-6 text-gray-700">
-                    {selectedSubmission.feedback?.trim() ||
-                      "No feedback has been added to this submission yet."}
-                  </div>
+                  <label htmlFor="review-feedback" className="font-semibold text-[#101d49]">
+                    Feedback for the student <span className="font-normal text-gray-500">(optional)</span>
+                  </label>
+                  <textarea
+                    id="review-feedback"
+                    value={reviewFeedback}
+                    maxLength={20000}
+                    onChange={(event) => { setReviewFeedback(event.target.value); setReviewFormError(""); }}
+                    disabled={reviewSubmission.isPending}
+                    rows={4}
+                    placeholder="Share clear, constructive feedback..."
+                    className="mt-3 w-full resize-y rounded-xl border border-[#e4e9f2] bg-[#fafbfe] p-3 text-sm leading-6 text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-[#f5c542] focus:ring-2 focus:ring-[#f5c542]/20 disabled:opacity-70"
+                  />
+                  <p className="mt-1 text-right text-xs text-gray-500">{reviewFeedback.length.toLocaleString()} / 20,000</p>
                 </div>
+
+                {(reviewFormError || reviewSubmission.error) && (
+                  <div role="alert" className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
+                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                    <p>{reviewFormError || reviewSubmission.error?.message || "We couldn't save this review. Please try again."}</p>
+                  </div>
+                )}
 
                 <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
 
                   <p className="text-sm leading-6 text-amber-800">
-                    This view is read-only. Grading and feedback updates
-                    require the appropriate backend endpoint.
+                    Returning this submission lets the student submit another attempt. Marking it reviewed records a final review.
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Modal footer */}
-            <div className="flex shrink-0 justify-end border-t border-[#e4e9f2] bg-white px-5 py-4 sm:px-6">
+            <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e4e9f2] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
               <button
                 type="button"
                 onClick={() => setSelectedSubmission(null)}
-                className="rounded-xl bg-[#101d49] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1b2c65]"
+                disabled={reviewSubmission.isPending}
+                className="rounded-xl border border-[#e4e9f2] px-5 py-3 text-sm font-semibold text-[#101d49] transition hover:bg-[#f7f8fc] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Close review
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={reviewSubmission.isPending}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#101d49] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1b2c65] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {reviewSubmission.isPending ? (
+                  <><LoaderCircle className="h-4 w-4 animate-spin" /> Saving review…</>
+                ) : (
+                  reviewStatus === "RETURNED" ? "Return to student" : "Save review"
+                )}
               </button>
             </div>
+            </form>
           </section>
         </div>
       )}
