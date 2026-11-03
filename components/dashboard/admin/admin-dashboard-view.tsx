@@ -8,9 +8,9 @@ import {
   Clock3,
   GraduationCap,
   RefreshCw,
-  ShieldCheck,
   Users,
 } from "lucide-react";
+import StudentEnrollmentAnalytics from "@/components/dashboard/admin/student-enrollment-analytics";
 
 import type {
   AdminDashboardData,
@@ -136,22 +136,41 @@ function LoadingSkeleton() {
         <div className="h-4 w-72 max-w-full animate-pulse rounded bg-[#e4e9f2]" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 7 }, (_, index) => (
-          <div
-            key={index}
-            className="rounded-2xl border border-[#e4e9f2] bg-white p-6"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 space-y-3">
-                <div className="h-4 w-28 animate-pulse rounded bg-[#e4e9f2]" />
-                <div className="h-9 w-20 animate-pulse rounded bg-[#e4e9f2]" />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-stretch">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {Array.from({ length: 5 }, (_, index) => (
+            <div key={index} className="rounded-2xl border border-[#e4e9f2] bg-white p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 space-y-3">
+                  <div className="h-4 w-28 animate-pulse rounded bg-[#e4e9f2]" />
+                  <div className="h-9 w-20 animate-pulse rounded bg-[#e4e9f2]" />
+                </div>
+                <div className="h-11 w-11 animate-pulse rounded-xl bg-[#e4e9f2]" />
               </div>
-              <div className="h-11 w-11 animate-pulse rounded-xl bg-[#e4e9f2]" />
+              <div className="mt-5 h-3 w-32 animate-pulse rounded bg-[#e4e9f2]" />
             </div>
-            <div className="mt-5 h-3 w-32 animate-pulse rounded bg-[#e4e9f2]" />
-          </div>
-        ))}
+          ))}
+        </div>
+        <div className="min-h-[340px] animate-pulse rounded-2xl border border-[#e4e9f2] bg-white p-5">
+          <div className="h-5 w-48 rounded bg-[#e4e9f2]" />
+          <div className="mt-5 h-10 w-full rounded-xl bg-[#f1f4f8]" />
+          <div className="mt-5 h-[230px] rounded-xl bg-[#f8f9fc]" />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-[#e4e9f2] bg-white p-6">
+        <div className="h-5 w-44 animate-pulse rounded bg-[#e4e9f2]" />
+        <div className="mt-6 space-y-5">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index}>
+              <div className="mb-2 flex justify-between gap-4">
+                <div className="h-4 w-36 animate-pulse rounded bg-[#e4e9f2]" />
+                <div className="h-4 w-10 animate-pulse rounded bg-[#e4e9f2]" />
+              </div>
+              <div className="h-2.5 animate-pulse rounded-full bg-[#e4e9f2]" />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
@@ -505,20 +524,6 @@ export default function AdminDashboardView({
       tone: "blue",
     },
     {
-      title: "Active tutors",
-      value: overview.activeTutors,
-      description: "Tutors currently marked active",
-      icon: CheckCircle2,
-      tone: "green",
-    },
-    {
-      title: "Total administrators",
-      value: overview.totalAdmins,
-      description: "Registered administrator accounts",
-      icon: ShieldCheck,
-      tone: "navy",
-    },
-    {
       title: "Active administrators",
       value: overview.activeAdmins,
       description: "Administrators currently marked active",
@@ -612,22 +617,21 @@ export default function AdminDashboardView({
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {metrics.map((metric) => (
-            <MetricCard key={metric.title} {...metric} />
-          ))}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-stretch">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {metrics.map((metric) => (
+              <MetricCard key={metric.title} {...metric} />
+            ))}
+          </div>
+          <StudentEnrollmentAnalytics />
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <RecentUsersTable
-          title="Recent students"
-          description="Latest student registrations"
-          users={recentStudents}
-          emptyMessage="New student registrations will appear here."
-          icon={GraduationCap}
-        />
+      <section>
+        <ProgrammeSummary programmes={programmeOverview} />
+      </section>
 
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <RecentUsersTable
           title="Recent tutors"
           description="Latest tutor registrations"
@@ -635,10 +639,14 @@ export default function AdminDashboardView({
           emptyMessage="New tutor registrations will appear here."
           icon={Users}
         />
-      </section>
 
-      <section>
-        <ProgrammeSummary programmes={programmeOverview} />
+        <RecentUsersTable
+          title="Recent students"
+          description="Latest student registrations"
+          users={recentStudents}
+          emptyMessage="New student registrations will appear here."
+          icon={GraduationCap}
+        />
       </section>
 
       <footer className="flex items-start gap-2 border-t border-[#e4e9f2] pt-4 text-xs leading-5 text-[#64718a]">

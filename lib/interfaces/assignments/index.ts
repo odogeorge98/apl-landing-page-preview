@@ -78,7 +78,8 @@ export interface StudentAssignment {
   title: string;
   instructions: string;
   availableAt: string;
-  dueAt: string;
+  /** Null means the assignment has no submission deadline. */
+  dueAt: string | null;
   /** The API serializes decimal scores as strings (for example, "100.00"). */
   maxScore: string | number;
   status: "PUBLISHED";
@@ -91,6 +92,10 @@ export interface StudentAssignment {
 
 export type StudentAssignmentSubmissionStatus =
   | "NOT_SUBMITTED"
+  | "DRAFT"
+  | "RETURNED"
+  | "IN_REVIEW"
+  | "REVIEWED"
   | "SUBMITTED"
   | "GRADED";
 
@@ -99,8 +104,88 @@ export interface StudentAssignmentSubmission {
   id?: string;
   status: StudentAssignmentSubmissionStatus;
   submittedAt?: string | null;
+  attemptNumber?: number;
+  answerText?: string | null;
+  fileUrl?: string | null;
   score?: string | number | null;
   feedback?: string | null;
+  reviewedAt?: string | null;
+}
+
+/** Request body for a student's assignment attempt submission. */
+export interface SubmitStudentAssignmentDto {
+  /** Preserve the learner's answer formatting, including Markdown and line breaks. */
+  answerText: string;
+}
+
+/** Complete record returned after POST /assignments/:id/submit. */
+export interface StudentAssignmentSubmissionRecord {
+  id: string;
+  assignmentId: string;
+  tutorId: string;
+  programmeId: string;
+  studentId: string;
+  attemptNumber: number;
+  answerText: string;
+  fileUrl: string | null;
+  submittedAt: string;
+  status: "SUBMITTED" | "IN_REVIEW" | "REVIEWED" | "RETURNED" | "GRADED";
+  updatedAt: string;
+  createdAt: string;
+  score: string | number | null;
+  feedback: string | null;
+  reviewedAt: string | null;
+}
+
+export interface StudentAssignmentSubmissionApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: StudentAssignmentSubmissionRecord;
+}
+
+export type ReviewAssignmentSubmissionStatus = "RETURNED" | "REVIEWED";
+
+/** Request body for PATCH /assignments/submissions/:id/review. */
+export interface ReviewAssignmentSubmissionDto {
+  status: ReviewAssignmentSubmissionStatus;
+  score?: number | null;
+  feedback?: string | null;
+}
+
+export interface ReviewedAssignmentSummary {
+  id: string;
+  title: string;
+  programmeId: string;
+  maxScore: string | number;
+  programme?: AssignmentProgrammeSummary | null;
+}
+
+/** Submission fields returned after a tutor records a review. */
+export interface ReviewedAssignmentSubmissionRecord {
+  id: string;
+  assignmentId: string;
+  tutorId: string;
+  programmeId: string;
+  studentId: string;
+  attemptNumber: number;
+  status: ReviewAssignmentSubmissionStatus;
+  answerText: string;
+  fileUrl: string | null;
+  submittedAt: string;
+  score: string | number | null;
+  feedback: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignment?: ReviewedAssignmentSummary | null;
+}
+
+export interface ReviewAssignmentSubmissionApiResponse {
+  status: "success" | "error" | string;
+  statusCode: number;
+  message: string;
+  data: ReviewedAssignmentSubmissionRecord;
 }
 
 export interface StudentAssignmentsData {

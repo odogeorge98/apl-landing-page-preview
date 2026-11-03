@@ -17,6 +17,7 @@ import {
   Megaphone,
   MessageSquare,
   MonitorPlay,
+  NotebookPen,
   Settings,
   ShieldCheck,
   UserCircle,
@@ -216,13 +217,13 @@ const adminConfig: DashboardUIConfig = {
       icon: Library,
       section: "Management",
     },
-    {
-      label: "Cohorts",
-      href: "/dashboard/cohorts",
-      description: "Training groups and schedules",
-      icon: Users,
-      section: "Management",
-    },
+    // {
+    //   label: "Cohorts",
+    //   href: "/dashboard/cohorts",
+    //   description: "Training groups and schedules",
+    //   icon: Users,
+    //   section: "Management",
+    // },
     {
       label: "Enrolments",
       href: "/dashboard/enrollments",
@@ -254,17 +255,17 @@ const adminConfig: DashboardUIConfig = {
     {
       label: "Reports",
       href: "/dashboard/reports",
-      description: "Learning and operational analytics",
+      description: "Daily student & intern reports",
       icon: BarChart3,
       section: "Insights",
     },
-    {
-      label: "Settings",
-      href: "/system/settings",
-      description: "Platform configuration",
-      icon: Settings,
-      section: "System",
-    },
+    // {
+    //   label: "Settings",
+    //   href: "/system/settings",
+    //   description: "Platform configuration",
+    //   icon: Settings,
+    //   section: "System",
+    // },
     {
       label: "Profile",
       href: "/dashboard/profile",
@@ -335,7 +336,7 @@ const tutorConfig: DashboardUIConfig = {
       key: "create-assignment",
       title: "Create Assignment",
       description: "Prepare work for your students.",
-      href: "/tutor/assignments/new",
+      href: "/tutor/assignments",
       icon: CheckSquare,
     },
     {
@@ -529,6 +530,13 @@ const studentConfig: DashboardUIConfig = {
       href: "/student/dashboard",
       description: "Your learning overview",
       icon: LayoutDashboard,
+      section: "Workspace",
+    },
+    {
+      label: "Daily report",
+      href: "/student/reports",
+      description: "Tell us what you did today",
+      icon: NotebookPen,
       section: "Workspace",
     },
     {

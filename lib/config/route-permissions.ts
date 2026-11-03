@@ -16,19 +16,20 @@ export type RoutePermission = {
 export const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Admin dashboard and administration.
   { pattern: "/dashboard", roles: [UserType.ADMIN] },
+  { pattern: "/business", roles: [UserType.ADMIN] },
   { pattern: "/organization", roles: [UserType.ADMIN] },
   { pattern: "/system", roles: [UserType.ADMIN] },
 
   // Tutor portal.
-  { pattern: "/tutor/dashboard", roles: [UserType.TUTOR] },
+  { pattern: "/tutor", roles: [UserType.TUTOR] },
 
   // Student portal.
-  { pattern: "/student/dashboard", roles: [UserType.STUDENT] },
+  { pattern: "/student", roles: [UserType.STUDENT] },
 
   // Shared authenticated pages.
   {
     pattern: "/settings",
-    roles: [UserType.ADMIN, UserType.TUTOR, UserType.STUDENT],
+    roles: [/* UserType.ADMIN, UserType.TUTOR, */UserType.STUDENT],
   },
   {
     pattern: "/profile",

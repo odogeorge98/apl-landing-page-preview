@@ -3,10 +3,12 @@
 
 import { useEffect, useMemo, useState, type FormEvent, type ChangeEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   CheckCircle2,
   CircleAlert,
   GraduationCap,
@@ -18,6 +20,7 @@ import {
   X,
   UserPlus,
   AlertTriangle,
+  Eye,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -134,6 +137,9 @@ function StudentRowsSkeleton() {
           <td className="px-5 py-4">
             <div className="h-4 w-24 rounded bg-[#edf0f6]" />
           </td>
+          <td className="px-5 py-4">
+            <div className="h-9 w-20 rounded-xl bg-[#edf0f6]" />
+          </td>
         </tr>
       ))}
     </>
@@ -141,6 +147,7 @@ function StudentRowsSkeleton() {
 }
 
 export default function StudentsPage() {
+  const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -328,8 +335,8 @@ export default function StudentsPage() {
     const errors = validateForm();
 
     if (!formValues.programme) {
-        errors.programme = "Please select a programme.";
-      }
+      errors.programme = "Please select a programme.";
+    }
 
     setFormErrors(errors);
     setRegistrationAttempted(false);
@@ -524,7 +531,7 @@ export default function StudentsPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-left text-sm">
+              <table className="w-full min-w-[1050px] text-left text-sm">
                 <thead className="bg-[#fafbfd] text-[11px] font-bold uppercase tracking-[0.08em] text-[#8995aa]">
                   <tr>
                     <th scope="col" className="px-5 py-3.5">Student</th>
@@ -533,6 +540,7 @@ export default function StudentsPage() {
                     <th scope="col" className="px-5 py-3.5">Guardian contact</th>
                     <th scope="col" className="px-5 py-3.5">Status</th>
                     <th scope="col" className="px-5 py-3.5">Joined</th>
+                    <th scope="col" className="px-5 py-3.5">Action</th>
                   </tr>
                 </thead>
 
@@ -541,7 +549,7 @@ export default function StudentsPage() {
                     <StudentRowsSkeleton />
                   ) : rows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-5 py-14 text-center">
+                      <td colSpan={7} className="px-5 py-14 text-center">
                         <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f3f5f9] text-[#718099]">
                           <GraduationCap size={23} />
                         </div>
@@ -648,6 +656,19 @@ export default function StudentsPage() {
                         <td className="whitespace-nowrap px-5 py-4 text-[#64718a]">
                           {formatDate(student.createdAt)}
                         </td>
+
+                        <td className="whitespace-nowrap px-5 py-4">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(`/dashboard/users/students/${student.id}`)
+                            }
+                            className="inline-flex items-center gap-2 rounded-lg border border-[#e4e9f2] bg-white px-3 py-2 text-xs font-semibold text-[#101d49] transition hover:border-[#101d49] hover:bg-[#f6f8fc] focus:outline-none focus:ring-4 focus:ring-[#101d49]/10"
+                          >
+                            View
+                            <ArrowUpRight size={14} />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -745,296 +766,296 @@ export default function StudentsPage() {
               aria-labelledby="register-student-title"
               className="my-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-[#e4e9f2] bg-white shadow-[0_24px_80px_rgba(7,16,39,0.28)]"
             >
-            <div className="flex items-start justify-between gap-4 border-b border-[#edf0f6] px-5 py-5 sm:px-7">
-              <div className="flex items-start gap-3">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#fff5d8] text-[#101d49]">
-                  <UserPlus size={21} />
-                </div>
-                <div>
-                  <h2
-                    id="register-student-title"
-                    className="text-lg font-bold text-[#101d49]"
-                  >
-                    Register a student
-                  </h2>
-                  <p className="mt-1 text-sm text-[#718099]">
-                    Enter the student's basic information below.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={closeRegisterModal}
-                aria-label="Close registration modal"
-                className="rounded-lg p-2 text-[#718099] transition hover:bg-[#f3f5f9] hover:text-[#101d49]"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleRegistrationSubmit} noValidate>
-              <div className="max-h-[65vh] space-y-5 overflow-y-auto px-5 py-6 sm:px-7">
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle
-                      size={19}
-                      className="mt-0.5 shrink-0 text-amber-700"
-                    />
-                    <div>
-                      <p className="text-sm font-semibold text-amber-900">
-                        Registration is not available yet
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-amber-800">
-                        The backend does not currently support creating student
-                        accounts. You can fill in and validate this form, but
-                        submitting it will not save a student.
-                      </p>
-                    </div>
+              <div className="flex items-start justify-between gap-4 border-b border-[#edf0f6] px-5 py-5 sm:px-7">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#fff5d8] text-[#101d49]">
+                    <UserPlus size={21} />
                   </div>
-                </div>
-
-                {registrationAttempted && (
-                  <div
-                    role="status"
-                    className="rounded-xl border border-[#e4e9f2] bg-[#f6f8fc] p-4"
-                  >
-                    <p className="text-sm font-semibold text-[#101d49]">
-                      Your form passed validation.
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-[#64718a]">
-                      No student has been created. Registration can be enabled
-                      when the backend provides a student creation endpoint.
-                    </p>
-                  </div>
-                )}
-
-                <div>
-                  <label
-                    htmlFor="student-name"
-                    className="text-sm font-semibold text-[#34415e]"
-                  >
-                    Full name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="student-name"
-                    name="name"
-                    type="text"
-                    autoComplete="name"
-                    value={formValues.name}
-                    onChange={handleFormChange}
-                    placeholder="Enter student's full name"
-                    aria-invalid={Boolean(formErrors.name)}
-                    aria-describedby={
-                      formErrors.name ? "student-name-error" : undefined
-                    }
-                    className={cn(
-                      fieldClass,
-                      formErrors.name && "border-red-400 focus:border-red-400",
-                    )}
-                  />
-                  {formErrors.name && (
-                    <p
-                      id="student-name-error"
-                      className="mt-1.5 text-xs text-red-600"
-                    >
-                      {formErrors.name}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="student-email"
-                    className="text-sm font-semibold text-[#34415e]"
-                  >
-                    Email address <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="student-email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    value={formValues.email}
-                    onChange={handleFormChange}
-                    placeholder="student@example.com"
-                    aria-invalid={Boolean(formErrors.email)}
-                    aria-describedby={
-                      formErrors.email ? "student-email-error" : undefined
-                    }
-                    className={cn(
-                      fieldClass,
-                      formErrors.email && "border-red-400 focus:border-red-400",
-                    )}
-                  />
-                  {formErrors.email && (
-                    <p
-                      id="student-email-error"
-                      className="mt-1.5 text-xs text-red-600"
-                    >
-                      {formErrors.email}
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid gap-5 sm:grid-cols-2">
                   <div>
-                    <label
-                      htmlFor="student-phone"
-                      className="text-sm font-semibold text-[#34415e]"
+                    <h2
+                      id="register-student-title"
+                      className="text-lg font-bold text-[#101d49]"
                     >
-                      Phone number
-                    </label>
-                    <input
-                      id="student-phone"
-                      name="phone"
-                      type="tel"
-                      autoComplete="tel"
-                      value={formValues.phone}
-                      onChange={handleFormChange}
-                      placeholder="+234 800 000 0000"
-                      aria-invalid={Boolean(formErrors.phone)}
-                      aria-describedby={
-                        formErrors.phone ? "student-phone-error" : undefined
-                      }
-                      className={cn(
-                        fieldClass,
-                        formErrors.phone &&
-                          "border-red-400 focus:border-red-400",
-                      )}
-                    />
-                    {formErrors.phone && (
-                      <p
-                        id="student-phone-error"
-                        className="mt-1.5 text-xs text-red-600"
-                      >
-                        {formErrors.phone}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="student-gender"
-                      className="text-sm font-semibold text-[#34415e]"
-                    >
-                      Gender <span className="text-red-500">*</span>
-                    </label>
-                    <AnimatedSelect
-                      id="student-gender"
-                      ariaLabel="Student gender"
-                      value={formValues.gender}
-                      options={[
-                        { value: "", label: "Select gender" },
-                        { value: "male", label: "Male" },
-                        { value: "female", label: "Female" },
-                      ]}
-                      onChange={(value) => handleFormSelectChange("gender", value)}
-                      ariaInvalid={Boolean(formErrors.gender)}
-                      ariaDescribedBy={formErrors.gender ? "student-gender-error" : undefined}
-                      className={cn(
-                        fieldClass,
-                        "justify-between",
-                        !formValues.gender && "text-[#8995aa]",
-                        formErrors.gender && "border-red-400 focus:border-red-400",
-                      )}
-                    />
-                    {formErrors.gender && (
-                      <p
-                        id="student-gender-error"
-                        className="mt-1.5 text-xs text-red-600"
-                      >
-                        {formErrors.gender}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="student-guardian"
-                    className="text-sm font-semibold text-[#34415e]"
-                  >
-                    Guardian contact
-                  </label>
-                  <input
-                    id="student-guardian"
-                    name="guardianContact"
-                    type="text"
-                    value={formValues.guardianContact}
-                    onChange={handleFormChange}
-                    placeholder="Guardian's phone number or email"
-                    className={fieldClass}
-                  />
-                  <p className="mt-1.5 text-xs text-[#8995aa]">
-                    Optional — enter a phone number or email address.
-                  </p>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="student-programme"
-                    className="text-sm font-semibold text-[#34415e]"
-                  >
-                    Programme / Course <span className="text-red-500">*</span>
-                  </label>
-
-                  <AnimatedSelect
-                    id="student-programme"
-                    ariaLabel="Student programme"
-                    value={formValues.programme}
-                    options={[
-                      { value: "", label: "Select a programme" },
-                      { value: "computer-science", label: "Computer Science" },
-                      { value: "software-engineering", label: "Software Engineering" },
-                      { value: "data-science", label: "Data Science" },
-                      { value: "cybersecurity", label: "Cybersecurity" },
-                      { value: "information-technology", label: "Information Technology" },
-                    ]}
-                    onChange={(value) => handleFormSelectChange("programme", value)}
-                    ariaInvalid={Boolean(formErrors.programme)}
-                    ariaDescribedBy={formErrors.programme ? "student-programme-error" : undefined}
-                    className={cn(
-                      fieldClass,
-                      "justify-between",
-                      !formValues.programme && "text-[#8995aa]",
-                      formErrors.programme && "border-red-400",
-                    )}
-                  />
-
-                  {formErrors.programme && (
-                    <p id="student-programme-error" className="mt-1.5 text-xs text-red-600">
-                      {formErrors.programme}
+                      Register a student
+                    </h2>
+                    <p className="mt-1 text-sm text-[#718099]">
+                      Enter the student's basic information below.
                     </p>
-                  )}
-
-                  <p className="mt-1.5 text-xs text-[#8995aa]">
-                    Select the programme the student intends to study.
-                  </p>
+                  </div>
                 </div>
 
-                <p className="text-xs leading-5 text-[#8995aa]">
-                  Fields marked with <span className="text-red-500">*</span>{" "}
-                  are required. Information entered here remains in the form
-                  only and is not saved to the student directory.
-                </p>
-              </div>
-
-              <div className="flex flex-col-reverse gap-3 border-t border-[#edf0f6] bg-[#fafbfd] px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
                 <button
                   type="button"
                   onClick={closeRegisterModal}
-                  className={secondaryButtonClass}
+                  aria-label="Close registration modal"
+                  className="rounded-lg p-2 text-[#718099] transition hover:bg-[#f3f5f9] hover:text-[#101d49]"
                 >
-                  Close
-                </button>
-
-                <button type="submit" className={primaryButtonClass}>
-                  <CheckCircle2 size={16} />
-                  Validate form
+                  <X size={20} />
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleRegistrationSubmit} noValidate>
+                <div className="max-h-[65vh] space-y-5 overflow-y-auto px-5 py-6 sm:px-7">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle
+                        size={19}
+                        className="mt-0.5 shrink-0 text-amber-700"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-amber-900">
+                          Registration is not available yet
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-amber-800">
+                          The backend does not currently support creating student
+                          accounts. You can fill in and validate this form, but
+                          submitting it will not save a student.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {registrationAttempted && (
+                    <div
+                      role="status"
+                      className="rounded-xl border border-[#e4e9f2] bg-[#f6f8fc] p-4"
+                    >
+                      <p className="text-sm font-semibold text-[#101d49]">
+                        Your form passed validation.
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-[#64718a]">
+                        No student has been created. Registration can be enabled
+                        when the backend provides a student creation endpoint.
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label
+                      htmlFor="student-name"
+                      className="text-sm font-semibold text-[#34415e]"
+                    >
+                      Full name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="student-name"
+                      name="name"
+                      type="text"
+                      autoComplete="name"
+                      value={formValues.name}
+                      onChange={handleFormChange}
+                      placeholder="Enter student's full name"
+                      aria-invalid={Boolean(formErrors.name)}
+                      aria-describedby={
+                        formErrors.name ? "student-name-error" : undefined
+                      }
+                      className={cn(
+                        fieldClass,
+                        formErrors.name && "border-red-400 focus:border-red-400",
+                      )}
+                    />
+                    {formErrors.name && (
+                      <p
+                        id="student-name-error"
+                        className="mt-1.5 text-xs text-red-600"
+                      >
+                        {formErrors.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="student-email"
+                      className="text-sm font-semibold text-[#34415e]"
+                    >
+                      Email address <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="student-email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      value={formValues.email}
+                      onChange={handleFormChange}
+                      placeholder="student@example.com"
+                      aria-invalid={Boolean(formErrors.email)}
+                      aria-describedby={
+                        formErrors.email ? "student-email-error" : undefined
+                      }
+                      className={cn(
+                        fieldClass,
+                        formErrors.email && "border-red-400 focus:border-red-400",
+                      )}
+                    />
+                    {formErrors.email && (
+                      <p
+                        id="student-email-error"
+                        className="mt-1.5 text-xs text-red-600"
+                      >
+                        {formErrors.email}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor="student-phone"
+                        className="text-sm font-semibold text-[#34415e]"
+                      >
+                        Phone number
+                      </label>
+                      <input
+                        id="student-phone"
+                        name="phone"
+                        type="tel"
+                        autoComplete="tel"
+                        value={formValues.phone}
+                        onChange={handleFormChange}
+                        placeholder="+234 800 000 0000"
+                        aria-invalid={Boolean(formErrors.phone)}
+                        aria-describedby={
+                          formErrors.phone ? "student-phone-error" : undefined
+                        }
+                        className={cn(
+                          fieldClass,
+                          formErrors.phone &&
+                            "border-red-400 focus:border-red-400",
+                        )}
+                      />
+                      {formErrors.phone && (
+                        <p
+                          id="student-phone-error"
+                          className="mt-1.5 text-xs text-red-600"
+                        >
+                          {formErrors.phone}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="student-gender"
+                        className="text-sm font-semibold text-[#34415e]"
+                      >
+                        Gender <span className="text-red-500">*</span>
+                      </label>
+                      <AnimatedSelect
+                        id="student-gender"
+                        ariaLabel="Student gender"
+                        value={formValues.gender}
+                        options={[
+                          { value: "", label: "Select gender" },
+                          { value: "male", label: "Male" },
+                          { value: "female", label: "Female" },
+                        ]}
+                        onChange={(value) => handleFormSelectChange("gender", value)}
+                        ariaInvalid={Boolean(formErrors.gender)}
+                        ariaDescribedBy={formErrors.gender ? "student-gender-error" : undefined}
+                        className={cn(
+                          fieldClass,
+                          "justify-between",
+                          !formValues.gender && "text-[#8995aa]",
+                          formErrors.gender && "border-red-400 focus:border-red-400",
+                        )}
+                      />
+                      {formErrors.gender && (
+                        <p
+                          id="student-gender-error"
+                          className="mt-1.5 text-xs text-red-600"
+                        >
+                          {formErrors.gender}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="student-guardian"
+                      className="text-sm font-semibold text-[#34415e]"
+                    >
+                      Guardian contact
+                    </label>
+                    <input
+                      id="student-guardian"
+                      name="guardianContact"
+                      type="text"
+                      value={formValues.guardianContact}
+                      onChange={handleFormChange}
+                      placeholder="Guardian's phone number or email"
+                      className={fieldClass}
+                    />
+                    <p className="mt-1.5 text-xs text-[#8995aa]">
+                      Optional — enter a phone number or email address.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="student-programme"
+                      className="text-sm font-semibold text-[#34415e]"
+                    >
+                      Programme / Course <span className="text-red-500">*</span>
+                    </label>
+
+                    <AnimatedSelect
+                      id="student-programme"
+                      ariaLabel="Student programme"
+                      value={formValues.programme}
+                      options={[
+                        { value: "", label: "Select a programme" },
+                        { value: "computer-science", label: "Computer Science" },
+                        { value: "software-engineering", label: "Software Engineering" },
+                        { value: "data-science", label: "Data Science" },
+                        { value: "cybersecurity", label: "Cybersecurity" },
+                        { value: "information-technology", label: "Information Technology" },
+                      ]}
+                      onChange={(value) => handleFormSelectChange("programme", value)}
+                      ariaInvalid={Boolean(formErrors.programme)}
+                      ariaDescribedBy={formErrors.programme ? "student-programme-error" : undefined}
+                      className={cn(
+                        fieldClass,
+                        "justify-between",
+                        !formValues.programme && "text-[#8995aa]",
+                        formErrors.programme && "border-red-400",
+                      )}
+                    />
+
+                    {formErrors.programme && (
+                      <p id="student-programme-error" className="mt-1.5 text-xs text-red-600">
+                        {formErrors.programme}
+                      </p>
+                    )}
+
+                    <p className="mt-1.5 text-xs text-[#8995aa]">
+                      Select the programme the student intends to study.
+                    </p>
+                  </div>
+
+                  <p className="text-xs leading-5 text-[#8995aa]">
+                    Fields marked with <span className="text-red-500">*</span>{" "}
+                    are required. Information entered here remains in the form
+                    only and is not saved to the student directory.
+                  </p>
+                </div>
+
+                <div className="flex flex-col-reverse gap-3 border-t border-[#edf0f6] bg-[#fafbfd] px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+                  <button
+                    type="button"
+                    onClick={closeRegisterModal}
+                    className={secondaryButtonClass}
+                  >
+                    Close
+                  </button>
+
+                  <button type="submit" className={primaryButtonClass}>
+                    <CheckCircle2 size={16} />
+                    Validate form
+                  </button>
+                </div>
+              </form>
             </motion.section>
           </motion.div>
         )}
