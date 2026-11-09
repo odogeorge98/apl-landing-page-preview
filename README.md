@@ -37,5 +37,5 @@ Open [http://localhost:3001](http://localhost:3001).
 
 | Area | Routes |
 | --- | --- |
-| Admin | `/dashboard`, `/dashboard/users/admins`, `/dashboard/users/students`, `/dashboard/users/tutors`, `/dashboard/support`, `/dashboard/profile` |
+| Admin | `/dashboard`, |
 | Auth | `/forgot-password`, `/reset-password`, `/onboard` |
