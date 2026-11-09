@@ -1,4 +1,4 @@
-# Portal
+# Academic Pavilon Frontend
 
 Frontend boilerplate. Screens are empty so the frontend team can build them.
 
@@ -37,5 +37,5 @@ Open [http://localhost:3001](http://localhost:3001).
 
 | Area | Routes |
 | --- | --- |
-| Admin | `/dashboard`, |
+| Admin | `/dashboard`, `/dashboard/users/admins`, `/dashboard/users/students`, `/dashboard/users/tutors`, `/dashboard/support`, `/dashboard/profile` |
 | Auth | `/forgot-password`, `/reset-password`, `/onboard` |
