@@ -1,85 +1,24 @@
-import React from 'react'
-import { FallbackProps } from 'react-error-boundary'
-import { Button } from './Button'
+"use client";
 
-export const ErrorFallback: React.FC<FallbackProps> = ({
-  error,
-  resetErrorBoundary
-}) => {
-  const handleGoHome = () => {
-    window.location.href = '/'
-  }
+import type { FallbackProps } from "react-error-boundary";
 
-  const errorMessage =
-    error instanceof Error ? error.message : 'Unknown error'
-
-  const errorStack =
-    error instanceof Error ? error.stack : undefined
+export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  const message = error instanceof Error ? error.message : "Unknown error";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full text-center">
-        <div className="mb-8">
-          <div className="mx-auto h-24 w-24 text-red-400 mb-4">
-            <svg
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              className="w-full h-full"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
-          </div>
-
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Oops! Something went wrong
-          </h1>
-
-          <p className="text-gray-600 mb-4">
-            We encountered an unexpected error. Please try refreshing the page
-            or go back to the homepage.
-          </p>
-
-          {process.env.NODE_ENV === 'development' && (
-            <details className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-left">
-              <summary className="cursor-pointer text-red-800 font-medium">
-                Error Details (Development)
-              </summary>
-
-              <pre className="mt-2 text-xs text-red-700 overflow-auto max-h-40">
-                {errorMessage}
-                {errorStack && '\n\n' + errorStack}
-              </pre>
-            </details>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          <Button
-            onClick={resetErrorBoundary}
-            className="w-full"
-            size="lg"
-          >
-            Try Again
-          </Button>
-
-          <Button
-            onClick={handleGoHome}
-            variant="outline"
-            className="w-full"
-            size="lg"
-          >
-            Go to Homepage
-          </Button>
+    <main className="flex min-h-screen items-center justify-center px-6">
+      <div className="max-w-md text-center">
+        <h1 className="text-lg font-semibold">Something went wrong</h1>
+        <p className="mt-2 text-sm text-neutral-600">{message}</p>
+        <div className="mt-6 flex justify-center gap-3">
+          <button type="button" className="rounded border px-3 py-1.5 text-sm" onClick={resetErrorBoundary}>
+            Try again
+          </button>
+          <a href="/" className="rounded border px-3 py-1.5 text-sm">
+            Go home
+          </a>
         </div>
       </div>
-    </div>
-  )
+    </main>
+  );
 }
-
-export default ErrorFallback

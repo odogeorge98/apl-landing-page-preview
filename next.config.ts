@@ -7,24 +7,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'cis-peppcruise-buckets.s3.eu-north-1.amazonaws.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
         hostname: 'res.cloudinary.com',
-        pathname: '/**', // Matches all paths under this domain
-      },
-      {
-        protocol: "https",
-        hostname: "www.peppcruise.com",
-        pathname: "/images/**",
-      },
-      {
-        protocol: 'https',
-        hostname: 'cdn.peppcruise.com',
-        port: '',
         pathname: '/**',
       },
     ],

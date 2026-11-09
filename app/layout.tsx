@@ -63,12 +63,8 @@ const euclidCircularA = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Nugi Innovations Portal",
-  description:
-    "Sign in to manage rides, drivers, payments, and platform operations for Nugi Innovations.",
-  icons: {
-    icon: "/ni-logo.svg",
-  },
+  title: "Portal",
+  description: "Portal frontend boilerplate.",
 };
 
 export default function RootLayout({
