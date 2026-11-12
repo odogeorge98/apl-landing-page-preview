@@ -63,8 +63,8 @@ const euclidCircularA = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Portal",
-  description: "Portal frontend boilerplate.",
+  title: "Academic Pavilion · One platform. Every academic journey.",
+  description: "Connect your people, records and results. From admission to graduation, keep every journey in view.",
 };
 
 export default function RootLayout({
