@@ -1,6 +1,5 @@
 export { Navbar } from "./Navbar";
 export { Hero } from "./Hero";
-export { TrustStrip } from "./TrustStrip";
 export { DashboardPreview } from "./DashboardPreview";
 export { Capabilities } from "./Capabilities";
 export { Teams } from "./Teams";

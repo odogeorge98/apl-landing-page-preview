@@ -6,14 +6,22 @@ export const NAV_LINKS = [
   { label: "FAQs", href: "/#faqs" },
 ];
 
-export const HERO_SLIDES = [
+export type HeroSlide = {
+  label: string;
+  tag: string;
+  title: [string, string];
+  body?: string;
+  cta?: { label: string; href: string };
+  image: string;
+};
+
+export const HERO_SLIDES: HeroSlide[] = [
   {
     label: "Platform",
     tag: "Built for Nigerian tertiary education",
     title: ["One platform.", "Every academic journey."],
     body: "Connect your people, records and results. From admission to graduation, keep every journey in view.",
     cta: { label: "Explore the platform", href: "#platform" },
-    note: "Product concept · Fictional university data shown below",
     image: "/assets/landing/students-walking.jpg",
   },
   {
@@ -28,12 +36,9 @@ export const HERO_SLIDES = [
     label: "Learning & discovery",
     tag: "Knowledge for the next chapter",
     title: ["Stay curious.", "Go further."],
-    body: "Explore resources and journals. Keep your next discovery close.",
-    cta: { label: "Explore Discoveries", href: "#discoveries" },
-    note: "Product concept · Built for Nigerian tertiary education",
     image: "/assets/landing/courtyard.jpg",
   },
-] as const;
+];
 
 export const TRUST = [
   "Institution-owned identity",

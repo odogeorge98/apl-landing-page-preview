@@ -3,13 +3,24 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Bookmark, Search } from "lucide-react";
+import { Bookmark, ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Container, Eyebrow } from "@/components/landing/Section";
 import { JOURNALS, MATERIALS, SAVED_INITIAL } from "./data";
 
 const select =
-  "h-12 w-full rounded-lg border border-line bg-white px-4 text-xs font-bold text-ink outline-none focus:border-brand md:w-auto md:min-w-[120px]";
+  "h-12 w-full appearance-none rounded-lg border border-line bg-white pl-4 pr-10 text-xs font-bold text-ink outline-none focus:border-brand md:field-sizing-content md:w-auto md:min-w-[120px]";
+
+function Select({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <div className="relative max-md:w-full">
+      <select {...props} className={select}>
+        {children}
+      </select>
+      <ChevronDown aria-hidden className="pointer-events-none absolute right-3.5 top-1/2 size-3.5 -translate-y-1/2 text-ink" />
+    </div>
+  );
+}
 
 export function DiscoveriesBrowser() {
   const [tab, setTab] = useState<"materials" | "journals">("materials");
@@ -61,19 +72,19 @@ export function DiscoveriesBrowser() {
                 className="w-full bg-transparent text-xs outline-none placeholder:text-muted"
               />
             </label>
-            <select aria-label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} className={select}>
+            <Select aria-label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)}>
               <option value="">All subjects</option>
               {subjects.map((s) => <option key={s}>{s}</option>)}
-            </select>
-            <select aria-label="Format" value={format} onChange={(e) => setFormat(e.target.value)} className={select}>
+            </Select>
+            <Select aria-label="Format" value={format} onChange={(e) => setFormat(e.target.value)}>
               <option value="">All formats</option>
               {formats.map((s) => <option key={s}>{s}</option>)}
-            </select>
-            <select aria-label="Access" value={access} onChange={(e) => setAccess(e.target.value)} className={select}>
+            </Select>
+            <Select aria-label="Access" value={access} onChange={(e) => setAccess(e.target.value)}>
               <option value="">Access</option>
               <option>Open access</option>
               <option>Institution access</option>
-            </select>
+            </Select>
           </div>
 
           <div className="mt-6 flex flex-col gap-3 text-sm md:flex-row md:items-center md:justify-between" role="tablist">

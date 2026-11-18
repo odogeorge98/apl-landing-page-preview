@@ -51,7 +51,7 @@ export function DashboardPreview() {
       <Container>
         <div className="text-left md:text-center">
           <Eyebrow>Your institution workspace</Eyebrow>
-          <H2 lines={["Your institution. In focus."]} className="mt-4" />
+          <H2 lines={["Your institution. In view."]} className="mt-4" />
         </div>
 
         <div className="mt-8 rounded-xl border border-line bg-white p-4 shadow-[0_20px_50px_-20px_rgba(91,76,239,0.3)] md:hidden">
