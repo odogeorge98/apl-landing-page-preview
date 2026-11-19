@@ -19,7 +19,7 @@ export function Pricing() {
                 <span className="rounded-full bg-lav px-3 py-1.5 text-[10px] font-bold uppercase text-brand">{p.badge}</span>
               </div>
               <p className="mt-6 flex flex-col gap-1 text-ink sm:flex-row sm:items-baseline sm:gap-3">
-                <span className="text-4xl font-bold tracking-[-0.04em]">{p.price}</span>
+                <span className="text-4xl font-extrabold tracking-[-0.04em]">{p.price}</span>
                 <span className="text-sm text-muted">per year</span>
               </p>
               <p className="mt-4 text-sm text-muted">{p.blurb}</p>
@@ -39,7 +39,7 @@ export function Pricing() {
 
         <div className="mt-10 rounded-lg border border-line bg-white p-6 md:p-8">
           <Eyebrow>Alternative pricing model</Eyebrow>
-          <h3 className="mt-3 text-3xl font-bold tracking-[-0.03em] text-ink">School-fees-percentage pricing</h3>
+          <h3 className="mt-3 text-3xl font-extrabold tracking-[-0.03em] text-ink">School-fees-percentage pricing</h3>
           <p className="mt-4 text-sm text-muted">An alternative to the fixed annual subscription: one rate applies to the full annual tuition volume, not marginal bands. Rates are illustrative and subject to commercial approval.</p>
           <div className="mt-6 space-y-3 md:hidden">
             {FEE_ROWS.map((r) => (

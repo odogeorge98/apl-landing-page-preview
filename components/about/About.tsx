@@ -26,7 +26,7 @@ export function About() {
         <Container className="grid items-center gap-10 lg:grid-cols-[1fr_440px] lg:gap-20">
           <div>
             <Eyebrow>About Academic Pavilion</Eyebrow>
-            <h1 className="mt-8 text-[40px] font-bold leading-[1.08] tracking-[-0.045em] text-ink sm:text-5xl lg:text-[64px]">
+            <h1 className="mt-8 text-[40px] font-extrabold leading-[1.08] tracking-[-0.045em] text-ink sm:text-5xl lg:text-[64px]">
               <span className="block">Built for people.</span>
               <span className="block">Made for progress.</span>
             </h1>
@@ -54,7 +54,7 @@ export function About() {
           <div className="grid gap-8 lg:grid-cols-2 lg:gap-20">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wide text-lime">Why APL exists</p>
-              <h2 className="mt-6 text-4xl font-bold leading-[1.1] tracking-[-0.04em] md:text-5xl">Progress shouldn’t get lost between systems.</h2>
+              <h2 className="mt-6 text-4xl font-extrabold leading-[1.1] tracking-[-0.04em] md:text-5xl">Progress shouldn’t get lost between systems.</h2>
             </div>
             <div className="text-base leading-relaxed lg:pt-4">
               <p>APL brings institutional administration, academic records and student services into role-aware workspaces.</p>
@@ -113,7 +113,7 @@ export function About() {
         <Container className="flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
           <div>
             <Eyebrow>A clearer next step</Eyebrow>
-            <h2 className="mt-4 text-4xl font-bold tracking-[-0.04em] text-ink md:text-5xl">Let’s meet your institution.</h2>
+            <h2 className="mt-4 text-4xl font-extrabold tracking-[-0.04em] text-ink md:text-5xl">Let’s meet your institution.</h2>
             <p className="mt-4 max-w-xl text-sm text-muted">Explore academic workflows, access responsibilities and rollout needs in a focused demo.</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">

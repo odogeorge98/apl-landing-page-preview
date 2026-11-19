@@ -43,7 +43,7 @@ export function ArticleView({ a }: { a: Article }) {
             <span className="rounded bg-brand/10 px-2.5 py-1.5 text-[10px] font-bold uppercase text-brand max-sm:w-full">Journal article</span>
             <span className="rounded bg-emerald-50 px-2.5 py-1.5 text-[10px] font-bold text-emerald-700 max-sm:w-full">Open preview</span>
           </div>
-          <h1 className="mt-6 text-[40px] font-bold leading-[1.08] tracking-[-0.045em] text-ink sm:text-5xl lg:text-[64px]">{a.title}</h1>
+          <h1 className="mt-6 text-[40px] font-extrabold leading-[1.08] tracking-[-0.045em] text-ink sm:text-5xl lg:text-[64px]">{a.title}</h1>
           <p className="mt-6 text-lg text-muted">{a.subtitle}</p>
           <div className="mt-8 grid gap-6 md:grid-cols-3">
             <div>
@@ -83,7 +83,7 @@ export function ArticleView({ a }: { a: Article }) {
             </div>
             <article id="preview" className={cn(card, "mt-5 scroll-mt-28 p-6 md:p-9")}>
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand">{a.pageLabel}</p>
-              <h2 className="mt-5 text-3xl font-bold tracking-[-0.03em] text-ink">{a.heading}</h2>
+              <h2 className="mt-5 text-3xl font-extrabold tracking-[-0.03em] text-ink">{a.heading}</h2>
               {a.paragraphs.map((p) => <p key={p} className="mt-5 text-sm leading-relaxed text-muted">{p}</p>)}
               <div className="mt-6 rounded bg-lav p-5 md:p-6">
                 <h3 className="text-xl font-bold tracking-tight text-ink">{a.calloutTitle}</h3>
@@ -92,7 +92,7 @@ export function ArticleView({ a }: { a: Article }) {
               <p className="mt-6 text-xs text-muted">{a.end}</p>
             </article>
 
-            <h2 className="mt-10 text-3xl font-bold tracking-[-0.03em] text-ink">Related materials</h2>
+            <h2 className="mt-10 text-3xl font-extrabold tracking-[-0.03em] text-ink">Related materials</h2>
             <ul className="mt-5 space-y-4">
               {a.related.map((r) => (
                 <li key={r.title} className="flex flex-col justify-between gap-3 rounded-lg border border-line bg-white p-5 sm:flex-row sm:items-center">

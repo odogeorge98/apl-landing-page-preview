@@ -11,7 +11,7 @@ export function Eyebrow({ children, className }: { children: React.ReactNode; cl
 
 export function H2({ lines, className }: { lines: string[]; className?: string }) {
   return (
-    <h2 className={cn("text-4xl font-bold leading-[1.05] tracking-[-0.04em] text-ink sm:text-5xl lg:text-[56px]", className)}>
+    <h2 className={cn("text-4xl font-extrabold leading-[1.05] tracking-[-0.04em] text-ink sm:text-5xl lg:text-[56px]", className)}>
       {lines.map((l, i) => (
         <span key={l} className="block">
           {l}

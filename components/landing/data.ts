@@ -36,6 +36,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     label: "Learning & discovery",
     tag: "Knowledge for the next chapter",
     title: ["Stay curious.", "Go further."],
+    cta: { label: "Explore Discoveries", href: "/discoveries" },
     image: "/assets/landing/courtyard.jpg",
   },
 ];

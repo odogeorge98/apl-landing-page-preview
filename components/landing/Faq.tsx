@@ -8,7 +8,7 @@ export function Faq() {
         <div className="flex items-start justify-between">
           <div>
             <Eyebrow>A few things, answered</Eyebrow>
-            <h2 className="mt-6 text-4xl font-bold leading-[1.05] tracking-[-0.04em] text-ink sm:text-5xl lg:text-[56px]">
+            <h2 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-[-0.04em] text-ink sm:text-5xl lg:text-[56px]">
               <span className="block">
                 Good <br className="hidden md:block" />
                 questions.

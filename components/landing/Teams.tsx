@@ -8,7 +8,7 @@ export function Teams() {
       <Container className="grid gap-12 lg:grid-cols-2 lg:gap-24">
         <div>
           <span className="inline-block rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-lime">Designed around people</span>
-          <h2 className="mt-8 text-4xl font-bold leading-[1.05] tracking-[-0.04em] sm:text-5xl lg:text-[56px]">
+          <h2 className="mt-8 text-4xl font-extrabold leading-[1.05] tracking-[-0.04em] sm:text-5xl lg:text-[56px]">
             <span className="block">One institution.</span>
             <span className="block">Every team.</span>
           </h2>

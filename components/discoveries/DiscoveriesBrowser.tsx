@@ -51,7 +51,7 @@ export function DiscoveriesBrowser() {
           <Eyebrow>The APL resource centre</Eyebrow>
           <div className="mt-6 flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
             <div>
-              <h1 className="text-[40px] font-bold leading-[1.08] tracking-[-0.045em] text-ink sm:text-5xl lg:text-[64px]">
+              <h1 className="text-[40px] font-extrabold leading-[1.08] tracking-[-0.045em] text-ink sm:text-5xl lg:text-[64px]">
                 <span className="block">Stay curious.</span>
                 <span className="block">Go further.</span>
               </h1>
@@ -104,7 +104,7 @@ export function DiscoveriesBrowser() {
             </div>
             <div className="bg-navy p-6 text-white md:p-10">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#b4adff]">Featured · Learning pathway</p>
-              <h2 className="mt-4 text-3xl font-bold tracking-[-0.03em]">Begin with a better question.</h2>
+              <h2 className="mt-4 text-3xl font-extrabold tracking-[-0.03em]">Begin with a better question.</h2>
               <p className="mt-4 text-sm">Plan your research. Question your sources. Make your case.</p>
               <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
                 <Link href="/discoveries" className="flex h-11 items-center justify-center rounded-md bg-brand px-5 text-xs font-bold hover:bg-brand-dark">Explore research methods</Link>
@@ -120,7 +120,7 @@ export function DiscoveriesBrowser() {
           {tab === "materials" ? (
             <>
               <div className="flex flex-wrap items-end justify-between gap-2">
-                <h2 className="text-3xl font-bold tracking-[-0.03em] text-ink">Find your next idea.</h2>
+                <h2 className="text-3xl font-extrabold tracking-[-0.03em] text-ink">Find your next idea.</h2>
                 <p className="w-full text-xs text-muted md:w-auto">Showing {items.length ? `1–${items.length}` : "0"} of 24 materials</p>
               </div>
               {items.length === 0 && <p className="mt-10 text-sm text-muted">No materials match your filters. Try clearing the search or filters.</p>}
@@ -176,7 +176,7 @@ export function JournalsSection() {
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div>
             <Eyebrow>Read beyond the classroom</Eyebrow>
-            <h2 className="mt-4 text-4xl font-bold tracking-[-0.04em] text-ink md:text-5xl">Ideas worth exploring.</h2>
+            <h2 className="mt-4 text-4xl font-extrabold tracking-[-0.04em] text-ink md:text-5xl">Ideas worth exploring.</h2>
             <p className="mt-4 max-w-xl text-sm text-muted">Browse example journals and article previews. Access terms are shown before you download.</p>
           </div>
           <Link href="/discoveries#journals" className="flex h-12 items-center rounded-md bg-white px-5 text-xs font-bold text-ink max-sm:w-full">Browse all journals</Link>
